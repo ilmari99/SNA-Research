@@ -2,8 +2,9 @@ from abc import ABC, abstractmethod
 import random
 from typing import List, TYPE_CHECKING
 import numpy as np
-from utils import _NoneLogger, _get_logger
+import functools as ft
 
+from .utils import _NoneLogger, _get_logger
 from RLFramework.Action import Action
 if TYPE_CHECKING:
     from RLFramework.GameState import GameState
@@ -23,7 +24,7 @@ class Player(ABC):
         self.pid = None
 
 
-    def choose_move(self, game : Game) -> Action:
+    def choose_move(self, game : 'Game') -> 'Action':
         """ Given the game state, select the move to play.
         Note: This is only for games where the next state is known exactly.
         """
@@ -46,7 +47,7 @@ class Player(ABC):
     def _select_random_action(self, evaluations : List[float]) -> int:
         """ Select a random action.
         """
-        return random.choice(range(len(evaluations)))
+        return np.random.choice(range(len(evaluations)))
     
     def _select_weighted_action(self, evaluations : List[float], temperature : float = 1.0) -> int:
         """ Select a random action, with the probability of each action being selected being proportional to the evaluation.
@@ -64,24 +65,56 @@ class Player(ABC):
         probs = evaluations_exp_temp / np.sum(evaluations_exp_temp)
         return np.random.choice(range(len(evaluations)), p=probs)
     
-    def check_is_finished_wrap(self, game_state : GameState) -> bool:
-        """ 'Cache' the check.
+    @staticmethod
+    def check_is_finished_decorator():
+        """ Decorator for the check_is_finished method."""
+        def decorator(func):
+            ft.wraps(func)
+            def wrapper(self : 'Player', game_state : 'GameState'):
+                if not self.is_finished:
+                    self.is_finished = func(self, game_state)
+                    # The player is also finished, if it is the only player in the game
+                    self.is_finished = self.is_finished or len(game_state.unfinished_players) == 1
+                return self.is_finished
+            return wrapper
+        return decorator
+    
+    @staticmethod
+    def initialize_player_decorator():
+        """ Decorator for the initialize_player method."""
+        def decorator(func):
+            ft.wraps(func)
+            def wrapper(self : 'Player', game : 'Game'):
+                self.pid = game.players.index(self)
+                print(f"Player {self.name} has pid {self.pid}")
+                self.is_finished = False  
+                return func(self, game)
+            return wrapper
+        return decorator
+    
+    def __init_subclass__(cls) -> None:
+        """ Persist the decorators in the subclass.
         """
-        if not self.is_finished:
-            self.is_finished = self.check_is_finished(game_state)
-            # The player is also finished, if it is the only player in the game
-            self.is_finished = self.is_finished or len(game_state.unfinished_players) == 1
-
-        return self.is_finished
+        super().__init_subclass__()
+        cls.initialize_player = cls.initialize_player_decorator()(cls.initialize_player)
+        cls.check_is_finished = cls.check_is_finished_decorator()(cls.check_is_finished)        
+    
+    @initialize_player_decorator()
+    @abstractmethod
+    def initialize_player(self, game : 'Game') -> None:
+        """ Set some desired vriables for the player.
+        """
+        pass
     
     @abstractmethod
-    def evaluate_states(self, states : List[GameState]) -> List[float]:
+    def evaluate_states(self, states : List['GameState']) -> List[float]:
         """ Evaluate the given game states.
         """
         pass
-
+    
+    @check_is_finished_decorator()
     @abstractmethod
-    def check_is_finished(self, game_state : GameState) -> bool:
+    def check_is_finished(self, game_state : 'GameState') -> bool:
         """ Check if in the game_state, this player is finished.
         """
         pass
