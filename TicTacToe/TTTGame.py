@@ -11,8 +11,8 @@ from TTTPlayer import TTTPlayer
 class TTTGame(Game):
     """ A class representing the game TicTacToe.
     """
-    def __init__(self, board_size : Tuple[int, int] = (3, 3)):
-        super().__init__(TTTGameState)
+    def __init__(self, board_size : Tuple[int, int] = (3, 3), logger_args : dict = None):
+        super().__init__(TTTGameState, logger_args)
         self.board_size = board_size
         self.board = [[-1 for _ in range(board_size[1])] for _ in range(board_size[0])]
     
