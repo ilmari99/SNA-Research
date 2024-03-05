@@ -1,9 +1,9 @@
 from abc import ABC, abstractmethod
 from typing import List, TYPE_CHECKING
-from RLFramework.GameState import GameState
+from .GameState import GameState
 if TYPE_CHECKING:
-    from RLFramework.Game import Game
-    from RLFramework.Player import Player
+    from .Game import Game
+    from .Player import Player
 
 class Action(ABC):
     """ Action -class contains information about the proposed changes to the game.
@@ -21,12 +21,12 @@ class Action(ABC):
         """ Decorator for the modify_game method."""
         def decorator(func):
             def wrapper(self : 'Action', game: 'Game', inplace: bool = False) -> GameState:
-                print(f"Making action {self} in game {game}")
                 if not self.check_action_is_legal(game):
                     raise ValueError("The action is not legal in the given game state.")
                 
                 if inplace:
                     return func(self, game)
+                
                 # Save the game state
                 game_state = game.game_state_class.from_game(game, copy = True)
                 # Modify the game

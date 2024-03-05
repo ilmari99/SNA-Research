@@ -4,11 +4,11 @@ from typing import List, TYPE_CHECKING, Dict, Any
 import functools as ft
 
 from .utils import _NoneLogger, _get_logger
-from RLFramework.GameState import GameState
-from RLFramework.Result import Result
+from .GameState import GameState
+from .Result import Result
 if TYPE_CHECKING:
-    from RLFramework.Action import Action
-    from RLFramework.Player import Player
+    from .Action import Action
+    from .Player import Player
 
 
 class Game(ABC):
@@ -32,6 +32,9 @@ class Game(ABC):
         super().__init_subclass__()
         cls.select_turn = cls.select_turn_decorator()(cls.select_turn)
 
+    def __repr__(self) -> str:
+        return self.game_state_class.from_game(self, copy = False).__repr__()
+
     @classmethod
     def from_game_state(cls, game_state : 'GameState', logger_args: Dict[str, Any] = None):
         """ Create a Game instance from a GameState instance.
@@ -53,10 +56,11 @@ class Game(ABC):
         """ Set the players of the game.
         """
         self.players = players
-        self.logger.info(f"Initialized game with {len(players)} players.")
         for i, player in enumerate(players):
             player.initialize_player(self)
         self.logger.info(f"Initialized game with {len(players)} players.")
+        self.unfinished_players = [i for i in range(len(players))]
+        self.finished_players = []
         
 
     def initialize_game_wrap(self, players : List['Player']) -> None:
@@ -66,6 +70,16 @@ class Game(ABC):
         self.initialize_game(players)
         self.check_correct_initialization()
 
+    def finish_player(self, player : 'Player') -> None:
+        state = self.game_state_class.from_game(self, copy = False)
+        #self.logger.debug(f"Checking if {player.name} is finished. Unfinished players: {self.unfinished_players}")
+        if player.check_is_finished(state) and player.pid in self.unfinished_players:
+            self.unfinished_players.remove(player.pid)
+            self.finished_players.append(player.pid)
+            self.logger.info(f"{player.name} finished the game.")
+            #print(f"Fninished players: {self.finished_players}, unfinished players: {self.unfinished_players}")
+        return
+
 
     def play_game(self, players : List['Player']) -> Result:
         """ Play a game with the given players.
@@ -74,21 +88,19 @@ class Game(ABC):
         self.initialize_game_wrap(players)
         
         players_with_no_moves = []
-        finishing_order = []
+        #finishing_order = []
+        self.current_player = self.select_turn(players, self.previous_turns)
 
         # Play until all players are finished
-        while not self.check_is_terminal() and len(players_with_no_moves) < len(players) - len(finishing_order):
-
+        while not self.check_is_terminal() and len(self.unfinished_players) > 1 and len(players_with_no_moves) < len(self.unfinished_players):
             # Select the next player to play
-            self.current_player = self.select_turn(players, self.previous_turns)
             self.current_player_name = players[self.current_player].name
             player = players[self.current_player]
             game_state = self.game_state_class.from_game(self, copy = False)
 
             # IF the player is finished, skip their turn
-            if player.check_is_finished(game_state):
-                self.logger.debug(f"Player {self.current_player_name} is finished, skipping turn.")
-                continue
+            # This is also triggered, if the player is the only one left
+            self.finish_player(player)
             self.logger.debug(f"Game state:\n{game_state}")
 
             # Make an action with the player
@@ -101,38 +113,44 @@ class Game(ABC):
                 continue
             players_with_no_moves = []
             self.logger.info(f"Player {self.current_player_name} chose action {action}.")
-            # Perform the action
+            # Perform the action and modify the state, incl. current player
             new_state = self.step(action)
-            # Save the new state
-            self.game_states.append(new_state.deepcopy())
-            # Save the previous turn
-            self.previous_turns.append(self.current_player)
-            if player.check_is_finished(new_state):
-                self.logger.info(f"Player {self.current_player_name} finished the game.")
-                finishing_order.append(self.current_player)
+
+            player.score += self.calculate_reward(new_state)
+            print(f"{self.current_player_name} has {player.score} score")
         
         game_is_draw = False
         # If the game ended, because no remaining players had any moves, then it's a draw
-        if len(players_with_no_moves) == len(players) - len(finishing_order):
+        if len(players_with_no_moves) == len(self.unfinished_players):
             self.logger.info("The remaining players are in a draw.")
             game_is_draw = True
-        else:
-            finishing_order += [i for i in range(len(players)) if i not in finishing_order]
+            self.unfinished_players = []
+            self.finished_players = list(range(len(players)))
+            # Calculate the reward for the players
+            state = self.game_state_class.from_game(self, copy = False)
+            for i, player in enumerate(players):
+                player.score += self.calculate_reward(state)
+                self.logger.info(f"{player.name} has {player.score} score")
 
         result = Result(successful = True if self.check_is_terminal() or game_is_draw else False,
                         player_jsons = [player.as_json() for player in players],
-                        finishing_order = finishing_order,
+                        finishing_order = self.finished_players,
                         logger_args = self.logger_args,
                         game_state_class = self.game_state_class,
                         game_states = self.game_states,
                         previous_turns = self.previous_turns,
                         )
-        
         s = "Game finished with results:"
         for k,v in result.as_json(states_as_num = True).items():
             s += f"\n{k}: {v}"
         self.logger.info(s)
+        result.save_to_file("game_results.csv")
         return result
+    
+    def calculate_reward(self, new_state : 'GameState'):
+        """ Calculate the reward for the player that made the move.
+        """
+        return 0.0
 
 
     def disable_logging_wrapper(self, f):
@@ -155,10 +173,44 @@ class Game(ABC):
         if real_move is False, then we disable logging, save the current state, modify the game,
         restore to the previous state, and enable logging again.
         """
+        #self.logger.debug(f"Stepping: {action}")
         # If we are making a real move, we can just modify the game
         # If not, we simulate the move and then restore the game state
-        curr_state = self.game_state_class.from_game(self, copy = True)
-        modify_game = lambda : action.modify_game(self, inplace = real_move)
+        if not real_move:
+            curr_state = self.game_state_class.from_game(self, copy = True)
+
+        def modify_game():
+            """ Modify the game according to the action.
+            We call the modify_game method of the action, and we also
+            update the under-the-hood variables of the game, such as
+            the current player, previous turns, etc.
+            """
+            # If real_move is True, then new_state contains references to the Game's attributes
+            # Hence, we can modify them through the new_state.
+            # If not, then new_state will be a copy of Game's attributes
+            new_state = action.modify_game(self, inplace = real_move)
+            player = self.players[self.current_player]
+            #print(new_state)
+
+            if real_move:
+                self.previous_turns.append(self.current_player)
+                next_player = self.select_turn(self.players, self.previous_turns)
+                # Save the new state
+                self.game_states.append(new_state.deepcopy())
+
+                self.finish_player(player)
+                self.current_player = next_player
+
+            else:
+                new_state.previous_turns.append(self.current_player)
+                next_player = self.select_turn(self.players, new_state.previous_turns)
+
+                if player.check_is_finished(new_state):
+                    new_state.unfinished_players.remove(self.current_player)
+                    new_state.finished_players.append(self.current_player)
+                new_state.current_player = next_player
+            return new_state
+
         # If not real move, then wrap the modify_game function with disable_logging_wrapper
         if not real_move:
             modify_game = self.disable_logging_wrapper(modify_game)
@@ -173,11 +225,11 @@ class Game(ABC):
         """
         return np.random.choice(range(len(players)))
     
-    def _select_round_turn(self, players : List['Player']) -> int:
+    def _select_round_turn(self, players : List['Player'], previous_turns : List[int]) -> int:
         """ Select the next player to play in a round-robin fashion.
         """
         # Return the next player in the list, wrapping around if necessary
-        return (self.previous_turns[-1] + 1) % len(players)
+        return (previous_turns[-1] + 1) % len(players)
     
     def _select_random_turn_exclude_last(self, players : List['Player']) -> int:
         """ Select a random player to play, excluding the last player.

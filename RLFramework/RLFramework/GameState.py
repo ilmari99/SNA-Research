@@ -3,10 +3,12 @@ import functools as ft
 from typing import Dict, List, SupportsFloat, TYPE_CHECKING
 import json
 
+import numpy as np
+
 if TYPE_CHECKING:
-    from RLFramework.Game import Game
-    from RLFramework.Action import Action
-    from RLFramework.Player import Player
+    from .Game import Game
+    from .Action import Action
+    from .Player import Player
 
 REQUIRED_KEYS = ["unfinished_players",
                  "current_player",
@@ -61,9 +63,11 @@ class GameState(ABC):
             def wrapper(game : 'Game'):
                 state_json = func(cls, game)
                 # Add the required keys
-                state_json["unfinished_players"] = [p.pid for p in game.players if not p.is_finished]
+                state_json["unfinished_players"] = game.unfinished_players
                 state_json["current_player"] = game.current_player
                 state_json["previous_turns"] = game.previous_turns
+                state_json["player_scores"] = [p.score for p in game.players]
+                state_json["finished_players"] = game.finished_players
                 return state_json
             return wrapper
         return decorator
@@ -95,6 +99,10 @@ class GameState(ABC):
         """ Check if the state of the game matches the state of the GameState.
         """
         return self.state_json == self.__class__.game_to_state_json(game)
+    
+    def __repr__(self) -> str:
+        return np.array(self.state_json["board"]).__repr__()
+        #return f"{self.__class__.__name__}({self.state_json})"
     
     
     @classmethod

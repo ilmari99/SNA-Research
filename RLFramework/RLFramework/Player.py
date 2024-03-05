@@ -5,10 +5,10 @@ import numpy as np
 import functools as ft
 
 from .utils import _NoneLogger, _get_logger
-from RLFramework.Action import Action
+from .Action import Action
 if TYPE_CHECKING:
-    from RLFramework.GameState import GameState
-    from RLFramework.Game import Game
+    from .GameState import GameState
+    from .Game import Game
 
 
 class Player(ABC):
@@ -19,33 +19,47 @@ class Player(ABC):
 
     def __init__(self, name : str = "Player", logger_args : dict = None):
         self.name = name
-        self.logger = _get_logger(logger_args)
+        default_logger_args = {
+            "name" : f"{name}_logger",
+            "level" : 10,
+            "log_file" : None,
+            "write_mode" : "w",
+        }
+        self.logger_args = {**default_logger_args, **logger_args}
+        self.logger = _get_logger(self.logger_args)
         self.is_finished = False
         self.pid = None
+        self.score = 0
 
     def as_json(self) -> dict:
         """ Return the player as a json.
         """
-        return {"name" : self.name,
-                "pid" : self.pid,
-                "classname" : self.__class__.__name__,
-                }
+        return {
+            "classname" : self.__class__.__name__,
+            "name" : self.name,
+            "pid" : self.pid,
+            "score" : self.score,
+            "is_finished" : self.is_finished,
+            "logger_args" : self.logger_args,
+            }
 
 
     def choose_move(self, game : 'Game') -> 'Action':
         """ Given the game state, select the move to play.
         Note: This is only for games where the next state is known exactly.
         """
+        self.logger.debug(f"Game state:\n{game}")
         possible_actions = game.get_all_possible_actions()
+        self.logger.info(f"Found {len(possible_actions)} possible actions.")
         # If there are no possible actions, return None
         if not possible_actions:
             return None
         next_states = [game.step(action, real_move = False) for action in possible_actions]
         evaluations = self.evaluate_states(next_states)
+        self.logger.debug(f"Moves and evaluations:\n{list(zip(possible_actions, evaluations))}")
         assert len(evaluations) == len(possible_actions), f"Number of evaluations ({len(evaluations)}) must match the number of possible actions ({len(possible_actions)})"
         selected_move_idx = self.select_action_strategy(evaluations)
         return possible_actions[selected_move_idx]
-
 
     def _select_best_action(self, evaluations : List[float]) -> int:
         """ Select the action with the highest evaluation.
@@ -94,8 +108,8 @@ class Player(ABC):
             ft.wraps(func)
             def wrapper(self : 'Player', game : 'Game'):
                 self.pid = game.players.index(self)
-                print(f"Player {self.name} has pid {self.pid}")
-                self.is_finished = False  
+                self.is_finished = False 
+                self.logger.debug(f"Initilaized player with arguments {self.as_json()}")
                 return func(self, game)
             return wrapper
         return decorator
