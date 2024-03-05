@@ -23,6 +23,14 @@ class Player(ABC):
         self.is_finished = False
         self.pid = None
 
+    def as_json(self) -> dict:
+        """ Return the player as a json.
+        """
+        return {"name" : self.name,
+                "pid" : self.pid,
+                "classname" : self.__class__.__name__,
+                }
+
 
     def choose_move(self, game : 'Game') -> 'Action':
         """ Given the game state, select the move to play.
