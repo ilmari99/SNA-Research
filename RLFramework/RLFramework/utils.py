@@ -24,11 +24,25 @@ def _get_logger(logger_args: Dict[str, Any] = None):
     """
     if logger_args is None:
         return _NoneLogger()
+    default_args = {
+        "name" : "Game",
+        "level" : logging.INFO,
+        "format" : '%(name)s - %(levelname)s - %(message)s',
+        # stdout
+        "log_file" : None,
+        "write_mode" : "w",
+    }
+    logger_args = {**default_args, **logger_args}
     logger = logging.getLogger(logger_args.get("name", "Game"))
-    logger.setLevel(logger_args.get("level", logging.INFO))
-    handler = logging.StreamHandler()
-    handler.setLevel(logger_args.get("level", logging.INFO))
-    formatter = logging.Formatter(logger_args.get("format", '%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
+    logger.setLevel(logger_args.get("log_level", logging.INFO))
+    formatter = logging.Formatter(logger_args.get("format", default_args["format"]))
+    if logger_args.get("log_file", None):
+        file_handler = logging.FileHandler(logger_args["log_file"], mode = logger_args.get("write_mode", "w"))
+        file_handler.setFormatter(formatter)
+        logger.addHandler(file_handler)
+    else:
+        stream_handler = logging.StreamHandler()
+        stream_handler.setFormatter(formatter)
+        logger.addHandler(stream_handler)
+
     return logger
