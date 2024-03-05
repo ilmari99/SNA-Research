@@ -5,6 +5,7 @@ import functools as ft
 
 from .utils import _NoneLogger, _get_logger
 from RLFramework.GameState import GameState
+from RLFramework.Result import Result
 if TYPE_CHECKING:
     from RLFramework.Action import Action
     from RLFramework.Player import Player
@@ -12,25 +13,25 @@ if TYPE_CHECKING:
 
 class Game(ABC):
     def __init__(self,
-                 subclass,
+                 game_state_class,
                  logger_args: Dict[str, Any] = None,
                 ):
         """ Initializes the Game instance.
         This is mainly used to set up the logger.
         """
-        self.game_state_class : GameState = subclass
+        self.game_state_class : GameState = game_state_class
+        self.logger_args = logger_args
         self.logger = _get_logger(logger_args)
         self.game_states : List[GameState] = []
         self.previous_turns : List[int] = []
         self.current_player : int = 0
+        self.current_player_name : str = ""
         self.players : List[Player] = []
         
     def __init_subclass__(cls) -> None:
         super().__init_subclass__()
         cls.select_turn = cls.select_turn_decorator()(cls.select_turn)
 
-                
-        
     @classmethod
     def from_game_state(cls, game_state : 'GameState', logger_args: Dict[str, Any] = None):
         """ Create a Game instance from a GameState instance.
@@ -52,7 +53,7 @@ class Game(ABC):
         """ Set the players of the game.
         """
         self.players = players
-        print(f"Initialized game with {players}")
+        self.logger.info(f"Initialized game with {len(players)} players.")
         for i, player in enumerate(players):
             player.initialize_player(self)
         self.logger.info(f"Initialized game with {len(players)} players.")
@@ -66,7 +67,7 @@ class Game(ABC):
         self.check_correct_initialization()
 
 
-    def play_game(self, players : List['Player']) -> List['GameState']:
+    def play_game(self, players : List['Player']) -> Result:
         """ Play a game with the given players.
         """
         # Initilize the game by setting internal variables, custom variables, and checking the initialization
@@ -76,26 +77,30 @@ class Game(ABC):
         finishing_order = []
 
         # Play until all players are finished
-        while not self.check_is_terminal() and len(players_with_no_moves) < len(players):
+        while not self.check_is_terminal() and len(players_with_no_moves) < len(players) - len(finishing_order):
 
             # Select the next player to play
             self.current_player = self.select_turn(players, self.previous_turns)
+            self.current_player_name = players[self.current_player].name
             player = players[self.current_player]
             game_state = self.game_state_class.from_game(self, copy = False)
 
             # IF the player is finished, skip their turn
             if player.check_is_finished(game_state):
+                self.logger.debug(f"Player {self.current_player_name} is finished, skipping turn.")
                 continue
+            self.logger.debug(f"Game state:\n{game_state}")
+
             # Make an action with the player
             action = player.choose_move(self)
-            print(f"Player {self.current_player} chose action {action}")
             
             if action is None:
                 #raise Exception(f"Player {self.current_player} had no valid moves to play, even though the player is not in a terminal state.")
+                self.logger.info(f"Player {self.current_player_name} had no valid moves to play, but is not in a terminal state.")
                 players_with_no_moves.append(self.current_player)
                 continue
             players_with_no_moves = []
-            
+            self.logger.info(f"Player {self.current_player_name} chose action {action}.")
             # Perform the action
             new_state = self.step(action)
             # Save the new state
@@ -103,9 +108,31 @@ class Game(ABC):
             # Save the previous turn
             self.previous_turns.append(self.current_player)
             if player.check_is_finished(new_state):
+                self.logger.info(f"Player {self.current_player_name} finished the game.")
                 finishing_order.append(self.current_player)
-        print(f"Players finished in order: {finishing_order}")
-        return self.game_states
+        
+        game_is_draw = False
+        # If the game ended, because no remaining players had any moves, then it's a draw
+        if len(players_with_no_moves) == len(players) - len(finishing_order):
+            self.logger.info("The remaining players are in a draw.")
+            game_is_draw = True
+        else:
+            finishing_order += [i for i in range(len(players)) if i not in finishing_order]
+
+        result = Result(successful = True if self.check_is_terminal() or game_is_draw else False,
+                        player_jsons = [player.as_json() for player in players],
+                        finishing_order = finishing_order,
+                        logger_args = self.logger_args,
+                        game_state_class = self.game_state_class,
+                        game_states = self.game_states,
+                        previous_turns = self.previous_turns,
+                        )
+        
+        s = "Game finished with results:"
+        for k,v in result.as_json(states_as_num = True).items():
+            s += f"\n{k}: {v}"
+        self.logger.info(s)
+        return result
 
 
     def disable_logging_wrapper(self, f):
@@ -136,7 +163,6 @@ class Game(ABC):
         if not real_move:
             modify_game = self.disable_logging_wrapper(modify_game)
         new_state : 'GameState' = modify_game()
-        print(f"New state: {new_state}")
         if not real_move:
             assert curr_state.check_is_game_equal(self), "The game state was not restored correctly."
         return new_state
