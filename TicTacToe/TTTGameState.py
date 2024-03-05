@@ -20,8 +20,8 @@ class TTTGameState(GameState):
         """ Convert the state to a vector.
         """
         board_arr = np.array(self.board)
-        return [self.current_player] + board_arr.flatten().tolist()
+        return [self.current_player] + self.player_scores + board_arr.flatten().tolist()
     
-    def __repr__(self):
-        return f"TTTGameState(\n{np.array(self.board)}\n)"
+    #def __repr__(self):
+    #    return f"TTTGameState(\n{np.array(self.board)}\n)"
     

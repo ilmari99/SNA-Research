@@ -5,8 +5,8 @@ from TTTGameState import TTTGameState
 
 
 game : TTTGame = TTTGame(board_size=(5,5),logger_args = {"log_level" : 10, "log_file" : "TTTGame.log"})
-player1 = TTTPlayer("Player 0")
-player2 = TTTPlayer("Player 1")
+player1 = TTTPlayer("Player 0", logger_args={"log_level" : 10, "log_file" : "TTTPlayer0.log"})
+player2 = TTTPlayer("Player 1", logger_args={"log_level" : 10, "log_file" : "TTTPlayer1.log"})
 
 res = game.play_game([player1, player2])
 

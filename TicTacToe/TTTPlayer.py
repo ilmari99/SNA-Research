@@ -27,14 +27,17 @@ class TTTPlayer(Player):
         # Check rows and columns
         for row_idx in range(arr.shape[0]):
             if np.all(arr[row_idx] == self.pid):
-                print(f"Player {self.name} has won with a row")
+                self.logger.info(f"{self.name} has won with a row")
                 return True
         for col_idx in range(arr.shape[1]):
             if np.all(arr[:, col_idx] == self.pid):
-                print(f"Player {self.name} has won with a column")
+                self.logger.info(f"{self.name} has won with a column")
                 return True
         if np.all(np.diag(arr) == self.pid) or np.all(np.diag(np.fliplr(arr)) == self.pid):
-            print(f"Player {self.name} has won with a diagonal")
+            self.logger.info(f"{self.name} has won with a diagonal")
+            return True
+        if len(game_state.unfinished_players) == 1:
+            self.logger.info(f"{self.name} has lost")
             return True
         return False
     
