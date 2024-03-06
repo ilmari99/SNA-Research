@@ -101,9 +101,8 @@ class Game(ABC):
             # IF the player is finished, skip their turn
             # This is also triggered, if the player is the only one left
             self.finish_player(player)
-            self.logger.debug(f"Game state:\n{game_state}")
 
-            # Make an action with the player
+            # Choose an action with the player
             action = player.choose_move(self)
             
             if action is None:
@@ -115,9 +114,8 @@ class Game(ABC):
             self.logger.info(f"Player {self.current_player_name} chose action {action}.")
             # Perform the action and modify the state, incl. current player
             new_state = self.step(action)
-
-            player.score += self.calculate_reward(new_state)
             print(f"{self.current_player_name} has {player.score} score")
+            self.logger.debug(f"Game state:\n{new_state}")
         
         game_is_draw = False
         # If the game ended, because no remaining players had any moves, then it's a draw
@@ -185,29 +183,36 @@ class Game(ABC):
             update the under-the-hood variables of the game, such as
             the current player, previous turns, etc.
             """
-            # If real_move is True, then new_state contains references to the Game's attributes
-            # Hence, we can modify them through the new_state.
-            # If not, then new_state will be a copy of Game's attributes
+            # Calculate the new state after making the action
             new_state = action.modify_game(self, inplace = real_move)
+            # Get a reference to the player who made the move
             player = self.players[self.current_player]
-            #print(new_state)
-
+            # If the move was real, then update self
             if real_move:
+                # Add knowledge of who made the move
                 self.previous_turns.append(self.current_player)
+                # Get the index if the next player
                 next_player = self.select_turn(self.players, self.previous_turns)
                 # Save the new state
                 self.game_states.append(new_state.deepcopy())
-
+                # Check if the player is finished, and if yes, remove them from the unfinished players
                 self.finish_player(player)
+                new_state.current_player = next_player
+                # Add the reward to the player
+                player.score += self.calculate_reward(new_state)
+                # Update the current player
                 self.current_player = next_player
-
+                
             else:
+                # Here, we are not making a real move, so we change the game state object, rather than self
                 new_state.previous_turns.append(self.current_player)
                 next_player = self.select_turn(self.players, new_state.previous_turns)
-
+                # Check if the player is finished, and if yes, remove them from the unfinished players
                 if player.check_is_finished(new_state):
                     new_state.unfinished_players.remove(self.current_player)
                     new_state.finished_players.append(self.current_player)
+                # Add the reward to the player, so to the score list at the players index
+                new_state.player_scores[self.current_player] += self.calculate_reward(new_state)
                 new_state.current_player = next_player
             return new_state
 
