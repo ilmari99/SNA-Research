@@ -6,13 +6,14 @@ from typing import List, Tuple
 from TTTAction import TTTAction
 from TTTGameState import TTTGameState
 from TTTPlayer import TTTPlayer
+import matplotlib.pyplot as plt
 
 
 class TTTGame(Game):
     """ A class representing the game TicTacToe.
     """
-    def __init__(self, board_size : Tuple[int, int] = (3, 3), logger_args : dict = None):
-        super().__init__(TTTGameState, logger_args)
+    def __init__(self, board_size : Tuple[int, int] = (3, 3), logger_args : dict = None, render_mode : str = ""):
+        super().__init__(TTTGameState, logger_args, render_mode)
         self.board_size = board_size
         #self.board = [[-1 for _ in range(board_size[1])] for _ in range(board_size[0])]
     
@@ -68,7 +69,7 @@ class TTTGame(Game):
             return True
         if -1 not in np.array(game_state.board).flatten():
             return True
-        if all([self.check_player_has_won(p, game_state) for p in range(len(self.players)) if p != pid]):
+        if any([self.check_player_has_won(p, game_state) for p in range(len(self.players)) if p != pid]):
             return True
         return False
     
@@ -81,6 +82,37 @@ class TTTGame(Game):
                 if TTTAction.check_action_is_legal_from_args(self, x, y):
                     actions.append(TTTAction(x, y))
         return actions
+    
+    def render_human(self : Game, ax):
+        """ Render the board to the ax and highlight the current player.
+        """
+        arr = np.array(self.board)
+        curr_player_pid = self.current_player
+        # Show the board, with all white squares and borders
+        ax.imshow(arr)
+        ax.set_xticks(np.arange(arr.shape[1]) - 0.5, minor=True)
+        ax.set_yticks(np.arange(arr.shape[0]) - 0.5, minor=True)
+        ax.grid(which="minor", color="w", linestyle="-", linewidth=3)
+        
+
+        # Annotate each square with the pid of the player who has it, or an empty string if it is empty
+        for i in range(arr.shape[0]):
+            for j in range(arr.shape[1]):
+                square_pid = arr[i, j]
+                if square_pid != -1:
+                    ax.text(j, i, str(square_pid), ha="center", va="center", fontsize=20)
+        # Highlight the current player
+        ax.set_title(f"{self.players[curr_player_pid].name}'s turn")
+        
+        if self.check_is_terminal():
+            ax.set_title(f"Game over! Scores: {self.player_scores}")
+            plt.pause(2.0)
+        
+        plt.pause(0.01)
+        
+        
+        
+                
     
     def __repr__(self):
         return f"TTTGame(\n{np.array(self.board)}\n)"
