@@ -1,5 +1,5 @@
 import sys
-
+from RLFramework.GameState import GameState
 import numpy as np
 from RLFramework.Game import Game
 from typing import List, Tuple
@@ -43,6 +43,34 @@ class TTTGame(Game):
         if -1 not in np.array(game_state.board).flatten():
             return 0.5
         return 0.0
+    
+    def check_is_player_finished(self, pid : int, game_state: GameState) -> bool:
+        """ Check if a player has a full row/col/diag
+        """
+        arr = np.array(game_state.board)
+        # Check rows and columns
+        for row_idx in range(arr.shape[0]):
+            if np.all(arr[row_idx] == pid):
+                self.logger.info(f"{self.players[pid]} has won with a row")
+                return True
+        for col_idx in range(arr.shape[1]):
+            if np.all(arr[:, col_idx] == pid):
+                self.logger.info(f"{self.players[pid]} has won with a column")
+                return True
+        if np.all(np.diag(arr) == pid) or np.all(np.diag(np.fliplr(arr)) == pid):
+            self.logger.info(f"{self.players[pid]} has won with a diagonal")
+            return True
+        # If we have no free spots, we have finished
+        if -1 not in arr:
+            self.logger.info(f"No available spots.")
+            return True
+        # If the other player is finished, we are finished
+        other_pid = 1 if pid == 0 else 0
+        if other_pid not in game_state.unfinished_players:
+            self.logger.info(f"Other player is finished.")
+            return True
+        
+        return False
     
     def get_all_possible_actions(self) -> List[TTTAction]:
         """ Return all possible actions.
