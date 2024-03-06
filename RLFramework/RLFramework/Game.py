@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 import numpy as np
 from typing import List, TYPE_CHECKING, Dict, Any
 import functools as ft
+import matplotlib.pyplot as plt
 
 from .utils import _NoneLogger, _get_logger
 from .GameState import GameState
@@ -15,10 +16,14 @@ class Game(ABC):
     def __init__(self,
                  game_state_class,
                  logger_args: Dict[str, Any] = None,
+                 render_mode : str = "",
                 ):
         """ Initializes the Game instance.
         This is mainly used to set up the logger.
         """
+        if render_mode == "human":
+            self.init_render_human()
+        self.render_mode = render_mode
         self.game_state_class : GameState = game_state_class
         self.logger_args = logger_args
         self.logger = _get_logger(logger_args)
@@ -38,6 +43,42 @@ class Game(ABC):
 
     def __repr__(self) -> str:
         return self.game_state_class.from_game(self, copy = False).__repr__()
+    
+    def render_self(self) -> None:
+        """ Render the game state.
+        """
+        print(self)
+        
+    def render_nothing(self) -> None:
+        """ Do nothing.
+        """
+        pass
+    
+    def init_render_human(self) -> None:
+        """ Create a figure and axis for rendering the game state.
+        """
+        self.fig, self.ax = plt.subplots()
+        plt.ion()
+        plt.show()
+        
+    def render_human(self, ax : plt.Axes = None) -> None:
+        """ Plot the game state in a human readable way.
+        """
+        raise NotImplementedError("The render_human method must be implemented in the subclass.")
+    
+    def render(self):
+        """ Render the game state.
+        """
+        if self.render_mode == "human":
+            self.render_human(self.ax)
+        elif self.render_mode == "":
+            self.render_nothing()
+        elif self.render_mode == "text":
+            self.render_self()
+        else:
+            raise ValueError(f"Render mode '{self.render_mode}' not recognized.")
+        
+        
 
     @classmethod
     def from_game_state(cls, game_state : 'GameState', logger_args: Dict[str, Any] = None):
@@ -83,10 +124,10 @@ class Game(ABC):
         self.initialize_game_wrap(players)
         
         self.current_player = self.select_turn(players, self.previous_turns)
-
+        self.render()
         # Play until all players are finished
         while not self.check_is_terminal():
-            print(f"Starting turn for player {self.current_player_name}")
+            #print(f"Starting turn for player {self.current_player_name}")
             # Select the next player to play
             self.current_player_name = players[self.current_player].name
             player = players[self.current_player]
@@ -95,7 +136,7 @@ class Game(ABC):
 
             # Choose an action with the player
             action = player.choose_move(self)
-            print(f"{self.current_player_name} chose action {action}")
+            #print(f"{self.current_player_name} chose action {action}")
             if action is not None:
                 new_state = self.step(action)
                 self.logger.info(f"Player {self.current_player_name} chose action {action}.")
@@ -105,8 +146,9 @@ class Game(ABC):
                 self.update_state_after_action(new_state)
                 new_state.restore_game(self)
             
-            print(f"{self.current_player_name} has {player.score} score")
+            #print(f"{self.current_player_name} has {player.score} score")
             self.logger.debug(f"Game state:\n{new_state}")
+            self.render()
         
         print(f"Game finished with scores: {[p.score for p in players]}")
 
