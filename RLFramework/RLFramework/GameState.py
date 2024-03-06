@@ -93,7 +93,6 @@ class GameState(ABC):
         """ Save the variables from the state_json.
         """
         for key, value in state_json.items():
-            #print(f"key: {key}, value: {value}")
             setattr(self, key, value)
             
     def restore_game(self, game : 'Game') -> None:

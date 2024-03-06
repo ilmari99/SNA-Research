@@ -86,6 +86,7 @@ class Game(ABC):
 
         # Play until all players are finished
         while not self.check_is_terminal():
+            print(f"Starting turn for player {self.current_player_name}")
             # Select the next player to play
             self.current_player_name = players[self.current_player].name
             player = players[self.current_player]
@@ -94,6 +95,7 @@ class Game(ABC):
 
             # Choose an action with the player
             action = player.choose_move(self)
+            print(f"{self.current_player_name} chose action {action}")
             if action is not None:
                 new_state = self.step(action)
                 self.logger.info(f"Player {self.current_player_name} chose action {action}.")
@@ -123,7 +125,7 @@ class Game(ABC):
         result.save_to_file("game_results.csv")
         return result
     
-    def calculate_reward(self, new_state : 'GameState'):
+    def calculate_reward(self, pid:int, new_state : 'GameState'):
         """ Calculate the reward for the player that made the move.
         """
         return 0.0
@@ -157,13 +159,17 @@ class Game(ABC):
         """
         new_state.previous_turns.append(self.current_player)
         next_player = self.select_turn(self.players, new_state.previous_turns)
-        self.update_player_scores_in_gamestate(new_state)
         self.update_finished_players_in_gamestate(new_state)
+        self.update_player_scores_in_gamestate(new_state)
         new_state.current_player = next_player
         return
+    
+    def update_player_attributes(self) -> None:
+        for pl in self.players:
+            pl.score = self.player_scores[pl.pid]
+            pl.is_finished = pl.pid in self.finishing_order
+        return
 
-    
-    
     def step(self, action: 'Action', real_move = True) -> 'GameState':
         """ Perform the given action, and calculate what is the next state.
         This step can be used, when we know the next state exactly. So we don't for example have to lift from deck.
@@ -191,6 +197,7 @@ class Game(ABC):
             if real_move:
                 self.game_states.append(new_state.deepcopy())
                 new_state.restore_game(self)
+                self.update_player_attributes()
 
             return new_state
 
@@ -228,9 +235,10 @@ class Game(ABC):
     def update_player_scores_in_gamestate(self, game_state: GameState) -> None:
         """ Add a reward to the players.
         """
-        print(game_state.state_json)
+        #print(game_state.state_json)
         for pid in range(len(self.players)):
-            game_state.player_scores[pid] += self.calculate_reward(game_state)
+            r = self.calculate_reward(pid, game_state)
+            game_state.player_scores[pid] += r
         return
     
     def update_player_scores_in_self(self) -> None:
