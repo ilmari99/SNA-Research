@@ -24,6 +24,9 @@ class Game(ABC):
         self.logger = _get_logger(logger_args)
         self.game_states : List[GameState] = []
         self.previous_turns : List[int] = []
+        self.unfinished_players : List[int] = []
+        self.finishing_order : List[int] = []
+        self.player_scores : List[float] = []
         self.current_player : int = 0
         self.current_player_name : str = ""
         self.players : List[Player] = []
@@ -31,6 +34,7 @@ class Game(ABC):
     def __init_subclass__(cls) -> None:
         super().__init_subclass__()
         cls.select_turn = cls.select_turn_decorator()(cls.select_turn)
+        cls.check_is_player_finished = ft.lru_cache(maxsize = 256)(cls.check_is_player_finished)
 
     def __repr__(self) -> str:
         return self.game_state_class.from_game(self, copy = False).__repr__()
@@ -60,7 +64,8 @@ class Game(ABC):
             player.initialize_player(self)
         self.logger.info(f"Initialized game with {len(players)} players.")
         self.unfinished_players = [i for i in range(len(players))]
-        self.finished_players = []
+        self.player_scores = [0.0 for _ in range(len(players))]
+        self.finishing_order = []
         
 
     def initialize_game_wrap(self, players : List['Player']) -> None:
@@ -70,16 +75,6 @@ class Game(ABC):
         self.initialize_game(players)
         self.check_correct_initialization()
 
-    def finish_player(self, player : 'Player') -> None:
-        state = self.game_state_class.from_game(self, copy = False)
-        #self.logger.debug(f"Checking if {player.name} is finished. Unfinished players: {self.unfinished_players}")
-        if player.check_is_finished(state) and player.pid in self.unfinished_players:
-            self.unfinished_players.remove(player.pid)
-            self.finished_players.append(player.pid)
-            self.logger.info(f"{player.name} finished the game.")
-            #print(f"Fninished players: {self.finished_players}, unfinished players: {self.unfinished_players}")
-        return
-
 
     def play_game(self, players : List['Player']) -> Result:
         """ Play a game with the given players.
@@ -87,52 +82,35 @@ class Game(ABC):
         # Initilize the game by setting internal variables, custom variables, and checking the initialization
         self.initialize_game_wrap(players)
         
-        players_with_no_moves = []
-        #finishing_order = []
         self.current_player = self.select_turn(players, self.previous_turns)
 
         # Play until all players are finished
-        while not self.check_is_terminal() and len(self.unfinished_players) > 1 and len(players_with_no_moves) < len(self.unfinished_players):
+        while not self.check_is_terminal():
             # Select the next player to play
             self.current_player_name = players[self.current_player].name
             player = players[self.current_player]
-            game_state = self.game_state_class.from_game(self, copy = False)
-
-            # IF the player is finished, skip their turn
-            # This is also triggered, if the player is the only one left
-            self.finish_player(player)
+            game_state = self.game_state_class.from_game(self, copy=False)
+            assert game_state.check_is_game_equal(self), "The game state was not created correctly."
 
             # Choose an action with the player
             action = player.choose_move(self)
+            if action is not None:
+                new_state = self.step(action)
+                self.logger.info(f"Player {self.current_player_name} chose action {action}.")
+            else:
+                new_state = game_state
+                self.logger.info(f"Player '{self.current_player_name}' has no moves.")
+                self.update_state_after_action(new_state)
+                new_state.restore_game(self)
             
-            if action is None:
-                #raise Exception(f"Player {self.current_player} had no valid moves to play, even though the player is not in a terminal state.")
-                self.logger.info(f"Player {self.current_player_name} had no valid moves to play, but is not in a terminal state.")
-                players_with_no_moves.append(self.current_player)
-                continue
-            players_with_no_moves = []
-            self.logger.info(f"Player {self.current_player_name} chose action {action}.")
-            # Perform the action and modify the state, incl. current player
-            new_state = self.step(action)
             print(f"{self.current_player_name} has {player.score} score")
             self.logger.debug(f"Game state:\n{new_state}")
         
-        game_is_draw = False
-        # If the game ended, because no remaining players had any moves, then it's a draw
-        if len(players_with_no_moves) == len(self.unfinished_players):
-            self.logger.info("The remaining players are in a draw.")
-            game_is_draw = True
-            self.unfinished_players = []
-            self.finished_players = list(range(len(players)))
-            # Calculate the reward for the players
-            state = self.game_state_class.from_game(self, copy = False)
-            for i, player in enumerate(players):
-                player.score += self.calculate_reward(state)
-                self.logger.info(f"{player.name} has {player.score} score")
+        print(f"Game finished with scores: {[p.score for p in players]}")
 
-        result = Result(successful = True if self.check_is_terminal() or game_is_draw else False,
+        result = Result(successful = True if self.check_is_terminal() else False,
                         player_jsons = [player.as_json() for player in players],
-                        finishing_order = self.finished_players,
+                        finishing_order = self.finishing_order,
                         logger_args = self.logger_args,
                         game_state_class = self.game_state_class,
                         game_states = self.game_states,
@@ -163,6 +141,28 @@ class Game(ABC):
             return result
         return wrapper
     
+    def update_state_after_action(self, new_state : 'GameState') -> None:
+        """ Once an action has been made, the game state is updated
+        except for the internal variables:
+        - current_player
+        - previous_turns
+        - game_states
+        - player_scores
+        - unfinished_players
+        - finished_players
+
+        Hence, we need to update these variables after the action has been made.
+        The new_state is the state after the action has been made, but
+        before these variables have been updated.
+        """
+        new_state.previous_turns.append(self.current_player)
+        next_player = self.select_turn(self.players, new_state.previous_turns)
+        self.update_player_scores_in_gamestate(new_state)
+        self.update_finished_players_in_gamestate(new_state)
+        new_state.current_player = next_player
+        return
+
+    
     
     def step(self, action: 'Action', real_move = True) -> 'GameState':
         """ Perform the given action, and calculate what is the next state.
@@ -171,60 +171,94 @@ class Game(ABC):
         if real_move is False, then we disable logging, save the current state, modify the game,
         restore to the previous state, and enable logging again.
         """
-        #self.logger.debug(f"Stepping: {action}")
         # If we are making a real move, we can just modify the game
         # If not, we simulate the move and then restore the game state
         if not real_move:
             curr_state = self.game_state_class.from_game(self, copy = True)
 
-        def modify_game():
-            """ Modify the game according to the action.
-            We call the modify_game method of the action, and we also
-            update the under-the-hood variables of the game, such as
-            the current player, previous turns, etc.
+        def make_action_and_update_vars():
+            """ Calculate a game state after making the action.
+            Also update the internal variables of the game_state.
+            If the move is real, we also apply the move to the game.
             """
             # Calculate the new state after making the action
             new_state = action.modify_game(self, inplace = real_move)
-            # Get a reference to the player who made the move
-            player = self.players[self.current_player]
-            # If the move was real, then update self
+            #print(f"Current player after action: {new_state.current_player}")
+            # Update the internal variables of the game_state
+            self.update_state_after_action(new_state)
+            #print(f"Current player after updating state: {new_state.current_player}")
+            # If real move, then also update the games state
             if real_move:
-                # Add knowledge of who made the move
-                self.previous_turns.append(self.current_player)
-                # Get the index if the next player
-                next_player = self.select_turn(self.players, self.previous_turns)
-                # Save the new state
                 self.game_states.append(new_state.deepcopy())
-                # Check if the player is finished, and if yes, remove them from the unfinished players
-                self.finish_player(player)
-                new_state.current_player = next_player
-                # Add the reward to the player
-                player.score += self.calculate_reward(new_state)
-                # Update the current player
-                self.current_player = next_player
-                
-            else:
-                # Here, we are not making a real move, so we change the game state object, rather than self
-                new_state.previous_turns.append(self.current_player)
-                next_player = self.select_turn(self.players, new_state.previous_turns)
-                # Check if the player is finished, and if yes, remove them from the unfinished players
-                if player.check_is_finished(new_state):
-                    new_state.unfinished_players.remove(self.current_player)
-                    new_state.finished_players.append(self.current_player)
-                # Add the reward to the player, so to the score list at the players index
-                new_state.player_scores[self.current_player] += self.calculate_reward(new_state)
-                new_state.current_player = next_player
+                new_state.restore_game(self)
+
             return new_state
 
         # If not real move, then wrap the modify_game function with disable_logging_wrapper
         if not real_move:
-            modify_game = self.disable_logging_wrapper(modify_game)
-        new_state : 'GameState' = modify_game()
+            make_action_and_update_vars = self.disable_logging_wrapper(make_action_and_update_vars)
+        new_state : 'GameState' = make_action_and_update_vars()
         if not real_move:
             assert curr_state.check_is_game_equal(self), "The game state was not restored correctly."
         return new_state
     
+    def _get_finished_players(self, game_state: GameState) -> List[int]:
+        """ Return the indices of the players that are finished.
+        """
+        return [i for i in range(len(self.players)) if self.check_is_player_finished(i, game_state)]
+    
+    def update_finished_players_in_self(self) -> None:
+        game_state = self.game_state_class.from_game(self, copy = False)
+        self.update_finished_players_in_gamestate(game_state)
+        game_state.restore_game(self)
+        return
+    
+    def update_finished_players_in_gamestate(self, game_state: GameState) -> None:
+        """ Update the finishing_order and unfinished_players.
+        """
+        finished_players = self._get_finished_players(game_state)
+        # If there are new finished players, append them to the finishing_order
+        for pid in finished_players:
+            if pid not in game_state.finishing_order:
+                game_state.finishing_order.append(pid)
+        # Remove the finished players from the unfinished_players
+        game_state.unfinished_players = [pid for pid in game_state.unfinished_players if pid not in finished_players]
+        return
+    
+    def update_player_scores_in_gamestate(self, game_state: GameState) -> None:
+        """ Add a reward to the players.
+        """
+        print(game_state.state_json)
+        for pid in range(len(self.players)):
+            game_state.player_scores[pid] += self.calculate_reward(game_state)
+        return
+    
+    def update_player_scores_in_self(self) -> None:
+        game_state = self.game_state_class.from_game(self, copy = False)
+        self.update_player_scores_in_gamestate(game_state)
+        game_state.restore_game(self)
+        return
+        
 
+    @staticmethod
+    def select_turn_decorator():
+        """ Decorator for the select_turn method."""
+        def decorator(func):
+            ft.wraps(func)
+            def wrapper(self, players : List['Player'], previous_turns : List[int]):
+                if len(previous_turns) == 0:
+                    return 0
+                return func(self, players, previous_turns)
+            return wrapper
+        return decorator
+    
+
+    def check_is_terminal(self) -> bool:
+        """ The game is in a terminal state, if all players are finished.
+        """
+        return len(self.unfinished_players) == 0
+    
+    
     def _select_random_turn(self, players : List['Player']) -> int:
         """ Select a random player to play.
         """
@@ -241,29 +275,12 @@ class Game(ABC):
         """
         return np.random.choice([i for i in range(len(players)) if i != self.previous_turns[-1]])
     
-    def _get_finished_players(self):
-        """ Return the indices of the players that are finished.
+    @ft.lru_cache(maxsize = 256)
+    @abstractmethod
+    def check_is_player_finished(self, pid : int, game_state: GameState) -> bool:
+        """ Check if a player has finished in the game_state.
         """
-        return [i for i, player in enumerate(self.players) if player.check_is_finished(self.game_state_class.from_game(self, copy = False))]
-    
-    @staticmethod
-    def select_turn_decorator():
-        """ Decorator for the select_turn method."""
-        def decorator(func):
-            ft.wraps(func)
-            def wrapper(self, players : List['Player'], previous_turns : List[int]):
-                if len(previous_turns) == 0:
-                    return 0
-                return func(self, players, previous_turns)
-            return wrapper
-        return decorator
-
-    def check_is_terminal(self) -> bool:
-        """ The game is in a terminal state, if all players are finished.
-        """
-        return all([player.check_is_finished(self.game_state_class.from_game(self, copy = False)) for player in self.players])
-        
-    
+        pass
 
     @abstractmethod
     def initialize_game(self, players : List['Player']) -> None:

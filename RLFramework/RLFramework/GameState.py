@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 import functools as ft
-from typing import Dict, List, SupportsFloat, TYPE_CHECKING
+from typing import Any, Dict, List, SupportsFloat, TYPE_CHECKING
 import json
 
 import numpy as np
@@ -9,11 +9,6 @@ if TYPE_CHECKING:
     from .Game import Game
     from .Action import Action
     from .Player import Player
-
-REQUIRED_KEYS = ["unfinished_players",
-                 "current_player",
-                 "previous_turns",
-                 ]
 
 class GameState(ABC):
     """ A class representing a state of a game.
@@ -33,26 +28,36 @@ class GameState(ABC):
         If copy is True, the values of the GameState will be deepcopies
         (if possible) of the values of the Game instance.
         """
-        self.state_json = state_json
-        self.check_state_json_has_required_keys(state_json)
+        self._state_json = state_json
+        self.unfinished_players = []
+        self.finished_players = []
+        self.current_player = 0
+        self.previous_turns = []
+        self.player_scores = []
+        self.game_states = []
+        #self.check_state_json_has_required_keys(state_json)
         self.initialize(state_json)
+
+    def update_state_json(self):
+        """ Update the state json.
+        """
+        for k, v in self.__dict__.items():
+            if k in self._state_json:
+                self._state_json[k] = v
+
+    @property
+    def state_json(self):
+        self.update_state_json()
+        return self._state_json
         
     def __init_subclass__(cls) -> None:
         super().__init_subclass__()
         cls.game_to_state_json = cls.game_to_state_json_decorator()(cls.game_to_state_json)
-        
-        
-    def check_state_json_has_required_keys(self, state_json : Dict) -> None:
-        """ Check that the state_json has all the required keys.
-        """
-        
-        for key in REQUIRED_KEYS:
-            assert key in state_json, f"state_json must contain the key {key}"
-            
+
     def deepcopy(self):
         """ Return a deepcopy of the game state.
         """
-        return self.__class__(json.loads(json.dumps(self.state_json)))
+        return self.__class__(json.loads(json.dumps(self._state_json)))
     
         
     @classmethod
@@ -66,8 +71,9 @@ class GameState(ABC):
                 state_json["unfinished_players"] = game.unfinished_players
                 state_json["current_player"] = game.current_player
                 state_json["previous_turns"] = game.previous_turns
-                state_json["player_scores"] = [p.score for p in game.players]
-                state_json["finished_players"] = game.finished_players
+                state_json["player_scores"] = game.player_scores
+                state_json["finishing_order"] = game.finishing_order
+                #state_json["game_states"] = game.game_states if self.copy_game_states else []
                 return state_json
             return wrapper
         return decorator
@@ -87,6 +93,7 @@ class GameState(ABC):
         """ Save the variables from the state_json.
         """
         for key, value in state_json.items():
+            #print(f"key: {key}, value: {value}")
             setattr(self, key, value)
             
     def restore_game(self, game : 'Game') -> None:
@@ -98,11 +105,19 @@ class GameState(ABC):
     def check_is_game_equal(self, game : 'Game') -> bool:
         """ Check if the state of the game matches the state of the GameState.
         """
-        return self.state_json == self.__class__.game_to_state_json(game)
+        suc = self.state_json == self.__class__.game_to_state_json(game)
+        if not suc:
+            print(f"self.state_json: {self.state_json}")
+            print(f"game.state_json: {self.__class__.game_to_state_json(game)}")
+        return suc
+    
     
     def __repr__(self) -> str:
         return np.array(self.state_json["board"]).__repr__()
         #return f"{self.__class__.__name__}({self.state_json})"
+    
+    def __hash__(self) -> int:
+        return hash(tuple(self.to_vector()))
     
     
     @classmethod
@@ -111,7 +126,8 @@ class GameState(ABC):
         """ Convert the game to a state json.
         """
         pass
-    
+
+
     @abstractmethod
     def to_vector(self) -> List[SupportsFloat]:
         """ Return a vector representation of the game state.
