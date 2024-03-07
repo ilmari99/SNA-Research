@@ -1,21 +1,37 @@
 import sys
-from RLFramework.GameState import GameState
+from RLFramework import GameState
 import numpy as np
-from RLFramework.Game import Game
-from typing import List, Tuple
+from RLFramework import Game
+from typing import Dict, List, Tuple
 from TTTAction import TTTAction
 from TTTGameState import TTTGameState
 from TTTPlayer import TTTPlayer
 import matplotlib.pyplot as plt
+from RLFramework.utils import TFLiteModel
 
 
 class TTTGame(Game):
     """ A class representing the game TicTacToe.
     """
-    def __init__(self, board_size : Tuple[int, int] = (3, 3), logger_args : dict = None, render_mode : str = ""):
-        super().__init__(TTTGameState, logger_args, render_mode)
+    def __init__(self, board_size : Tuple[int, int] = (3, 3), model_paths : List[str] = [], **kwargs):
+        super().__init__(TTTGameState, **kwargs)
         self.board_size = board_size
-        #self.board = [[-1 for _ in range(board_size[1])] for _ in range(board_size[0])]
+        self.models = {path: TFLiteModel(path) for path in model_paths}
+        
+        
+    def get_model(self, model_name : str) -> TFLiteModel:
+        """ Get the model with the given name.
+        """
+        try:
+            return self.models[model_name]
+        except KeyError:
+            raise ValueError(f"Model with name {model_name} not found. Available models: {list(self.models.keys())}")
+        
+    def set_models(self, model_paths : List[str]) -> None:
+        """ Set the models to the given paths.
+        """
+        self.models = {path: TFLiteModel(path) for path in model_paths}  
+    
     
     def initialize_game(self, players: List[TTTPlayer]) -> None:
         """ When the game is started, we need to set the board.
@@ -24,6 +40,7 @@ class TTTGame(Game):
 
     def restore_game(self, game_state: TTTGameState) -> None:
         """ Restore the game to the state described by the game_state.
+        We don't need to worry about the players states or their scores, as they are automatically restored.
         """
         self.board = game_state.board
     
