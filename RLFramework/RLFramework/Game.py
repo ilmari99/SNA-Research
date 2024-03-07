@@ -17,10 +17,14 @@ class Game(ABC):
                  game_state_class,
                  logger_args: Dict[str, Any] = None,
                  render_mode : str = "",
+                 gather_data : str = "",
+                 custom_result_class = None,
                 ):
         """ Initializes the Game instance.
         This is mainly used to set up the logger.
         """
+        self.result_class = custom_result_class if custom_result_class else Result
+        self.gather_data = gather_data
         if render_mode == "human":
             self.init_render_human()
         self.render_mode = render_mode
@@ -35,6 +39,41 @@ class Game(ABC):
         self.current_player : int = 0
         self.current_player_name : str = ""
         self.players : List[Player] = []
+        self.verify_self()
+        
+    def verify_self(self) -> None:
+        """ Verify that the game is correctly initialized.
+        """
+        assert self.render_mode in ["human", "text", ""], f"render_mode must be 'human', 'text', or '', not {self.render_mode}"
+        assert (self.gather_data and len(self.gather_data) > 4) or not self.gather_data, "gather_data must be a string with length > 4, or \"\"."
+        assert isinstance(self.game_state_class, type), f"game_state_class must be a class, not {type(self.game_state_class)}"
+        assert issubclass(self.game_state_class, GameState), f"game_state_class must be a subclass of GameState, not {self.game_state_class}"
+        assert isinstance(self.result_class, type), f"result_class must be a class, not {type(self.result_class)}"
+        assert issubclass(self.result_class, Result), f"result_class must be a subclass of Result, not {self.result_class}"
+        
+    def load_models(self, model_paths : List[str]) -> None:
+        """ Load the given model paths into Tflite models.
+        """
+        
+    
+    def reset(self) -> None:
+        """ Reset the game to the initial state, with no player data.
+        """
+        self.game_states = []
+        self.previous_turns = []
+        self.unfinished_players = []
+        self.finishing_order = []
+        self.player_scores = []
+        self.current_player = 0
+        self.current_player_name = ""
+        self.players = []
+        
+        if self.render_mode == "human":
+            plt.cla()
+            plt.clf()
+            plt.close()
+            self.init_render_human()
+        return
         
     def __init_subclass__(cls) -> None:
         super().__init_subclass__()
@@ -120,6 +159,7 @@ class Game(ABC):
     def play_game(self, players : List['Player']) -> Result:
         """ Play a game with the given players.
         """
+        self.reset()
         # Initilize the game by setting internal variables, custom variables, and checking the initialization
         self.initialize_game_wrap(players)
         
@@ -152,7 +192,7 @@ class Game(ABC):
         
         print(f"Game finished with scores: {[p.score for p in players]}")
 
-        result = Result(successful = True if self.check_is_terminal() else False,
+        result = self.result_class(successful = True if self.check_is_terminal() else False,
                         player_jsons = [player.as_json() for player in players],
                         finishing_order = self.finishing_order,
                         logger_args = self.logger_args,
@@ -164,7 +204,8 @@ class Game(ABC):
         for k,v in result.as_json(states_as_num = True).items():
             s += f"\n{k}: {v}"
         self.logger.info(s)
-        result.save_to_file("game_results.csv")
+        if self.gather_data and result.successful:
+            result.save_game_states_to_file(self.gather_data)
         return result
     
     def calculate_reward(self, pid:int, new_state : 'GameState'):

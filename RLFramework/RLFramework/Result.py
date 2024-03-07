@@ -27,21 +27,37 @@ class Result:
         self.game_states = game_states
         self.previous_turns = previous_turns
 
-    def save_to_file(self, file_path : str) -> None:
+    def save_game_states_to_file(self, file_path : str) -> None:
         """ Take all the game states as vectors (X), and label them with the final score of the player.
         """
         assert file_path.endswith(".csv"), f"file_path must end with .csv, not {file_path}"
         player_final_scores = self.game_states[-1].player_scores
+        print(f"Final scores: {player_final_scores}")
+        print(f"Number of game states: {len(self.game_states)}")
         Xs = []
         ys = []
         for game_state in self.game_states:
-            pid = game_state.current_player
-            Xs.append(game_state.to_vector())
-            ys.append(player_final_scores[pid])
-        Xs = np.array(Xs, dtype=np.int32)
-        ys = np.array(ys, dtype=np.int32)
-        # Save to csv
-        np.savetxt(file_path, np.hstack((Xs, ys.reshape(-1, 1))), delimiter = ",", fmt = "%d")
+            x = game_state.to_vector()
+            # Save the state from each player's perspective.
+            for perspective_pid in range(len(player_final_scores)):
+                Xs.append(x + [perspective_pid])
+                ys.append(player_final_scores[perspective_pid])
+        print(set([len(x) for x in Xs]))
+        Xs = np.array(Xs, dtype=np.float16)
+        ys = np.array(ys, dtype=np.float16)
+        arr = np.hstack((Xs, ys.reshape(-1, 1)))
+        self.save_array_to_file(arr, file_path)
+        print(f"Saved {len(Xs)} states with {Xs.shape[1]} features to {file_path}")
+        
+    def save_array_to_file(self, arr : np.ndarray, file_path : str) -> None:
+        """ Write the array to a file.
+        NOTE: Overwrite this if you want to customize how the array is saved.
+        """
+        arr = arr.astype(np.float16)
+        with open(file_path, "a") as f:
+            fmt = "%f"
+            np.savetxt(f, arr, delimiter=",", fmt=fmt)
+        
         
 
 
