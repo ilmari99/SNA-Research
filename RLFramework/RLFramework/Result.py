@@ -42,12 +42,11 @@ class Result:
             for perspective_pid in range(len(player_final_scores)):
                 Xs.append(x + [perspective_pid])
                 ys.append(player_final_scores[perspective_pid])
-        print(set([len(x) for x in Xs]))
         Xs = np.array(Xs, dtype=np.float16)
         ys = np.array(ys, dtype=np.float16)
         arr = np.hstack((Xs, ys.reshape(-1, 1)))
         self.save_array_to_file(arr, file_path)
-        print(f"Saved {len(Xs)} states with {Xs.shape[1]} features to {file_path}")
+        #print(f"Saved {len(Xs)} states with {Xs.shape[1]} features to {file_path}")
         
     def save_array_to_file(self, arr : np.ndarray, file_path : str) -> None:
         """ Write the array to a file.

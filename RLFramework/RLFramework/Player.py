@@ -25,7 +25,7 @@ class Player(ABC):
             "log_file" : None,
             "write_mode" : "w",
         }
-        self.logger_args = {**default_logger_args, **logger_args}
+        self.logger_args = {**default_logger_args, **logger_args} if logger_args is not None else None
         self.logger = _get_logger(self.logger_args)
         self.is_finished = False
         self.pid = None

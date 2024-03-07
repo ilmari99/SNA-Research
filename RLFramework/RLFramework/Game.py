@@ -4,7 +4,7 @@ from typing import List, TYPE_CHECKING, Dict, Any
 import functools as ft
 import matplotlib.pyplot as plt
 
-from .utils import _NoneLogger, _get_logger
+from .utils import _NoneLogger, TFLiteModel, _get_logger
 from .GameState import GameState
 from .Result import Result
 if TYPE_CHECKING:
@@ -50,11 +50,6 @@ class Game(ABC):
         assert issubclass(self.game_state_class, GameState), f"game_state_class must be a subclass of GameState, not {self.game_state_class}"
         assert isinstance(self.result_class, type), f"result_class must be a class, not {type(self.result_class)}"
         assert issubclass(self.result_class, Result), f"result_class must be a subclass of Result, not {self.result_class}"
-        
-    def load_models(self, model_paths : List[str]) -> None:
-        """ Load the given model paths into Tflite models.
-        """
-        
     
     def reset(self) -> None:
         """ Reset the game to the initial state, with no player data.
@@ -69,9 +64,6 @@ class Game(ABC):
         self.players = []
         
         if self.render_mode == "human":
-            plt.cla()
-            plt.clf()
-            plt.close()
             self.init_render_human()
         return
         
@@ -96,6 +88,9 @@ class Game(ABC):
     def init_render_human(self) -> None:
         """ Create a figure and axis for rendering the game state.
         """
+        plt.cla()
+        plt.clf()
+        plt.close()
         self.fig, self.ax = plt.subplots()
         plt.ion()
         plt.show()
@@ -190,7 +185,7 @@ class Game(ABC):
             self.logger.debug(f"Game state:\n{new_state}")
             self.render()
         
-        print(f"Game finished with scores: {[p.score for p in players]}")
+        #print(f"Game finished with scores: {[p.score for p in players]}")
 
         result = self.result_class(successful = True if self.check_is_terminal() else False,
                         player_jsons = [player.as_json() for player in players],

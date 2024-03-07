@@ -11,7 +11,6 @@ class TFLiteModel:
         """ Initialize the model.
         """
         path = os.path.abspath(path)
-        self.expand_input_dims = expand_input_dims
         if not os.path.exists(path):
             raise FileNotFoundError(f"Model file not found at {path}")
         self.interpreter = tf.lite.Interpreter(model_path=path)
@@ -19,25 +18,27 @@ class TFLiteModel:
         self.output_details = self.interpreter.get_output_details()
         self.interpreter.allocate_tensors()
         
-    def validate_input(self, X) -> None:
+    def is_valid_size_input(self, X) -> bool:
         """ Validate the input.
         """
-        if not isinstance(X, np.ndarray):
-            raise ValueError(f"X should be a numpy array, not {type(X)}")
-        if X.shape != self.input_details[0]['shape'][1:]:
-            raise ValueError(f"X should have shape {self.input_details[0]['shape'][1:]}, not {X.shape}")
+        is_valid = X.shape[1:] == self.input_details[0]['shape'][1:]
+        return True if all(is_valid) else False
         
     def predict(self, X) -> List[float]:
         """ Predict the output of the model.
         The input should be a numpy array with size (batch_size, input_size)
         """
-        if self.expand_input_dims:
-            X = np.expand_dims(X, axis=-1)
-        self.validate_input(X)
+        if not self.is_valid_size_input(X):
+            # Add a dimension to the input
+            X = np.expand_dims(X, axis = -1)
+            if not self.is_valid_size_input(X):
+                raise ValueError(f"Input shape {X.shape} is not valid for the model. Expected shape {self.input_details[0]['shape']}")
+        self.interpreter.resize_tensor_input(self.input_details[0]['index'], X.shape)
+        self.interpreter.allocate_tensors()
         self.interpreter.set_tensor(self.input_details[0]['index'], X)
         self.interpreter.invoke()
         out = self.interpreter.get_tensor(self.output_details[0]['index'])
-        out = out[0]
+        return list(out)
         
 class _NoneLogger(logging.Logger):
     """ A logger that does nothing.
