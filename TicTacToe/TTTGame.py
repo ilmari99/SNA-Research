@@ -1,5 +1,8 @@
+import os
 import sys
 from RLFramework import GameState
+from RLFramework.Player import Player
+from RLFramework.Result import Result
 import numpy as np
 from RLFramework import Game
 from typing import Dict, List, Tuple
@@ -13,24 +16,35 @@ from RLFramework.utils import TFLiteModel
 class TTTGame(Game):
     """ A class representing the game TicTacToe.
     """
-    def __init__(self, board_size : Tuple[int, int] = (3, 3), model_paths : List[str] = [], **kwargs):
+    def __init__(self, board_size : Tuple[int, int] = (3, 3), **kwargs):
         super().__init__(TTTGameState, **kwargs)
         self.board_size = board_size
-        self.models = {path: TFLiteModel(path) for path in model_paths}
+        self.model_paths = []
         
+    def play_game(self, players: List[Player]) -> Result:
+        # Load the models before playing the game
+        current_models = set(self.model_paths)
+        model_paths = set([p.model_path for p in players if (hasattr(p, "model_path") and p.model_path is not None)])
+        # If there are any new models, load them
+        if model_paths - current_models:
+            self.set_models(list(model_paths))
+        return super().play_game(players)
         
+    
     def get_model(self, model_name : str) -> TFLiteModel:
         """ Get the model with the given name.
         """
+        model_name = os.path.abspath(model_name)
         try:
             return self.models[model_name]
         except KeyError:
             raise ValueError(f"Model with name {model_name} not found. Available models: {list(self.models.keys())}")
         
-    def set_models(self, model_paths : List[str]) -> None:
+    def set_models(self, model_paths : List[str], convolutionals : List[bool] = []) -> None:
         """ Set the models to the given paths.
         """
-        self.models = {path: TFLiteModel(path) for path in model_paths}  
+        self.model_paths = model_paths
+        self.models = {path: TFLiteModel(path) for path in model_paths}
     
     
     def initialize_game(self, players: List[TTTPlayer]) -> None:
@@ -47,7 +61,7 @@ class TTTGame(Game):
     def select_turn(self, players: List[TTTPlayer], previous_turns: List[int]) -> int:
         return super()._select_round_turn(players, previous_turns)
     
-    def calculate_reward(self,pid : int, game_state: TTTGameState) -> float:
+    def calculate_reward(self, pid : int, game_state: TTTGameState) -> float:
         """ Calculate the reward for the player.
         If the player wins, the reward is 1.0.
         If the game is a draw, the reward is 0.5

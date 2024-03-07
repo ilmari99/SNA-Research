@@ -1,3 +1,4 @@
+from typing import List
 import numpy as np
 from RLFramework.Game import Game
 from RLFramework.GameState import GameState
@@ -10,7 +11,7 @@ class TTTPlayer(Player):
     def __init__(self, name, logger_args = None):
         super().__init__(name, logger_args)
         
-    def evaluate_states(self, states):
+    def evaluate_states(self, states) -> List[float]:
         """ Evaluate the states.
         """
         return [np.random.random() for _ in states]
@@ -18,6 +19,7 @@ class TTTPlayer(Player):
     def initialize_player(self, game: Game) -> None:
         """ Called when a game begins.
         """
+        self.game : Game = game
         return
     
     def select_action_strategy(self, evaluations):
