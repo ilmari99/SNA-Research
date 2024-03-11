@@ -4,7 +4,7 @@ from typing import List, TYPE_CHECKING
 import numpy as np
 import functools as ft
 
-from .utils import _NoneLogger, _get_logger
+from .utils import _get_logger
 from .Action import Action
 if TYPE_CHECKING:
     from .GameState import GameState

@@ -32,8 +32,8 @@ class Result:
         """
         assert file_path.endswith(".csv"), f"file_path must end with .csv, not {file_path}"
         player_final_scores = self.game_states[-1].player_scores
-        print(f"Final scores: {player_final_scores}")
-        print(f"Number of game states: {len(self.game_states)}")
+        #print(f"Final scores: {player_final_scores}")
+        #print(f"Number of game states: {len(self.game_states)}")
         Xs = []
         ys = []
         for game_state in self.game_states:
@@ -57,9 +57,6 @@ class Result:
             fmt = "%f"
             np.savetxt(f, arr, delimiter=",", fmt=fmt)
         
-        
-
-
 
 
     def as_json(self, states_as_num = False) -> Dict[str, Any]:
