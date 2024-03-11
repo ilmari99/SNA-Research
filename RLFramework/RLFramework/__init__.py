@@ -3,4 +3,5 @@ from .Player import Player
 from .Result import Result
 from .GameState import GameState
 from .Game import Game
+from .simulate import simulate_games
 
