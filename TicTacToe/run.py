@@ -8,7 +8,7 @@ from TTTResult import TTTResult
 from TTTHumanPlayer import TTTHumanPlayer
 
 
-game : TTTGame = TTTGame(board_size=(5,5),
+game : TTTGame = TTTGame(board_size=(3,3),
                          logger_args = {"log_level" : 10, "log_file" : "TTTGame.log"},
                          render_mode = "human",
                          gather_data = "",
@@ -16,8 +16,9 @@ game : TTTGame = TTTGame(board_size=(5,5),
 )
 
 player1 = TTTPlayer("RandomPlayer1", logger_args={"log_level" : 10, "log_file" : "TTTPlayer0.log"})
-player2 = TTTPlayerNeuralNet(model_path="/home/ilmari/python/RLFramework/ModelFiles/model_conv5x5_bin0455.tflite",
+player2 = TTTPlayerNeuralNet(model_path="/home/ilmari/python/RLFramework/models/model_9.tflite",
                                 name=f"NeuralNetPlayer1",
+                                move_selection_temp=0,
                                 logger_args=None)
 human = TTTHumanPlayer("HumanPlayer", logger_args={"log_level" : 10, "log_file" : "TTTPlayer1.log"})
 
