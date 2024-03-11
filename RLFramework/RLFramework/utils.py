@@ -43,6 +43,10 @@ class TFLiteModel:
 class _NoneLogger(logging.Logger):
     """ A logger that does nothing.
     """
+    @property
+    def name(self):
+        return "NoneLogger"
+    
     def __init__(self):
         pass
     def debug(self, *args, **kwargs):
