@@ -51,7 +51,8 @@ def simulate_games(game_constructor,
                    num_games: int,
                    num_files: int = -1,
                    num_cpus: int = -1,
-                   exists_ok: bool = True
+                   exists_ok: bool = True,
+                   return_results: bool = False
                    ) -> None:
     """Simulate games using the given game and players constructors.
     In total, this function will simulate num_games games.
@@ -72,6 +73,8 @@ def simulate_games(game_constructor,
     # If num_files is not specified, we run the simulation once.
     # Otherwise, we run num_files games at a time.
     if num_files == -1:
+        if return_results:
+            return _simulate_games_once(game_constructor, players_constructor, num_games, num_cpus, folder)
         _simulate_games_once(game_constructor, players_constructor, num_games, num_cpus, folder)
         return
     num_cpus = mp.cpu_count() if num_cpus == -1 else num_cpus
@@ -80,7 +83,12 @@ def simulate_games(game_constructor,
         warnings.warn(f"Number of games per round (num_files={num_files}) is less than the desired number of cpus ({num_cpus}). In this case, all cpus will not be used.")
     print(f"Simulating {num_games} games using {min(num_files, num_cpus)} cpus.")
     print(f"The games will be simulated in {num_games//num_files} rounds.")
+    results = []
     for i in tqdm.tqdm(range(num_games//num_files)):
+        if return_results:
+            results.extend(_simulate_games_once(game_constructor, players_constructor, num_files, num_cpus, folder))
         _simulate_games_once(game_constructor, players_constructor, num_files, num_cpus, folder)
+    if return_results:
+        return results
     return
     
