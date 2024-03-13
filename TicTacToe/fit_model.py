@@ -18,32 +18,32 @@ def game_constructor(i):
                             )
 
 def players_constructor(i, model_path):
-    if model_path:
-        # Get the epoch number from the model path
-        model_base_path = model_path.split("/")[-1]
-        epoch_num = int(model_base_path.split("_")[1].split(".")[0])
-        # The previous models are in the same folder, but with different epoch numbers
-        all_model_paths = [os.path.abspath(f"../../models/model_{i}.tflite") for i in range(epoch_num + 1)]
-        #print(all_model_paths)
-        # In the simulation, we play games with the current and previous models
-        # To do that, we'll create a dict of players, where the keys are the model paths, and the values are the weights
-        # for picking that player. The weight is the epoch number.
-        models_weighted_set = {model_path_ : epoch_num_ + 1 for model_path_, epoch_num_ in zip(all_model_paths, range(epoch_num+1))}
-        # Softmax the weights
-        model_weights = np.array(list(models_weighted_set.values()))
-        model_weights = np.exp(model_weights) / np.sum(np.exp(model_weights))
-        
-        models_weighted_set = {model_path_ : w for model_path_, w in zip(all_model_paths, model_weights)}
-        #print(models_weighted_set)
-        players = [TTTPlayerNeuralNet(name=f"Player{j}_{i}",
-                                      logger_args=None,
-                                      model_path=np.random.choice(list(models_weighted_set.keys()), p=list(models_weighted_set.values())),
-                                      move_selection_temp=1,
-                                      )
-                   for j in range(2)]
-        
-        return players
-    return [TTTPlayer(name=f"Player{j}_{i}", logger_args=None) for j in range(2)]
+    if not model_path:
+        return [TTTPlayer(name=f"Player{j}_{i}", logger_args=None) for j in range(2)]
+    # Get the epoch number from the model path
+    model_base_path = model_path.split("/")[-1]
+    epoch_num = int(model_base_path.split("_")[1].split(".")[0])
+    # The previous models are in the same folder, but with different epoch numbers
+    all_model_paths = [os.path.abspath(f"../../models/model_{i}.tflite") for i in range(epoch_num + 1)]
+    #print(all_model_paths)
+    # In the simulation, we play games with the current and previous models
+    # To do that, we'll create a dict of players, where the keys are the model paths, and the values are the weights
+    # for picking that player. The weight is the epoch number.
+    models_weighted_set = {model_path_ : epoch_num_ + 1 for model_path_, epoch_num_ in zip(all_model_paths, range(epoch_num+1))}
+    # Softmax the weights
+    model_weights = np.array(list(models_weighted_set.values()))
+    model_weights = np.exp(model_weights) / np.sum(np.exp(model_weights))
+    
+    models_weighted_set = {model_path_ : w for model_path_, w in zip(all_model_paths, model_weights)}
+    #print(models_weighted_set)
+    players = [TTTPlayerNeuralNet(name=f"Player{j}_{i}",
+                                    logger_args=None,
+                                    model_path=np.random.choice(list(models_weighted_set.keys()), p=list(models_weighted_set.values())),
+                                    move_selection_temp=1,
+                                    )
+                for j in range(2)]
+    
+    return players
 
 def model_fit(ds, epoch, num_samples):
     # Expand ds to have a channel dimension
@@ -93,7 +93,7 @@ if __name__ == "__main__":
               model_fit,
               starting_model_path="",
               num_epochs=5,
-              num_games=5000,
+              num_games=2*128,
               num_files=-1,
               num_cpus=12,
               folder="TicTacToeModelFit",
