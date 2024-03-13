@@ -42,7 +42,7 @@ class Result:
             x = game_state.to_vector()
             # Save the state from each player's perspective.
             for perspective_pid in range(len(player_final_scores)):
-                Xs.append([perspective_pid] + x)
+                Xs.append(x)
                 ys.append(player_final_scores[perspective_pid])
         Xs = np.array(Xs, dtype=np.float16)
         ys = np.array(ys, dtype=np.float16)

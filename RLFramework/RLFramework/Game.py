@@ -73,7 +73,13 @@ class Game(ABC):
         cls.check_is_player_finished = ft.lru_cache(maxsize = 256)(cls.check_is_player_finished)
 
     def __repr__(self) -> str:
-        return self.game_state_class.from_game(self, copy = False).__repr__()
+        return self.get_current_state().__repr__()
+    
+    def get_current_state(self, player : 'Player' = None) -> GameState:
+        """ Return the current state of the game.
+        """
+        player = player if player else self.players[self.current_player]
+        return self.game_state_class.from_game(self, player=player, copy = False)
     
     def render_self(self) -> None:
         """ Render the game state.
@@ -166,7 +172,7 @@ class Game(ABC):
             # Select the next player to play
             self.current_player_name = players[self.current_player].name
             player = players[self.current_player]
-            game_state = self.game_state_class.from_game(self, copy=False)
+            game_state = self.get_current_state(player)
             assert game_state.check_is_game_equal(self), "The game state was not created correctly."
 
             # Choose an action with the player
@@ -263,7 +269,7 @@ class Game(ABC):
         # If we are making a real move, we can just modify the game
         # If not, we simulate the move and then restore the game state
         if not real_move:
-            curr_state = self.game_state_class.from_game(self, copy = True)
+            curr_state = self.game_state_class.from_game(self, player=self.players[self.current_player], copy = True)
 
         def make_action_and_update_vars():
             """ Calculate a game state after making the action.
@@ -298,7 +304,7 @@ class Game(ABC):
         return [i for i in range(len(self.players)) if self.check_is_player_finished(i, game_state)]
     
     def update_finished_players_in_self(self) -> None:
-        game_state = self.game_state_class.from_game(self, copy = False)
+        game_state = self.get_current_state()
         self.update_finished_players_in_gamestate(game_state)
         game_state.restore_game(self)
         return
@@ -325,7 +331,7 @@ class Game(ABC):
         return
     
     def update_player_scores_in_self(self) -> None:
-        game_state = self.game_state_class.from_game(self, copy = False)
+        game_state = self.get_current_state()
         self.update_player_scores_in_gamestate(game_state)
         game_state.restore_game(self)
         return

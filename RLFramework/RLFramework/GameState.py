@@ -65,25 +65,28 @@ class GameState(ABC):
         """ Decorator for the game_to_state_json method."""
         def decorator(func):
             @ft.wraps(func)
-            def wrapper(game : 'Game'):
-                state_json = func(cls, game)
+            def wrapper(game : 'Game', player : 'Player' = None):
+                if player is None:
+                    player = game.players[game.current_player]
+                state_json = func(cls, game, player)
                 # Add the required keys
                 state_json["unfinished_players"] = game.unfinished_players
                 state_json["current_player"] = game.current_player
                 state_json["previous_turns"] = game.previous_turns
                 state_json["player_scores"] = game.player_scores
                 state_json["finishing_order"] = game.finishing_order
+                state_json["perspective_pid"] = player.pid
                 #state_json["game_states"] = game.game_states if self.copy_game_states else []
                 return state_json
             return wrapper
         return decorator
     
     @classmethod
-    def from_game(cls, game : 'Game', copy : bool = True):
+    def from_game(cls, game : 'Game', player : 'Player' = None, copy : bool = True):
         """ Create a GameState from a Game instance.
         If copy is True, the values of the GameState will be deepcopies
         """
-        state_json = cls.game_to_state_json(game)
+        state_json = cls.game_to_state_json(game, player)
         if copy:
             # "Deepcopy" the state_json
             state_json = json.loads(json.dumps(state_json))
@@ -121,7 +124,7 @@ class GameState(ABC):
     
     @classmethod
     @abstractmethod
-    def game_to_state_json(cls, game : 'Game') -> Dict:
+    def game_to_state_json(cls, game : 'Game', player : 'Player' = None) -> Dict:
         """ Convert the game to a state json.
         """
         pass
