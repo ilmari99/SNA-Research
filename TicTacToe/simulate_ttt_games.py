@@ -18,8 +18,9 @@ def game_constructor(i):
                             )
 
 def players_constructor(i):
-    players = [TTTPlayerNeuralNet(model_path="/home/ilmari/python/RLFramework/models/model_2.tflite",
+    players = [TTTPlayerNeuralNet(model_path="/home/ilmari/python/RLFramework/models/model_5.tflite",
                                 name=f"NeuralNetPlayer1_{i}",
+                                move_selection_temp=0,
                                 logger_args=None),
                TTTPlayer(name=f"Player2_{i}", logger_args=None)]
     random.shuffle(players)
@@ -45,6 +46,7 @@ if __name__ == "__main__":
     player_name_to_wins = {"NeuralNetPlayer1" : 0, "Player2" : 0}
     for r in res:
         if r.winner:
+            print(r)
             player_name_to_wins[r.winner.split("_")[0]] += 1
     print(player_name_to_wins)
     

@@ -10,7 +10,7 @@ class Action(ABC):
     The action class is passed to the the Game.step() -method, which then returns the new state of the game.
     """
     def __init__(self):
-        pass
+        raise NotImplementedError("When subclassing Action, you must implement the __init__ method.")
     
     def __init_subclass__(cls) -> None:
         super().__init_subclass__()

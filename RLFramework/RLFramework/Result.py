@@ -18,6 +18,7 @@ class Result:
                  game_state_class : 'GameState' = None,
                  game_states : List['GameState'] = None,
                  previous_turns : List[int] = None,
+                 winner : str = None,
         ):
         self.successful = successful
         self.player_jsons = player_jsons
@@ -26,6 +27,7 @@ class Result:
         self.game_state_class = game_state_class
         self.game_states = game_states
         self.previous_turns = previous_turns
+        self.winner = winner
 
     def save_game_states_to_file(self, file_path : str) -> None:
         """ Take all the game states as vectors (X), and label them with the final score of the player.
@@ -40,7 +42,7 @@ class Result:
             x = game_state.to_vector()
             # Save the state from each player's perspective.
             for perspective_pid in range(len(player_final_scores)):
-                Xs.append(x + [perspective_pid])
+                Xs.append([perspective_pid] + x)
                 ys.append(player_final_scores[perspective_pid])
         Xs = np.array(Xs, dtype=np.float16)
         ys = np.array(ys, dtype=np.float16)
@@ -56,8 +58,6 @@ class Result:
         with open(file_path, "a") as f:
             fmt = "%f"
             np.savetxt(f, arr, delimiter=",", fmt=fmt)
-        
-
 
     def as_json(self, states_as_num = False) -> Dict[str, Any]:
         """ Return the result as a json.
@@ -68,5 +68,9 @@ class Result:
                 "logger_args" : self.logger_args,
                 "game_state_class" : self.game_state_class.__name__,
                 "game_states" : len(self.game_states) if states_as_num else self.game_states,
+                "winner" : self.winner,
                 #"previous_turns" : self.previous_turns,
                 }
+        
+    def __repr__(self):
+        return f"Result(successful={self.successful}, player_scores={[p['score'] for p in self.player_jsons]}, winner={self.winner})"

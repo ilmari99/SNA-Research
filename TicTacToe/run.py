@@ -22,7 +22,7 @@ player2 = TTTPlayerNeuralNet(model_path="/home/ilmari/python/RLFramework/models/
                                 logger_args=None)
 human = TTTHumanPlayer("HumanPlayer", logger_args={"log_level" : 10, "log_file" : "TTTPlayer1.log"})
 
-res1 = game.play_game([player2, human])
+res1 = game.play_game([human, player2])
 
 res_json = res1.as_json(states_as_num = True)
 for k,v in res_json.items():

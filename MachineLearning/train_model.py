@@ -48,24 +48,11 @@ def get_conv_model(input_shape):
     
     model = tf.keras.Model(inputs=inputs, outputs=out)
     
-    loss = TieToLoss()
     model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.001),
             loss=loss,
             metrics=['mae', 'mse']
     )
     return model
-
-class TieToLoss(tf.keras.losses.Loss):
-    """ A custom loss function, that is BCE.
-    If y_true is 0.5 (tie), then the y_true will be set to 0
-    """
-    def __init__(self, name="tie_to_loss", **kwargs):
-        super().__init__(name=name, **kwargs)
-        self.bce = tf.keras.losses.BinaryCrossentropy(reduction=tf.keras.losses.Reduction.NONE)
-        
-    def call(self, y_true, y_pred):
-        y_true = tf.where(y_true == 0.5, 0.0, y_true)
-        return self.bce(y_true, y_pred)
     
 
 if __name__ == "__main__":
@@ -82,7 +69,7 @@ if __name__ == "__main__":
     parser.add_argument("--model_out_file", help="The file to save the model to. If not specified, the standard naming convention is used.", default="")
     parser.add_argument("--input_shape", help="The input shape of the model", default="(0,)")
     parser.add_argument("--batch_size", help="The batch size", default="16384")
-    parser.add_argument("--validation_split", help="Which fraction to use for validation and test sets.", default="0.05")
+    parser.add_argument("--validation_split", help="Which fraction to use for validation and test sets.", default="0.15")
     parser.add_argument("--patience", help="The patience for early stopping", default="6")
     parser.add_argument("--num_samples_per_file", help="The number of samples per file", default="-1")
     parser.add_argument("--use_conv", help="Use a convolutional model", action="store_true", default=False)

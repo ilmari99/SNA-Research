@@ -4,6 +4,7 @@ import os
 import argparse
 from typing import Tuple, List
 import warnings
+import numpy as np
 import tqdm
 
 from .Game import Game
@@ -11,9 +12,11 @@ from .Result import Result
 from .Player import Player
 
 def run_game(args):
-    i, game_func, players_func = args
+    i, game_func, players_func, seed = args
     game = game_func(i)
     players = players_func(i)
+    random.seed(seed)
+    np.random.seed(seed)
     random.shuffle(players)
     return game.play_game(players)
  
@@ -25,12 +28,12 @@ def _simulate_games_once(game_func,
     os.makedirs(folder, exist_ok=True)
     cwd = os.getcwd()
     os.chdir(folder)
+    
     if num_cpus == -1:
         num_cpus = mp.cpu_count()
-    
 
     with mp.Pool(num_cpus) as pool:
-        res_gen = pool.imap_unordered(run_game, [(i, game_func, players_func) for i in range(num_games)])
+        res_gen = pool.imap_unordered(run_game, [(i, game_func, players_func, random.randint(0, 2**32-1)) for i in range(num_games)])
         #tqdm_bar = tqdm.tqdm(total=num_games)
         results = []
         while True:
@@ -53,7 +56,7 @@ def simulate_games(game_constructor,
                    num_cpus: int = -1,
                    exists_ok: bool = True,
                    return_results: bool = False
-                   ) -> None:
+                   ) -> List[Result]:
     """Simulate games using the given game and players constructors.
     In total, this function will simulate num_games games.
     Additionally, you can specify the number of files to save the results to.

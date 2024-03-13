@@ -55,16 +55,18 @@ def fit_model(
     ds = None
     base_folder = folder
     model_path = starting_model_path
+    prev_folders = []
     for epoch in range(num_epochs):
         folder = f"{base_folder}/epoch_{epoch}"
         player_constructor_temp = PickleableFunction(player_constructor, model_path=model_path)
         # Simulate the games
         print("Simulating games...")
         
-        simulate_games(game_constructor, player_constructor_temp, folder, num_games, num_files, num_cpus, exists_ok=True)
+        simulate_games(game_constructor, player_constructor_temp, folder, num_games, num_files, num_cpus, exists_ok=False)
         # Read the data
         print("Reading data...")
-        ds,nfiles, num_samples = read_to_dataset([folder])
+        prev_folders.append(folder)
+        ds,nfiles, num_samples = read_to_dataset(prev_folders)
         # Fit the model
         print("Fitting model...")
         model_path = model_fit(ds, epoch, num_samples)

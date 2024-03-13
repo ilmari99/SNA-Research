@@ -185,8 +185,12 @@ class Game(ABC):
             self.logger.debug(f"Game state:\n{new_state}")
             self.render()
         
-        #print(f"Game finished with scores: {[p.score for p in players]}")
-
+        # Winner is the player with the higher score
+        winner = players[np.argmax(self.player_scores)].name
+        # If multiple players have the same score, the winner is None
+        if len(set(self.player_scores)) != len(self.player_scores):
+            winner = None
+        
         result = self.result_class(successful = True if self.check_is_terminal() else False,
                         player_jsons = [player.as_json() for player in players],
                         finishing_order = self.finishing_order,
@@ -194,6 +198,7 @@ class Game(ABC):
                         game_state_class = self.game_state_class,
                         game_states = self.game_states,
                         previous_turns = self.previous_turns,
+                        winner=winner,
                         )
         s = "Game finished with results:"
         for k,v in result.as_json(states_as_num = True).items():
@@ -378,6 +383,7 @@ class Game(ABC):
     @abstractmethod
     def restore_game(self, game_state: 'GameState') -> None:
         """ Restore the game to the state described by the game_state.
+        The common variables, such as unfinished players, current player, etc. are restored automatically.
         """
         pass
 

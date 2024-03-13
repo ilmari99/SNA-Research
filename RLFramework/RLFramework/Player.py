@@ -81,7 +81,7 @@ class Player(ABC):
             return self._select_best_action(evaluations)
         assert temperature > 0, f"Temperature must be greater than 0, but was {temperature}"
         # Softmax
-        evaluations_exp = np.exp(evaluations)
+        evaluations_exp = np.exp(evaluations).flatten()
         # Adjust the selection probabilities by using temperature
         evaluations_exp_temp = evaluations_exp / temperature
         probs = evaluations_exp_temp / np.sum(evaluations_exp_temp)

@@ -66,6 +66,7 @@ class TTTGame(Game):
         If the player wins, the reward is 1.0.
         If the game is a draw, the reward is 0.5
         """
+        
         if self.check_player_has_won(pid, game_state):
             return 1.0
         # If game is a draw
@@ -140,10 +141,7 @@ class TTTGame(Game):
             plt.pause(2.0)
         
         plt.pause(0.01)
-        
-        
-        
-                
+
     
     def __repr__(self):
         return f"TTTGame(\n{np.array(self.board)}\n)"
