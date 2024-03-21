@@ -14,6 +14,7 @@ class TTTHumanPlayer(TTTPlayer):
         """ Choose the move to make.
         """
         print(game)
+        print(game.get_current_state().to_vector())
         x, y = input("Enter the x and y coordinates of your move: ").split()
         return TTTAction(int(x), int(y))
         
