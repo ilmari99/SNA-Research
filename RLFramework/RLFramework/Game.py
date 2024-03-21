@@ -166,6 +166,7 @@ class Game(ABC):
         
         self.current_player = self.select_turn(players, self.previous_turns)
         self.render()
+        self.game_states.append(self.get_current_state().deepcopy())
         # Play until all players are finished
         while not self.check_is_terminal():
             #print(f"Starting turn for player {self.current_player_name}")
@@ -181,11 +182,13 @@ class Game(ABC):
             if action is not None:
                 new_state = self.step(action)
                 self.logger.info(f"Player {self.current_player_name} chose action {action}.")
+                state = self.get_current_state(player=player)
+                self.game_states.append(state.deepcopy())
             else:
                 new_state = game_state
                 self.logger.info(f"Player '{self.current_player_name}' has no moves.")
                 self.update_state_after_action(new_state)
-                new_state.restore_game(self)
+                new_state.set_game_state(self)
             
             #print(f"{self.current_player_name} has {player.score} score")
             self.logger.debug(f"Game state:\n{new_state}")
@@ -214,7 +217,7 @@ class Game(ABC):
             result.save_game_states_to_file(self.gather_data)
         return result
     
-    def calculate_reward(self, pid:int, new_state : 'GameState'):
+    def calculate_reward(self, pid : int, new_state : 'GameState'):
         """ Calculate the reward for the player that made the move.
         """
         return 0.0
@@ -284,8 +287,8 @@ class Game(ABC):
             #print(f"Current player after updating state: {new_state.current_player}")
             # If real move, then also update the games state
             if real_move:
-                self.game_states.append(new_state.deepcopy())
-                new_state.restore_game(self)
+                #self.game_states.append(new_state.deepcopy())
+                new_state.set_game_state(self)
                 self.update_player_attributes()
 
             return new_state
@@ -306,7 +309,7 @@ class Game(ABC):
     def update_finished_players_in_self(self) -> None:
         game_state = self.get_current_state()
         self.update_finished_players_in_gamestate(game_state)
-        game_state.restore_game(self)
+        game_state.set_game_state(self)
         return
     
     def update_finished_players_in_gamestate(self, game_state: GameState) -> None:
@@ -333,7 +336,7 @@ class Game(ABC):
     def update_player_scores_in_self(self) -> None:
         game_state = self.get_current_state()
         self.update_player_scores_in_gamestate(game_state)
-        game_state.restore_game(self)
+        game_state.set_game_state(self)
         return
         
 
