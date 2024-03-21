@@ -98,7 +98,7 @@ class GameState(ABC):
         for key, value in state_json.items():
             setattr(self, key, value)
             
-    def restore_game(self, game : 'Game') -> None:
+    def set_game_state(self, game : 'Game') -> None:
         """ Restore the state of the game to match the state of the GameState.
         """
         for key, value in self.state_json.items():
@@ -131,7 +131,7 @@ class GameState(ABC):
 
 
     @abstractmethod
-    def to_vector(self) -> List[SupportsFloat]:
+    def to_vector(self, perspective_pid : int = None) -> List[SupportsFloat]:
         """ Return a vector representation of the game state.
         """
         pass
