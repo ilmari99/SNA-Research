@@ -80,13 +80,25 @@ class Player(ABC):
         if temperature == 0:
             return self._select_best_action(evaluations)
         assert temperature > 0, f"Temperature must be greater than 0, but was {temperature}"
+        choice_evals = [(i, e) for i, e in enumerate(evaluations)]
+        choice_evals = sorted(choice_evals, key = lambda x : x[1], reverse = True)
         # Softmax
-        evaluations_exp = np.exp(evaluations).flatten()
-        # Adjust the selection probabilities by using temperature
-        evaluations_exp_temp = evaluations_exp / temperature
-        probs = evaluations_exp_temp / np.sum(evaluations_exp_temp)
-        return np.random.choice(range(len(evaluations)), p=probs)
-    
+        evals_exp = np.exp([x[1] for x in choice_evals]).flatten()
+        evals = evals_exp / np.sum(evals_exp)
+        cumsum = np.cumsum(evals)
+        # Find the first index where the cumulative sum is gte than p
+        idx = np.argmax(cumsum >= temperature)
+        # Redo the softmax
+        valid_choices = choice_evals[:idx+1]
+        evals_exp = np.exp([x[1] for x in valid_choices]).flatten()
+        evals = evals_exp / np.sum(evals_exp)
+        indices = [x[0] for x in valid_choices]
+        #print(f"valid_choices: {valid_choices}")
+        return np.random.choice(indices, p = evals)
+        
+        
+        
+        
     @staticmethod
     def initialize_player_decorator():
         """ Decorator for the initialize_player method."""
