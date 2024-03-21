@@ -18,7 +18,7 @@ def game_constructor(i):
                             )
 
 def players_constructor(i):
-    players = [TTTPlayerNeuralNet(model_path="/home/ilmari/python/RLFramework/models/model_5.tflite",
+    players = [TTTPlayerNeuralNet(model_path=os.path.abspath("./RLFramework/TicTacToe/TTT3x3.tflite"),
                                 name=f"NeuralNetPlayer1_{i}",
                                 move_selection_temp=0,
                                 logger_args=None),
