@@ -18,7 +18,7 @@ class TTTPlayerNeuralNet(TTTPlayer):
         """
         # Load the model
         model = self.game.get_model(self.model_path)
-        X = np.array([s.to_vector() for s in states], dtype=np.float32)
+        X = np.array([s.to_vector(self.pid) for s in states], dtype=np.float32)
         #print(f"X shape: {X.shape}")
         evaluations = model.predict(X)
         #print(f"evaluations: {evaluations}")
