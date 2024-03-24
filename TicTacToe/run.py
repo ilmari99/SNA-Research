@@ -1,3 +1,8 @@
+""" A script to run a game of TicTacToe with a human player and a neural network player. 
+"""
+
+import logging
+
 from TTTGame import TTTGame
 from TTTPlayer import TTTPlayer
 from TTTPlayerNeuralNet import TTTPlayerNeuralNet
@@ -6,8 +11,6 @@ from TTTGameState import TTTGameState
 from TTTPlayerMaxElems import TTTPlayerMaxElems
 from TTTResult import TTTResult
 from TTTHumanPlayer import TTTHumanPlayer
-
-import logging
 
 
 game : TTTGame = TTTGame(board_size=(3,3),

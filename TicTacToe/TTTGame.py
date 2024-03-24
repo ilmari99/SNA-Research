@@ -119,7 +119,7 @@ class TTTGame(Game):
         """ Render the board to the ax and highlight the current player.
         """
         arr = np.array(self.board)
-        curr_player_pid = self.current_player
+        curr_player_pid = self.current_pid
         # Show the board, with all white squares and borders
         ax.imshow(arr)
         ax.set_xticks(np.arange(arr.shape[1]) - 0.5, minor=True)

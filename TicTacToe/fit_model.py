@@ -117,7 +117,7 @@ def model_fit(ds, epoch, num_samples):
 
     tb_log = tf.keras.callbacks.TensorBoard(log_dir=f"logs/fit/{epoch}", histogram_freq=1)
     early_stop = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
-    model.fit(train_ds, epochs=30, callbacks=[tb_log, early_stop], validation_data=val_ds)
+    model.fit(train_ds, epochs=50, callbacks=[tb_log, early_stop], validation_data=val_ds)
     model.save(f"models/model_{epoch}.keras")
     tf.keras.backend.clear_session()
     return os.path.abspath(f"models/model_{epoch}.keras")
