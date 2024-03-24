@@ -19,6 +19,7 @@ class Game(ABC):
                  render_mode : str = "",
                  gather_data : str = "",
                  custom_result_class = None,
+                 max_num_total_steps : int = 1000,
                 ):
         """ Initializes the Game instance.
         This is mainly used to set up the logger.
@@ -27,6 +28,7 @@ class Game(ABC):
         self.gather_data = gather_data
         if render_mode == "human":
             self.init_render_human()
+        self.max_num_total_steps = max_num_total_steps
         self.render_mode = render_mode
         self.game_state_class : GameState = game_state_class
         self.logger_args = logger_args
@@ -36,9 +38,10 @@ class Game(ABC):
         self.unfinished_players : List[int] = []
         self.finishing_order : List[int] = []
         self.player_scores : List[float] = []
-        self.current_player : int = 0
+        self.current_pid : int = 0
         self.current_player_name : str = ""
         self.players : List[Player] = []
+        self.total_num_played_turns = 0
         self.verify_self()
         
     def verify_self(self) -> None:
@@ -59,9 +62,10 @@ class Game(ABC):
         self.unfinished_players = []
         self.finishing_order = []
         self.player_scores = []
-        self.current_player = 0
+        self.current_pid = 0
         self.current_player_name = ""
         self.players = []
+        self.total_num_played_turns = 0
         
         if self.render_mode == "human":
             self.init_render_human()
@@ -78,7 +82,7 @@ class Game(ABC):
     def get_current_state(self, player : 'Player' = None) -> GameState:
         """ Return the current state of the game.
         """
-        player = player if player else self.players[self.current_player]
+        player = player if player else self.players[self.current_pid]
         return self.game_state_class.from_game(self, player=player, copy = False)
     
     def render_self(self) -> None:
@@ -147,6 +151,7 @@ class Game(ABC):
         self.unfinished_players = [i for i in range(len(players))]
         self.player_scores = [0.0 for _ in range(len(players))]
         self.finishing_order = []
+        self.total_num_played_turns = 0
         
 
     def initialize_game_wrap(self, players : List['Player']) -> None:
@@ -164,15 +169,15 @@ class Game(ABC):
         # Initilize the game by setting internal variables, custom variables, and checking the initialization
         self.initialize_game_wrap(players)
         
-        self.current_player = self.select_turn(players, self.previous_turns)
+        self.current_pid = self.select_turn(players, self.previous_turns)
         self.render()
         self.game_states.append(self.get_current_state().deepcopy())
         # Play until all players are finished
-        while not self.check_is_terminal():
+        while not self.check_is_terminal() and self.total_num_played_turns < self.max_num_total_steps:
             #print(f"Starting turn for player {self.current_player_name}")
             # Select the next player to play
-            self.current_player_name = players[self.current_player].name
-            player = players[self.current_player]
+            self.current_player_name = players[self.current_pid].name
+            player = players[self.current_pid]
             game_state = self.get_current_state(player)
             assert game_state.check_is_game_equal(self), "The game state was not created correctly."
 
@@ -184,11 +189,13 @@ class Game(ABC):
                 self.logger.info(f"Player {self.current_player_name} chose action {action}.")
                 state = self.get_current_state(player=player)
                 self.game_states.append(state.deepcopy())
+                self.total_num_played_turns += 1
             else:
                 new_state = game_state
                 self.logger.info(f"Player '{self.current_player_name}' has no moves.")
                 self.update_state_after_action(new_state)
                 new_state.set_game_state(self)
+            #print(f"Player scores: {self.player_scores}")
             
             #print(f"{self.current_player_name} has {player.score} score")
             self.logger.debug(f"Game state:\n{new_state}")
@@ -249,7 +256,7 @@ class Game(ABC):
         The new_state is the state after the action has been made, but
         before these variables have been updated.
         """
-        new_state.previous_turns.append(self.current_player)
+        new_state.previous_turns.append(self.current_pid)
         next_player = self.select_turn(self.players, new_state.previous_turns)
         self.update_finished_players_in_gamestate(new_state)
         self.update_player_scores_in_gamestate(new_state)
@@ -272,7 +279,7 @@ class Game(ABC):
         # If we are making a real move, we can just modify the game
         # If not, we simulate the move and then restore the game state
         if not real_move:
-            curr_state = self.game_state_class.from_game(self, player=self.players[self.current_player], copy = True)
+            curr_state = self.game_state_class.from_game(self, player=self.players[self.current_pid], copy = True)
 
         def make_action_and_update_vars():
             """ Calculate a game state after making the action.

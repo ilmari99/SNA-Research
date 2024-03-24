@@ -47,15 +47,18 @@ def fit_model(
         num_files : int = -1,
         num_cpus : int = -1,
         folder : str = "RLData",
+        starting_epoch : int = 0,
     ):
     """ Fit a model to play a game.
     The model is fitted by alternating between simulating games, and training a model.
     When a model is trained, it is then used to play the games in the next epoch.
     """
+    if starting_epoch > 0 and not starting_model_path:
+        raise ValueError("starting_model_path must be specified when starting_epoch > 0")
     ds = None
     base_folder = folder
     model_path = starting_model_path
-    for epoch in range(num_epochs):
+    for epoch in range(starting_epoch, num_epochs):
         folder = f"{base_folder}/epoch_{epoch}"
         player_constructor_temp = PickleableFunction(player_constructor, model_path=model_path)
         # Simulate the games

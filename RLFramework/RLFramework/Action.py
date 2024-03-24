@@ -18,7 +18,11 @@ class Action(ABC):
     
     @staticmethod
     def modify_game_decorator():
-        """ Decorator for the modify_game method."""
+        """ Decorator for the modify_game method.
+        The decorator checks if the action is legal in the given game state.
+        Also, If the inplace argument is False, then this wrapper saves
+        the game state, modifies the game, and then restores the game state.
+        """
         def decorator(func):
             def wrapper(self : 'Action', game: 'Game', inplace: bool = False) -> GameState:
                 if not self.check_action_is_legal(game):

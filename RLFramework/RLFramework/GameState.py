@@ -67,11 +67,11 @@ class GameState(ABC):
             @ft.wraps(func)
             def wrapper(game : 'Game', player : 'Player' = None):
                 if player is None:
-                    player = game.players[game.current_player]
+                    player = game.players[game.current_pid]
                 state_json = func(cls, game, player)
                 # Add the required keys
                 state_json["unfinished_players"] = game.unfinished_players
-                state_json["current_player"] = game.current_player
+                state_json["current_player"] = game.current_pid
                 state_json["previous_turns"] = game.previous_turns
                 state_json["player_scores"] = game.player_scores
                 state_json["finishing_order"] = game.finishing_order
