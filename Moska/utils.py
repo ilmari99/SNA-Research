@@ -1,11 +1,10 @@
 
 from collections import Counter
 import itertools
-from typing import Dict, List, Sequence, Tuple
+from typing import Dict, Iterable, List, Sequence, Set, Tuple
 
 import numpy as np
 from Card import Card
-
 
 class Assignment:
     """ An assignment is a mapping from cards in the hand to cards on the table.
@@ -112,7 +111,7 @@ def get_single_kills(matrix : np.ndarray) -> List[List[int]]:
     nz = np.nonzero(matrix)
     return list(zip(nz[0],nz[1]))
 
-def _get_assignments(from_ : List[Card], to : List[Card] = [], trump : str = "", start=[], found_assignments = None, max_num : int = 1000) -> Set[Assignment]:
+def get_all_matchings(from_ : List[Card], to : List[Card] = [], trump : str = "", start=[], found_assignments = None, max_num : int = 1000) -> Set[Assignment]:
     """ Return a set of found Assignments, containing all possible assignments of cards from the hand to the cards to fall.
     Symmetrical assignments are considered the same when the same cards are played to the same cards, regardless of order.
     
@@ -163,7 +162,7 @@ def _get_assignments(from_ : List[Card], to : List[Card] = [], trump : str = "",
         matrix[hand_cards,:] = 0
         matrix[:,table_cards] = 0
         # Find the next assignments, which adds the new assignments to the found_assignments
-        _get_assignments(from_ = matrix, start = start +[row,col], found_assignments = found_assignments, max_num = max_num)
+        get_all_matchings(from_ = matrix, start = start +[row,col], found_assignments = found_assignments, max_num = max_num)
         # Restore matrix
         matrix[hand_cards,:] = row_vals
         matrix[:,table_cards] = col_vals

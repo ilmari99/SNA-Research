@@ -11,15 +11,26 @@ from MoskaGameState import MoskaGameState
 from MoskaAction import MoskaAction
 from Card import Card
 from MoskaGame import MoskaGame
-
+ 
 class MoskaPlayer(Player):
     
     def __init__(self,name : str = "MoskaPlayer", logger_args : dict = None):
         super().__init__(name, logger_args)
-        self.hand : List[Card] = []
         self.game : MoskaGame = None
         self.ready = False
         return
+    
+    @property
+    def hand(self) -> List[Card]:
+        return self.game.player_full_cards[self.pid]
+    
+    @property
+    def public_hand(self) -> List[Card]:
+        return self.game.player_public_cards[self.pid]
+    
+    @property
+    def ready(self) -> bool:
+        return self.game.players_ready[self.pid]
     
     def get_possible_kill_mapping(self) -> Dict[Card, List[Card]]:
         """ Get the possible kill mapping.

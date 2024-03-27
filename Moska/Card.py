@@ -1,9 +1,14 @@
 
 
 
+import itertools
+from typing import Dict, Iterable, List
+
+
 CARD_VALUES = tuple(range(2,15))                            # Initialize the standard deck
 CARD_SUITS = ("C","D","H","S") 
 CARD_SUIT_SYMBOLS = {"S":'♠', "D":'♦',"H": '♥',"C": '♣',"X":"X"}    #Conversion table
+REFERENCE_DECK = [Card(suit, value) for suit, value in itertools.product(CARD_SUITS, CARD_VALUES)] #Reference deck
 USING_CARD_SYMBOLS = True
 
 class Card:
@@ -32,3 +37,22 @@ class Card:
     
     def __eq__(self, other) -> bool:
         return self.rank == other.rank and self.suit == other.suit
+    
+    def __copy__(self):
+        return Card(self.suit, self.rank, self.kopled)
+
+    def __dict__(self):
+        return {"suit": self.suit, "rank": self.rank, "kopled": self.kopled}
+    
+    
+def serialize_cards(cards : Iterable[Card]) -> List[Dict]:
+    """ Serialize a list of cards to a list of dictionaries.
+    """
+    return [{"rank" : c.rank,
+             "suit" : c.suit, 
+             "kopled" : c.kopled} for c in cards]
+    
+def deserialize_cards(cards : List[Dict]) -> List[Card]:
+    """ Deserialize a list of dictionaries to a list of cards.
+    """
+    return [Card(c["suit"],c["rank"],c["kopled"]) for c in cards]
