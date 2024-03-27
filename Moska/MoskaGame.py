@@ -13,7 +13,7 @@ from RLFramework.utils import TFLiteModel
 
 from MoskaGameState import MoskaGameState
 from MoskaPlayer import MoskaPlayer
-from MoskaAction import MoskaAction, VALID_MOVE_IDS
+from MoskaAction import MoskaAction, VALID_MOVE_IDS, get_moska_action
 from Card import Card, REFERENCE_DECK
 
 from utils import get_initial_attacks, get_all_matchings
@@ -21,8 +21,8 @@ from utils import get_initial_attacks, get_all_matchings
 
 class MoskaGame(Game):
     
-    def __init__(self, name : str = "MoskaGame", logger_args : dict = None):
-        super().__init__(name, logger_args)
+    def __init__(self, logger_args : dict = None, *args, **kwargs):
+        super().__init__(MoskaGameState, logger_args, *args, **kwargs)
         self.deck : List[Card] = []
         self.trump_card : Card = None
         self.players : List[MoskaPlayer] = []
@@ -35,8 +35,9 @@ class MoskaGame(Game):
         self.target_pid : int = 0
         self.model_paths : List[str] = []
         self.models : Dict[str, TFLiteModel] = {}
+        self.ready_players : List[bool] = []
     
-    def get_all_possible_actions(self) -> List[MoskaAction]:
+    def get_all_possible_actions(self) -> List['MoskaAction']:
         """ Return a list with all possible actions, that the current player can make.
         """
         if self.players[self.current_pid] in self.get_finished_players():
@@ -49,7 +50,7 @@ class MoskaGame(Game):
                 if not gs.player_is_initiating(self.current_pid):
                     continue
                 possible_plays = get_initial_attacks(self.player_full_cards[self.current_pid], self.num_fits_to_table)
-                actions += [MoskaAction(self.current_pid, move_id, target_pid = self.target_pid, cards = list(play)) for play in possible_plays]
+                actions += [get_moska_action(self.current_pid, move_id, target_pid = self.target_pid, cards = list(play)) for play in possible_plays]
             elif move_id == "AttackOther":
                 # If the bout is not initiated, then the player can't attack
                 if not gs.bout_is_initiated():
@@ -60,7 +61,7 @@ class MoskaGame(Game):
                 for i in range(1, min(len(playable_cards) + 1, self.num_fits_to_table + 1)):
                     play_iterables.append(itertools.combinations(playable_cards, i))
                 plays = itertools.chain.from_iterable(play_iterables)
-                actions += [MoskaAction(self.current_pid, move_id, target_pid = pid, cards = list(play)) for pid, play in plays]
+                actions += [get_moska_action(self.current_pid, move_id, target_pid = pid, cards = list(play)) for pid, play in plays]
                 
             elif move_id == "AttackSelf":
                 playable_values = self.players[self.current_pid].get_playable_ranks_from_hand()
@@ -69,10 +70,12 @@ class MoskaGame(Game):
                 for i in range(1, len(playable_cards) + 1):
                     play_iterables.append(itertools.combinations(playable_cards, i))
                 plays = itertools.chain.from_iterable(play_iterables)
-                actions += [MoskaAction(self.current_pid, move_id, target_pid = self.current_pid, cards = list(play)) for play in plays]
+                actions += [get_moska_action(self.current_pid, move_id, target_pid = self.current_pid, cards = list(play)) for play in plays]
 
             elif move_id == "KillFromHand":
                 if self.current_pid != self.target_pid:
+                    continue
+                if len(self.cards_to_kill) == 0:
                     continue
                 possible_killings = get_all_matchings(self.player_full_cards[self.current_pid],
                                                       self.cards_to_kill,
@@ -89,27 +92,34 @@ class MoskaGame(Game):
                     cards_from_hand = [self.player_full_cards[self.current_pid][i] for i in hand_inds]
                     cards_from_table = [self.cards_to_kill[i] for i in table_inds]
                     possible_killings_as_cards.append({hc : tc for hc, tc in zip(cards_from_hand, cards_from_table)})
-                actions += [MoskaAction(self.current_pid, move_id, kill_mapping = kill_mapping) for kill_mapping in possible_killings_as_cards]
-
+                actions += [get_moska_action(self.current_pid, move_id, kill_mapping = kill_mapping) for kill_mapping in possible_killings_as_cards]
 
             elif move_id == "KillFromDeck":
-                # We can't kill from deck if we are not the target
-                if self.current_pid != self.target_pid:
-                    continue
-                if not gs.target_can_play_from_deck():
-                    continue
-                actions.append(MoskaAction(self.current_pid, move_id))
-                
-                
-                
-            
+                # For now, let's just play the Skip move
+                #actions.append(MoskaAction(self.current_pid, "Skip"))
+                pass
             elif move_id == "EndBout":
-                pass
+                # We can only end the bout, if there are cards on the table
+                # and all other players are ready
+                if len(self.cards_to_kill + self.killed_cards) == 0:
+                    continue
+                if not all(self.ready_players):
+                    continue
+                # In an EndBout move we can either pick all cards from the table, or only cards_to_kill
+                actions.append(get_moska_action(self.current_pid, move_id, self.cards_to_kill))
+                if len(self.killed_cards) > 0:
+                    actions.append(get_moska_action(self.current_pid, move_id, self.killed_cards + self.cards_to_kill))
+
             elif move_id == "Skip":
-                pass
+                actions.append(get_moska_action(self.current_pid, move_id))
             else:
                 raise ValueError(f"Invalid move_id: {move_id}")
-
+            
+        print(f"Player {self.current_pid} has {actions} possible actions.", flush=True)
+        return actions
+    
+    def __repr__(self) -> str:
+        return f"MoskaGame with {len(self.players)} players, {len(self.deck)} cards in deck, {len(self.cards_to_kill)} cards to kill, {len(self.killed_cards)} killed cards, {len(self.discarded_cards)} discarded cards."
         
     def get_players_condition(self, condition = None) -> List[MoskaPlayer]:
         """ Get the players that satisfy the condition.
@@ -303,7 +313,7 @@ class MoskaGame(Game):
         self.trump_card = game_state.trump_card
         self.player_full_cards = game_state.player_full_cards
         self.player_public_cards = game_state.player_public_cards
-        self.ready_players = game_state.players_ready
+        self.ready_players = game_state.ready_players
         
         self.cards_to_kill = game_state.cards_to_kill
         self.killed_cards = game_state.killed_cards
@@ -329,7 +339,7 @@ class MoskaGame(Game):
         self.trump_card = self.deck.pop(0).copy()
         # Place the trump card at the bottom of the deck
         self.deck.append(self.trump_card)
-        self.players_ready = [False for _ in players]
+        self.ready_players = [False for _ in players]
         
     def check_is_player_finished(self, pid : int, game_state : MoskaGameState) -> bool:
         """ A player is finished, if they have no cards left in their hand,
@@ -356,7 +366,7 @@ class MoskaGame(Game):
         #    target_pid = self.target_pid
         #    total_num_players = len(players)
         #    return (target_pid - 1) % total_num_players
-        return self._select_random_turn(players, previous_turns)
+        return self._select_random_turn(players)
     
     def play_game(self, players: List[MoskaPlayer]) -> Result:
         # Load the models before playing the game

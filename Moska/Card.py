@@ -8,7 +8,6 @@ from typing import Dict, Iterable, List
 CARD_VALUES = tuple(range(2,15))                            # Initialize the standard deck
 CARD_SUITS = ("C","D","H","S") 
 CARD_SUIT_SYMBOLS = {"S":'♠', "D":'♦',"H": '♥',"C": '♣',"X":"X"}    #Conversion table
-REFERENCE_DECK = [Card(suit, value) for suit, value in itertools.product(CARD_SUITS, CARD_VALUES)] #Reference deck
 USING_CARD_SYMBOLS = True
 
 class Card:
@@ -40,10 +39,20 @@ class Card:
     
     def __copy__(self):
         return Card(self.suit, self.rank, self.kopled)
+    
+    def copy(self):
+        return self.__copy__()
+    
+    def __deepcopy__(self, memo):
+        return Card(self.suit, self.rank, self.kopled)
+    
+    def deepcopy(self):
+        return self.__deepcopy__()
 
     def __dict__(self):
         return {"suit": self.suit, "rank": self.rank, "kopled": self.kopled}
-    
+
+REFERENCE_DECK = [Card(suit, value) for suit, value in itertools.product(CARD_SUITS, CARD_VALUES)]
     
 def serialize_cards(cards : Iterable[Card]) -> List[Dict]:
     """ Serialize a list of cards to a list of dictionaries.

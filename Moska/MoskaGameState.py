@@ -1,15 +1,17 @@
 import copy
-from typing import List, SupportsFloat
+from typing import List, SupportsFloat, TYPE_CHECKING
 import pickle
 import warnings
 # named tuple class
 from collections import namedtuple
 
 import numpy as np
-from MoskaGame import MoskaGame
-from MoskaPlayer import MoskaPlayer
-from RLFramework.GameState import GameState
+if TYPE_CHECKING:
+    from MoskaGame import MoskaGame
+    from MoskaPlayer import MoskaPlayer
+
 from Card import REFERENCE_DECK, Card
+from RLFramework.GameState import GameState
 
 class MoskaGameState(GameState):
     """ A class representing the state of the game Moska.
@@ -24,7 +26,7 @@ class MoskaGameState(GameState):
         self.discarded_cards : List[Card] = state_json["discarded_cards"]
         self.current_pid : int = state_json["current_pid"]
         self.target_pid : int = state_json["target_pid"]
-        self.players_ready : List[bool] = state_json["players_ready"]
+        self.ready_players : List[bool] = state_json["ready_players"]
         self.player_full_cards : List[List[Card]] = state_json["player_full_cards"]
         self.player_public_cards : List[List[Card]] = state_json["player_public_cards"]
         
@@ -42,7 +44,7 @@ class MoskaGameState(GameState):
         Return True, if the current_pid is equal to the pid before
         the target.
         """
-        remaining_player_pids = [i for i in range(len(self.players_ready)) if not self.check_is_player_finished(i)]
+        remaining_player_pids = [i for i in range(len(self.ready_players)) if not self.check_is_player_finished(i)]
         num_remaining_players = len(remaining_player_pids)
         target_pid = self.target_pid
         target_pid_fake = remaining_player_pids.index(target_pid)
@@ -99,7 +101,7 @@ class MoskaGameState(GameState):
             "discarded_cards" : game.discarded_cards,
             "current_pid" : game.current_pid,
             "target_pid" : game.target_pid,
-            "players_ready" : game.ready_players,
+            "ready_players" : game.ready_players,
             "player_full_cards" : [player_full_cards for player_full_cards in game.player_full_cards],
             "player_public_cards" : [public_cards for public_cards in game.player_public_cards],
         }
@@ -110,13 +112,15 @@ class MoskaGameState(GameState):
         """
         for k,v in self.state_json.items():
             if isinstance(v, list):
-                self.state_json[k] = copy.deepcopy(v)
+                #print(k)
+                #print(v)
+                self.state_json[k] = [copy.deepcopy(item) for item in v]
         return MoskaGameState(self.state_json)
     
     def cards_to_vector(self, cards : List[Card]) -> List[SupportsFloat]:
         """ Convert a list of cards to a vector.
         """
-        card_vector = np.zeros(len(REFERENCE_DECK))
+        card_vector = np.zeros(52)
         for card in cards:
             ind = REFERENCE_DECK.index(card)
             card_vector[ind] = 1
@@ -139,8 +143,8 @@ class MoskaGameState(GameState):
         target_pid = self.target_pid
         current_pid = self.current_pid
         is_kopled_card_on_table = 1 if any((c.kopled for c in self.cards_to_kill)) else 0
-        player_hand_lens = [len(player.hand) for player in self.players]
-        player_is_ready = [player.ready for player in self.players]
+        player_hand_lens = [len(hand) for hand in self.player_full_cards]
+        player_is_ready = [r for r in self.ready_players]
         # Now we know the meta data, we can create the card data
         meta_data = [perspective_pid, deck_len, trump_suit, target_pid, current_pid, is_kopled_card_on_table]
         meta_data += player_hand_lens + player_is_ready
@@ -151,12 +155,13 @@ class MoskaGameState(GameState):
         # - The cards to kill (full info),
         # - The killed cards (full info),
         # - The discarded cards (full info)
-        my_cards = self.cards_to_vector(self.players[perspective_pid].hand)
+        my_cards = self.cards_to_vector(self.player_full_cards[perspective_pid])
         cards_to_kill = self.cards_to_vector(self.cards_to_kill)
         killed_cards = self.cards_to_vector(self.killed_cards)
         discarded_cards = self.cards_to_vector(self.discarded_cards)
-        public_cards = [self.cards_to_vector(player.public_cards) for player in self.players]
-    
+        public_cards = [self.cards_to_vector(public_cards) for public_cards in self.player_public_cards]
+
+        print(public_cards)
         card_data = my_cards + cards_to_kill + killed_cards + discarded_cards
         card_data += np.concatenate(public_cards).tolist()
         
