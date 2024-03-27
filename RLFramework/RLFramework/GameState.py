@@ -46,7 +46,7 @@ class GameState(ABC):
                 self._state_json[k] = v
 
     @property
-    def state_json(self):
+    def state_json(self) -> Dict:
         self.update_state_json()
         return self._state_json
         
@@ -87,10 +87,12 @@ class GameState(ABC):
         If copy is True, the values of the GameState will be deepcopies
         """
         state_json = cls.game_to_state_json(game, player)
+        state = cls(state_json)
         if copy:
             # "Deepcopy" the state_json
-            state_json = json.loads(json.dumps(state_json))
-        return cls(state_json)
+            #state_json = json.loads(json.dumps(state_json))
+            state = state.deepcopy()
+        return state
     
     def initialize(self, state_json : Dict) -> None:
         """ Save the variables from the state_json.
