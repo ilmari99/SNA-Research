@@ -51,7 +51,9 @@ class MoskaGameState(GameState):
         # Return true, if the current player's
         # pid is the one before the target, accounting
         # for already finished players
-        return pid == remaining_player_pids[(target_pid_fake - 1) % num_remaining_players]
+        is_initiating = pid == remaining_player_pids[(target_pid_fake - 1) % num_remaining_players]
+        #print(f"Player {self.target_pid} is target, player {pid} is initiating: {is_initiating}")
+        return is_initiating
     
     def target_can_play_from_deck(self) -> bool:
         if (any(card.kopled for card in self.cards_to_kill) or
@@ -102,20 +104,15 @@ class MoskaGameState(GameState):
             "current_pid" : game.current_pid,
             "target_pid" : game.target_pid,
             "ready_players" : game.ready_players,
-            "player_full_cards" : [player_full_cards for player_full_cards in game.player_full_cards],
-            "player_public_cards" : [public_cards for public_cards in game.player_public_cards],
+            "player_full_cards" : game.player_full_cards,
+            "player_public_cards" : game.player_public_cards,
         }
         return state_json
     
     def deepcopy(self):
-        """ Custom copy the game state by deep copying the lists.
+        """ Deepcopy self by copying the state_json.
         """
-        for k,v in self.state_json.items():
-            if isinstance(v, list):
-                #print(k)
-                #print(v)
-                self.state_json[k] = [copy.deepcopy(item) for item in v]
-        return MoskaGameState(self.state_json)
+        return self.__class__(copy.deepcopy(self.state_json))
     
     def cards_to_vector(self, cards : List[Card]) -> List[SupportsFloat]:
         """ Convert a list of cards to a vector.
@@ -161,7 +158,7 @@ class MoskaGameState(GameState):
         discarded_cards = self.cards_to_vector(self.discarded_cards)
         public_cards = [self.cards_to_vector(public_cards) for public_cards in self.player_public_cards]
 
-        print(public_cards)
+        #print(public_cards)
         card_data = my_cards + cards_to_kill + killed_cards + discarded_cards
         card_data += np.concatenate(public_cards).tolist()
         

@@ -71,7 +71,7 @@ class GameState(ABC):
                 state_json = func(cls, game, player)
                 # Add the required keys
                 state_json["unfinished_players"] = game.unfinished_players
-                state_json["current_player"] = game.current_pid
+                state_json["current_pid"] = game.current_pid
                 state_json["previous_turns"] = game.previous_turns
                 state_json["player_scores"] = game.player_scores
                 state_json["finishing_order"] = game.finishing_order
@@ -117,8 +117,8 @@ class GameState(ABC):
     
     
     def __repr__(self) -> str:
-        return np.array(self.state_json["board"]).__repr__()
-        #return f"{self.__class__.__name__}({self.state_json})"
+        #return np.array(self.state_json["board"]).__repr__()
+        return f"{self.__class__.__name__}({self.state_json})"
     
     def __hash__(self) -> int:
         return hash(tuple(self.to_vector()))

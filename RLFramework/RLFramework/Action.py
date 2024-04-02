@@ -25,12 +25,22 @@ class Action(ABC):
         """
         def decorator(func):
             def wrapper(self : 'Action', game: 'Game', inplace: bool = False) -> GameState:
-                if not self.check_action_is_legal(game):
-                    raise ValueError("The action is not legal in the given game state.")
+                out = self.check_action_is_legal(game)
+                if type(out) == bool:
+                    is_legal = out
+                    msg = ""
+                elif len(out) == 2:
+                    is_legal, msg = out
+                else:
+                    raise ValueError("The return value of check_action_is_legal should be a boolean or a tuple of two elements.")
+                if not is_legal:
+                    raise ValueError("The action is not legal: " + msg)
                 
+                # If we modify the game inplace, then we just modify, and return the new state
                 if inplace:
                     return func(self, game)
                 
+                # Otherwise, we save the game state, modify the game, and then restore the game state
                 # Save the game state
                 game_state = game.game_state_class.from_game(game, copy = True)
                 # Modify the game

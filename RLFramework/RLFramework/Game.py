@@ -73,7 +73,7 @@ class Game(ABC):
         
     def __init_subclass__(cls) -> None:
         super().__init_subclass__()
-        cls.select_turn = cls.select_turn_decorator()(cls.select_turn)
+        #cls.select_turn = cls.select_turn_decorator()(cls.select_turn)
         cls.check_is_player_finished = ft.lru_cache(maxsize = 256)(cls.check_is_player_finished)
 
     def __repr__(self) -> str:
