@@ -35,6 +35,7 @@ class GameState(ABC):
         self.previous_turns = []
         self.player_scores = []
         self.game_states = []
+        self.finishing_order = []
         #self.check_state_json_has_required_keys(state_json)
         self.initialize(state_json)
 
@@ -114,6 +115,9 @@ class GameState(ABC):
             print(f"self.state_json: {self.state_json}")
             print(f"game.state_json: {self.__class__.game_to_state_json(game)}")
         return suc
+    
+    def __bool__(self) -> bool:
+        return True
     
     
     def __repr__(self) -> str:

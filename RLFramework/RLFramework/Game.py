@@ -75,6 +75,7 @@ class Game(ABC):
         super().__init_subclass__()
         #cls.select_turn = cls.select_turn_decorator()(cls.select_turn)
         cls.check_is_player_finished = ft.lru_cache(maxsize = 256)(cls.check_is_player_finished)
+        cls.environment_action = cls._environment_action_wrapper(cls.environment_action)
 
     def __repr__(self) -> str:
         return self.get_current_state().__repr__()
@@ -125,10 +126,10 @@ class Game(ABC):
         
 
     @classmethod
-    def from_game_state(cls, game_state : 'GameState', logger_args: Dict[str, Any] = None):
+    def from_game_state(cls, game_state : 'GameState', *args, **kwargs) -> 'Game':
         """ Create a Game instance from a GameState instance.
         """
-        game = cls(logger_args)
+        game = cls(*args, **kwargs)
         game.restore_game(game_state)
         return game
     
@@ -152,7 +153,8 @@ class Game(ABC):
         self.player_scores = [0.0 for _ in range(len(players))]
         self.finishing_order = []
         self.total_num_played_turns = 0
-        
+        self.current_pid = 0
+
 
     def initialize_game_wrap(self, players : List['Player']) -> None:
         """ Wrap the initialize_game method, so that it checks the initialization and sets internal variables.
@@ -169,7 +171,6 @@ class Game(ABC):
         # Initilize the game by setting internal variables, custom variables, and checking the initialization
         self.initialize_game_wrap(players)
         
-        self.current_pid = self.select_turn(players, self.previous_turns)
         self.render()
         self.game_states.append(self.get_current_state().deepcopy())
         # Play until all players are finished
@@ -179,32 +180,41 @@ class Game(ABC):
             self.current_player_name = players[self.current_pid].name
             player = players[self.current_pid]
             game_state = self.get_current_state(player)
-            assert game_state.check_is_game_equal(self), "The game state was not created correctly."
+            assert game_state.check_is_game_equal(self), ("The game state was not created correctly. The created ",
+                                                          "GameState is not equal to the game according to the ",
+                                                          "game state's 'check_is_game_equal' method.")
 
             # Choose an action with the player
             action = player.choose_move(self)
-            #print(f"{self.current_player_name} chose action {action}")
             if action is not None:
-                new_state = self.step(action)
+                # First, we take the step, which modifies self.
+                # We then save this state (after action).
+                new_state : 'GameState' = self.step(action)
                 self.logger.info(f"Player {self.current_player_name} chose action {action}.")
-                state = self.get_current_state(player=player)
-                self.game_states.append(state.deepcopy())
+                new_state = self.get_current_state(player=player)
+                self.game_states.append(new_state.deepcopy())
+                # After every action, the environment reacts.
+                # For example, we might add cards to players with missing cards, or change the current player.
+                s = self.environment_action(new_state)
+                # If the environment action returns something other than False, we set the new state to that.
+                if s is not False:
+                    new_state = s
+                    self.game_states.append(new_state.deepcopy())
+                    new_state.set_game_state(self)
                 self.total_num_played_turns += 1
             else:
                 new_state = game_state
                 self.logger.info(f"Player '{self.current_player_name}' has no moves.")
-                self.update_state_after_action(new_state)
-                new_state.set_game_state(self)
-            #print(f"Player scores: {self.player_scores}")
-            
-            #print(f"{self.current_player_name} has {player.score} score")
+
             self.logger.debug(f"Game state:\n{new_state}")
             self.render()
         
         # Winner is the player with the higher score
         winner = players[np.argmax(self.player_scores)].name
+        players_with_max_score = [p.name for p in players if p.score == max(self.player_scores)]
+
         # If multiple players have the same score, the winner is None
-        if len(set(self.player_scores)) != len(self.player_scores):
+        if len(players_with_max_score) > 1:
             winner = None
         
         result = self.result_class(successful = True if self.check_is_terminal() else False,
@@ -242,26 +252,37 @@ class Game(ABC):
             return result
         return wrapper
     
-    def update_state_after_action(self, new_state : 'GameState') -> None:
-        """ Once an action has been made, the game state is updated
-        except for the internal variables:
-        - current_player
-        - previous_turns
-        - game_states
-        - player_scores
-        - unfinished_players
-        - finished_players
-
-        Hence, we need to update these variables after the action has been made.
-        The new_state is the state after the action has been made, but
-        before these variables have been updated.
+    @staticmethod
+    def _environment_action_wrapper(f):
+        """ A wrapper that wraps 'environment_action' and
+        updates the finishing order and player scores.
         """
-        new_state.previous_turns.append(self.current_pid)
-        next_player = self.select_turn(self.players, new_state.previous_turns)
-        self.update_finished_players_in_gamestate(new_state)
-        self.update_player_scores_in_gamestate(new_state)
-        new_state.current_player = next_player
-        return
+        ft.wraps(f)
+        def wrapper(self : 'Game', game_state : 'GameState'):
+            state = f(self, game_state)
+            self.update_finished_players_in_gamestate(state)
+            self.update_player_scores_in_gamestate(state)
+            return state
+        return wrapper
+    
+
+    @_environment_action_wrapper
+    def environment_action(self, game_state : 'GameState') -> 'GameState':
+        """ When creating a new game, the user can define what happens after every action.
+        In an Action, the user should set all variables, that are exactly known after each action.
+        Such as which move was made, what is the board state, etc.
+
+        In this function, the user should define how the environment reacts to being in a certain state.
+        For example:
+        - If a player is missing cards, we should add cards to the player
+        - If the next player is not known, we should choose the next player
+        - If there is a fruit missing in Snake, we should add a fruit to the board
+
+        Nevertheless, this method (it's wrapper) is used to update which players have finished,
+        and to increment the rewards of the players.
+        """
+        return False
+    
     
     def update_player_attributes(self) -> None:
         for pl in self.players:
@@ -288,13 +309,8 @@ class Game(ABC):
             """
             # Calculate the new state after making the action
             new_state = action.modify_game(self, inplace = real_move)
-            #print(f"Current player after action: {new_state.current_player}")
-            # Update the internal variables of the game_state
-            self.update_state_after_action(new_state)
-            #print(f"Current player after updating state: {new_state.current_player}")
-            # If real move, then also update the games state
+            # If real move, then we also modify self
             if real_move:
-                #self.game_states.append(new_state.deepcopy())
                 new_state.set_game_state(self)
                 self.update_player_attributes()
 
@@ -312,12 +328,6 @@ class Game(ABC):
         """ Return the indices of the players that are finished.
         """
         return [i for i in range(len(self.players)) if self.check_is_player_finished(i, game_state)]
-    
-    def update_finished_players_in_self(self) -> None:
-        game_state = self.get_current_state()
-        self.update_finished_players_in_gamestate(game_state)
-        game_state.set_game_state(self)
-        return
     
     def update_finished_players_in_gamestate(self, game_state: GameState) -> None:
         """ Update the finishing_order and unfinished_players.
@@ -339,48 +349,11 @@ class Game(ABC):
             r = self.calculate_reward(pid, game_state)
             game_state.player_scores[pid] += r
         return
-    
-    def update_player_scores_in_self(self) -> None:
-        game_state = self.get_current_state()
-        self.update_player_scores_in_gamestate(game_state)
-        game_state.set_game_state(self)
-        return
-        
-
-    @staticmethod
-    def select_turn_decorator():
-        """ Decorator for the select_turn method."""
-        def decorator(func):
-            ft.wraps(func)
-            def wrapper(self, players : List['Player'], previous_turns : List[int]):
-                if len(previous_turns) == 0:
-                    return 0
-                return func(self, players, previous_turns)
-            return wrapper
-        return decorator
-    
 
     def check_is_terminal(self) -> bool:
         """ The game is in a terminal state, if all players are finished.
         """
         return len(self.unfinished_players) == 0
-    
-    
-    def _select_random_turn(self, players : List['Player']) -> int:
-        """ Select a random player to play.
-        """
-        return np.random.choice(range(len(players)))
-    
-    def _select_round_turn(self, players : List['Player'], previous_turns : List[int]) -> int:
-        """ Select the next player to play in a round-robin fashion.
-        """
-        # Return the next player in the list, wrapping around if necessary
-        return (previous_turns[-1] + 1) % len(players)
-    
-    def _select_random_turn_exclude_last(self, players : List['Player']) -> int:
-        """ Select a random player to play, excluding the last player.
-        """
-        return np.random.choice([i for i in range(len(players)) if i != self.previous_turns[-1]])
     
     @ft.lru_cache(maxsize = 256)
     @abstractmethod
@@ -400,13 +373,6 @@ class Game(ABC):
     def restore_game(self, game_state: 'GameState') -> None:
         """ Restore the game to the state described by the game_state.
         The common variables, such as unfinished players, current player, etc. are restored automatically.
-        """
-        pass
-
-    @select_turn_decorator()
-    @abstractmethod
-    def select_turn(self, players : List['Player'], previous_turns : List[int]) -> int:
-        """ Given self, list of players, and the previous turns, select the next player (index) to play.
         """
         pass
 

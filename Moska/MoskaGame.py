@@ -35,8 +35,8 @@ class MoskaGame(Game):
         self.model_paths : List[str] = []
         self.models : Dict[str, TFLiteModel] = {}
         self.ready_players : List[bool] = []
-        
-    
+
+
     def get_all_possible_actions(self) -> List['MoskaAction']:
         """ Return a list with all possible actions, that the current player can make.
         """
