@@ -31,7 +31,8 @@ class GameState(ABC):
         self._state_json = state_json
         self.unfinished_players = []
         self.finished_players = []
-        self.current_player = 0
+        self.current_pid = 0
+        self.perspective_pid = 0
         self.previous_turns = []
         self.player_scores = []
         self.game_states = []
@@ -107,13 +108,13 @@ class GameState(ABC):
         for key, value in self.state_json.items():
             setattr(game, key, value)
             
-    def check_is_game_equal(self, game : 'Game') -> bool:
+    def check_is_game_equal(self, game : 'Game', player : 'Player' = None) -> bool:
         """ Check if the state of the game matches the state of the GameState.
         """
-        suc = self.state_json == self.__class__.game_to_state_json(game)
+        suc = self.state_json == self.__class__.game_to_state_json(game, player)
         if not suc:
             print(f"self.state_json: {self.state_json}")
-            print(f"game.state_json: {self.__class__.game_to_state_json(game)}")
+            print(f"game.state_json: {self.__class__.game_to_state_json(game, player)}")
         return suc
     
     def __bool__(self) -> bool:

@@ -204,7 +204,7 @@ class Game(ABC):
                     self.game_states.append(new_state.deepcopy())
                     new_state.set_game_state(self)
                     print(f"New state after environment action:\n{new_state}")
-                    assert new_state.check_is_game_equal(self), ("The game state was not restored correctly. The created ",
+                    assert new_state.check_is_game_equal(self, player=player), ("The game state was not restored correctly. The created ",
                                                                   "GameState is not equal to the game according to the ",
                                                                   "game state's 'check_is_game_equal' method.")
                 self.total_num_played_turns += 1

@@ -53,12 +53,12 @@ class TTTGame(Game):
         self.current_pid = 0
     
     def environment_action(self: Game, game_state: GameState) -> GameState:
-        print(f"Game state previous turns: {game_state.previous_turns}")
-        last_player = 0 if not game_state.previous_turns else game_state.previous_turns[-1]
-        print(f"Last player: {last_player}")
-        curr_player = 1 - last_player
-        print(f"Current player: {curr_player}")
-        game_state.current_player = curr_player
+        if self.current_pid != -1:
+            return game_state
+        #last_player = 0 if not game_state.previous_turns else game_state.previous_turns[-1]
+        # Select random player
+        curr_player = int(np.random.choice([p for p in range(len(self.players))]))
+        game_state.current_pid = curr_player
         return game_state
 
     def restore_game(self, game_state: TTTGameState) -> None:
@@ -67,6 +67,7 @@ class TTTGame(Game):
         """
         self.board = game_state.board
         self.current_pid = game_state.current_pid
+        self.previous_turns = game_state.previous_turns
     
     def calculate_reward(self, pid : int, game_state: TTTGameState) -> float:
         """ Calculate the reward for the player.

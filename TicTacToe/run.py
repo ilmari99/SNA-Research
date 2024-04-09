@@ -21,7 +21,7 @@ game : TTTGame = TTTGame(board_size=(3,3),
 )
 
 #player1 = TTTPlayer("RandomPlayer1", logger_args={"log_level" : 10, "log_file" : "TTTPlayer0.log"})
-player2 = TTTPlayerNeuralNet(model_path="/home/ilmari/python/RLFramework/TicTacToe/TTT3x3.tflite",
+player2 = TTTPlayerNeuralNet(model_path="C:\\Users\\ilmari\\Desktop\\Python\\RLFramework\\TicTacToe\\TTT3x3.tflite",
                                 name=f"NeuralNetPlayer1",
                                 move_selection_temp=0,
                                 logger_args={"log_level" : logging.DEBUG, "log_file" : "TTTPlayer1.log"},

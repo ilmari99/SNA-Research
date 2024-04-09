@@ -22,7 +22,7 @@ class TTTGameState(GameState):
         if perspective_pid is None:
             perspective_pid = self.perspective_pid
         board_arr = np.array(self.board)
-        return [perspective_pid] + [self.current_player] + board_arr.flatten().tolist()
+        return [perspective_pid] + [self.current_pid] + board_arr.flatten().tolist()
     
     #def __repr__(self):
     #    return f"TTTGameState(\n{np.array(self.board)}\n)"
