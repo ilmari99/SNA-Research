@@ -20,8 +20,8 @@ game : TTTGame = TTTGame(board_size=(3,3),
                          custom_result_class = TTTResult,
 )
 
-player1 = TTTPlayer("RandomPlayer1", logger_args={"log_level" : 10, "log_file" : "TTTPlayer0.log"})
-player2 = TTTPlayerNeuralNet(model_path="/home/ilmari/python/RLFramework/models/model_8.tflite",
+#player1 = TTTPlayer("RandomPlayer1", logger_args={"log_level" : 10, "log_file" : "TTTPlayer0.log"})
+player2 = TTTPlayerNeuralNet(model_path="/home/ilmari/python/RLFramework/TicTacToe/TTT3x3.tflite",
                                 name=f"NeuralNetPlayer1",
                                 move_selection_temp=0,
                                 logger_args={"log_level" : logging.DEBUG, "log_file" : "TTTPlayer1.log"},

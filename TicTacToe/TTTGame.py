@@ -40,33 +40,39 @@ class TTTGame(Game):
         except KeyError:
             raise ValueError(f"Model with name {model_name} not found. Available models: {list(self.models.keys())}")
         
-    def set_models(self, model_paths : List[str], convolutionals : List[bool] = []) -> None:
+    def set_models(self, model_paths : List[str]) -> None:
         """ Set the models to the given paths.
         """
         self.model_paths = model_paths
         self.models = {path: TFLiteModel(path) for path in model_paths}
     
-    
     def initialize_game(self, players: List[TTTPlayer]) -> None:
         """ When the game is started, we need to set the board.
         """
         self.board = [[-1 for _ in range(self.board_size[1])] for _ in range(self.board_size[0])]
+        self.current_pid = 0
+    
+    def environment_action(self: Game, game_state: GameState) -> GameState:
+        print(f"Game state previous turns: {game_state.previous_turns}")
+        last_player = 0 if not game_state.previous_turns else game_state.previous_turns[-1]
+        print(f"Last player: {last_player}")
+        curr_player = 1 - last_player
+        print(f"Current player: {curr_player}")
+        game_state.current_player = curr_player
+        return game_state
 
     def restore_game(self, game_state: TTTGameState) -> None:
         """ Restore the game to the state described by the game_state.
         We don't need to worry about the players states or their scores, as they are automatically restored.
         """
         self.board = game_state.board
-    
-    def select_turn(self, players: List[TTTPlayer], previous_turns: List[int]) -> int:
-        return super()._select_round_turn(players, previous_turns)
+        self.current_pid = game_state.current_pid
     
     def calculate_reward(self, pid : int, game_state: TTTGameState) -> float:
         """ Calculate the reward for the player.
         If the player wins, the reward is 1.0.
         If the game is a draw, the reward is 0.5
         """
-        
         if self.check_player_has_won(pid, game_state):
             return 1.0
         # If game is a draw
@@ -96,12 +102,14 @@ class TTTGame(Game):
         """ A player is finished if the game is finished.
         I.e. if the player has won, or if there are no more free spots, or if the other player is finished.
         """
-        has_straight_line = self.check_player_has_won(pid, game_state)
-        if has_straight_line:
+        players_with_straight_line = [p for p in range(len(self.players)) if self.check_player_has_won(p, game_state)]
+        if pid in players_with_straight_line:
             return True
         if -1 not in np.array(game_state.board).flatten():
             return True
-        if any([self.check_player_has_won(p, game_state) for p in range(len(self.players)) if p != pid]):
+        players_with_straight_line = [p for p in range(len(self.players)) if self.check_player_has_won(p, game_state)]
+        # If this player is the only one who hasn't finished, they are finished
+        if pid not in players_with_straight_line and len(players_with_straight_line) == len(self.players) - 1:
             return True
         return False
     

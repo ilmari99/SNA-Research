@@ -175,23 +175,25 @@ class Game(ABC):
         self.game_states.append(self.get_current_state().deepcopy())
         # Play until all players are finished
         while not self.check_is_terminal() and self.total_num_played_turns < self.max_num_total_steps:
-            #print(f"Starting turn for player {self.current_player_name}")
             # Select the next player to play
             self.current_player_name = players[self.current_pid].name
             player = players[self.current_pid]
+            self.previous_turns.append(self.current_pid)
             game_state = self.get_current_state(player)
             assert game_state.check_is_game_equal(self), ("The game state was not created correctly. The created ",
                                                           "GameState is not equal to the game according to the ",
                                                           "game state's 'check_is_game_equal' method.")
 
+            print(f"Player pid: {self.current_pid}")
             # Choose an action with the player
             action = player.choose_move(self)
             if action is not None:
                 # First, we take the step, which modifies self.
                 # We then save this state (after action).
-                new_state : 'GameState' = self.step(action)
                 self.logger.info(f"Player {self.current_player_name} chose action {action}.")
+                new_state : 'GameState' = self.step(action)
                 new_state = self.get_current_state(player=player)
+                self.logger.debug(f"New state after action:\n{new_state}")
                 self.game_states.append(new_state.deepcopy())
                 # After every action, the environment reacts.
                 # For example, we might add cards to players with missing cards, or change the current player.
@@ -201,6 +203,10 @@ class Game(ABC):
                     new_state = s
                     self.game_states.append(new_state.deepcopy())
                     new_state.set_game_state(self)
+                    print(f"New state after environment action:\n{new_state}")
+                    assert new_state.check_is_game_equal(self), ("The game state was not restored correctly. The created ",
+                                                                  "GameState is not equal to the game according to the ",
+                                                                  "game state's 'check_is_game_equal' method.")
                 self.total_num_played_turns += 1
             else:
                 new_state = game_state
@@ -260,8 +266,13 @@ class Game(ABC):
         ft.wraps(f)
         def wrapper(self : 'Game', game_state : 'GameState'):
             state = f(self, game_state)
+            if state is False:
+                return False
             self.update_finished_players_in_gamestate(state)
             self.update_player_scores_in_gamestate(state)
+            self.update_player_attributes()
+            
+            self.logger.debug(f"Environment action finished. Game state:\n{state}")
             return state
         return wrapper
     
