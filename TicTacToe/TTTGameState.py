@@ -7,6 +7,10 @@ from RLFramework.GameState import GameState
 class TTTGameState(GameState):
     """ A class representing the state of the game TicTacToe.
     """
+    def __init__(self, state_json):
+        super().__init__(state_json)
+        self.board = state_json["board"]
+        
     
     def game_to_state_json(cls, game, player):
         """ Convert a Game to a state_json.

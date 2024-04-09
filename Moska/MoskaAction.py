@@ -79,6 +79,28 @@ class MoskaAction(Action):
         legal in the game.
         """
         pass
+
+    def do_after_action(self, game : 'MoskaGame') -> 'MoskaGameState':
+        """ After a Moska action is done, we set the next player to unknown (-1),
+        since the next player is usually selected randomly. The only exception is 
+        when the bout is ended. In that case:
+        - If the target picks up any cards, the target is shifted by two and the turn by one.
+        - If the target does not pick up any cards, the target is shifted by one, and the turn remains.
+
+        Another exception (not implemented yet), is when a player wants to play from deck.
+        In that case, the turn remains, and the state will have a flag indicating that the target is playing from the deck.
+        Then, the environment makes an action: Add the card to the table, OR add a card to a separate set of cards.
+        Then, the player must kill a card on the table, with that card.
+        """
+        if self.move_id == "EndBout":
+            if len(self.cards_to_lift) > 0:
+                game.target_pid = (game.target_pid + 2) % len(game.players)
+                game.turn_pid = (game.turn_pid + 1) % len(game.players)
+            else:
+                game.target_pid = (game.target_pid + 1) % len(game.players)
+        else:
+            game.target_pid = -1
+        return game.game_state_class.from_game(game, copy = False)
         
     def modify_game(self, game, inplace = False):
         pass
