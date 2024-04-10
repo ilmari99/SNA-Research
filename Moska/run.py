@@ -1,9 +1,9 @@
 from MoskaGame import MoskaGame
 from MoskaPlayer import MoskaPlayer
-
+from MoskaHumanPlayer import MoskaHumanPlayer
 
 for i in range(1):
-   players = [MoskaPlayer("Player 0",
+   players = [MoskaHumanPlayer("Player 0",
                         logger_args = {
                               "log_file" : "moskaplayer0.log",
                               "log_level" : 10,
