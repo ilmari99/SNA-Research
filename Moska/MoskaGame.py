@@ -136,8 +136,28 @@ class MoskaGame(Game):
         return actions
     
     def __repr__(self) -> str:
-        return f"MoskaGame with {len(self.players)} players, {len(self.deck)} cards in deck, {len(self.cards_to_kill)} cards to kill, {len(self.killed_cards)} killed cards, {len(self.discarded_cards)} discarded cards."
-        
+        """ Print the game state.
+        Number of cards in deck: {len(self.deck)}
+        Trump card: {self.trump_card}
+        Player1 (4)*: self.public_cards[0]
+        Player2 (6): self.public_cards[1]
+        player3 (6): self.public_cards[2]...
+        etc.
+        Cards to kill: {self.cards_to_kill}
+        Killed cards: {self.killed_cards}
+
+        """
+        s = f"Number of cards in deck: {len(self.deck)}\n"
+        s += f"Trump card: {self.trump_card}\n"
+        for i, player in enumerate(self.players):
+            s += f"Player{i} ({len(self.player_full_cards[i])})"
+            if i == self.target_pid:
+                s += "*"
+            s += f": {self.player_public_cards[i]}\n"
+        s += f"Cards to kill: {self.cards_to_kill}\n"
+        s += f"Killed cards: {self.killed_cards}\n"
+        return s
+
     def get_players_condition(self, condition = None) -> List[MoskaPlayer]:
         """ Get the players that satisfy the condition.
         """
@@ -331,17 +351,18 @@ class MoskaGame(Game):
         all the cards on the table have to have been killed (cards_to_kill is empty)
         """
         player_hand = game_state.player_full_cards[pid]
-        if pid == game_state.target_pid:
-            return (len(player_hand) == 0 and
-                    len(self.deck) == 0 and
-                    len(game_state.cards_to_kill) == 0)
-        
+
         # If the player is the last player, then they are finished
         if len(game_state.get_finished_players()) == len(self.players) - 1:
             return True
         
-        return (len(player_hand) == 0 and
-                len(self.deck) == 0)
+        if pid == game_state.target_pid:
+            return (len(player_hand) == 0 and
+                    len(self.deck) == 0 and
+                    len(game_state.cards_to_kill) == 0)
+        elif (len(player_hand) == 0 and len(self.deck) == 0):
+            return True
+        return False
         
     def select_turn(self, players: List[Player], previous_turns: List[int]) -> int:
         """ In Moska, the turns are mostly based on speed.
