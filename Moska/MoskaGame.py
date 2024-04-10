@@ -153,7 +153,10 @@ class MoskaGame(Game):
             s += f"Player{i} ({len(self.player_full_cards[i])})"
             if i == self.target_pid:
                 s += "*"
-            s += f": {self.player_public_cards[i]}\n"
+            if "human" in player.__class__.__name__.lower():
+                s += f": {self.player_full_cards[i]}\n"
+            else:
+                s += f": {self.player_public_cards[i]}\n"
         s += f"Cards to kill: {self.cards_to_kill}\n"
         s += f"Killed cards: {self.killed_cards}\n"
         return s
@@ -261,6 +264,12 @@ class MoskaGame(Game):
             if len(player_full_cards) < 6:
                 player_with_missing_cards = i
                 break
+        # The else block is executed if the loop completes without breaking
+        else:
+            return
+        player = self.players[player_with_missing_cards]
+        if player.pid == game_state.target_pid:
+            return
             
         if player_with_missing_cards is None:
             return
