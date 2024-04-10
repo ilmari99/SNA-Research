@@ -27,7 +27,7 @@ class Assignment:
         #return hash(frozenset(self._hand_inds)) + hash(frozenset(self._table_inds))
         return hash(tuple(sorted(list(self._hand_inds)) + sorted(list(self._table_inds))))
 
-def get_initial_attacks(cards : List[Card], fits : int):
+def get_initial_attacks(cards : List[Card], fits : int, max_moves : int = 1000) -> List[List[Card]]:
     single_solutions = itertools.combinations(cards,1)
     og_counter = Counter([c.rank for c in cards])
     cards = [c for c in cards if og_counter[c.rank] >= 2]
@@ -55,7 +55,7 @@ def get_initial_attacks(cards : List[Card], fits : int):
     # Then for each of those plays, we go to all other values, and combine all of their pure plays with the current play and them to the list of plays
     # Then for each of those plays, we go to all other values, and combine all of their pure plays with the current play and them to the list of plays
     # And so on, until we have gone through all values
-    def get_play_combinations(play,visited = set(), started_with = set()):
+    def get_play_combinations(play,visited = set(), started_with = set(), max_moves = 1000):
         """ Return a list of combinations from the cards_set_combinations dictionary. The input is a tuple play,
         and this function returns all plays, that can be combined with the input play, that do not share values with the input play.
         """
@@ -66,18 +66,21 @@ def get_initial_attacks(cards : List[Card], fits : int):
             visited = set((c.rank for c in play))
         combined_plays = [play]
         for val, plays in cards_set_combinations.items():
-            if val not in visited:
-                for len_play, plays in plays.items():
-                    if len_play + len(play) > fits:
+            if val in visited:
+                continue
+            for len_play, plays in plays.items():
+                if len_play + len(play) > fits:
+                    continue
+                for p in plays:
+                    if p in started_with:
                         continue
-                    for p in plays:
-                        if p in started_with:
-                            continue
-                        visited.add(val)
-                        old_visited = visited.copy()
-                        combs = get_play_combinations(tuple(list(play) + list(p)),visited,started_with)
-                        visited = old_visited
-                        combined_plays += combs
+                    visited.add(val)
+                    old_visited = visited.copy()
+                    combs = get_play_combinations(tuple(list(play) + list(p)),visited,started_with, max_moves - len(combined_plays))
+                    visited = old_visited
+                    combined_plays += combs
+                    if len(combined_plays) > max_moves:
+                        break
         return combined_plays
     
     started_with = set()
@@ -86,8 +89,10 @@ def get_initial_attacks(cards : List[Card], fits : int):
         for len_play, plays in plays.items():
             for play in plays:
                 started_with.add(tuple(play))
-                combs = get_play_combinations(tuple(play),started_with=started_with)
+                combs = get_play_combinations(tuple(play),started_with=started_with,max_moves=max_moves - len(legal_plays))
                 legal_plays += [tuple(c) for c in combs]
+        if len(legal_plays) > max_moves:
+            break
     legal_plays = list(set(legal_plays))
     legal_plays = [list(play) for play in legal_plays]
     return legal_plays
@@ -111,7 +116,7 @@ def get_single_kills(matrix : np.ndarray) -> List[List[int]]:
     nz = np.nonzero(matrix)
     return list(zip(nz[0],nz[1]))
 
-def get_all_matchings(from_ : List[Card], to : List[Card] = [], trump : str = "", start=[], found_assignments = None, max_num : int = 1000) -> Set[Assignment]:
+def get_all_matchings(from_ : List[Card], to : List[Card] = [], trump : str = "", start=[], found_assignments = None, max_moves : int = 1000) -> Set[Assignment]:
     """ Return a set of found Assignments, containing all possible assignments of cards from the hand to the cards to fall.
     Symmetrical assignments are considered the same when the same cards are played to the same cards, regardless of order.
     
@@ -140,7 +145,7 @@ def get_all_matchings(from_ : List[Card], to : List[Card] = [], trump : str = ""
     
     # If there are no more assignments, or the max number of states is reached, return the found assignments
     for row, col in new_assignments:
-        if len(found_assignments) >= max_num:
+        if len(found_assignments) >= max_moves:
             return found_assignments
         og_len = len(found_assignments)
         # Named tuple with a custom __eq__ and __hash__ method
@@ -162,7 +167,7 @@ def get_all_matchings(from_ : List[Card], to : List[Card] = [], trump : str = ""
         matrix[hand_cards,:] = 0
         matrix[:,table_cards] = 0
         # Find the next assignments, which adds the new assignments to the found_assignments
-        get_all_matchings(from_ = matrix, start = start +[row,col], found_assignments = found_assignments, max_num = max_num)
+        get_all_matchings(from_ = matrix, start = start +[row,col], found_assignments = found_assignments, max_moves=max_moves)
         # Restore matrix
         matrix[hand_cards,:] = row_vals
         matrix[:,table_cards] = col_vals

@@ -79,6 +79,57 @@ class MoskaAction(Action):
         legal in the game.
         """
         pass
+    
+    def __init_subclass__(cls) -> None:
+        cls.modify_game = cls._do_after_action_wrapper(cls.modify_game)
+        return super().__init_subclass__()
+    
+    def check_has_duplicate_cards_on_players(self, game : 'MoskaGame') -> bool:
+        """ Check if there are no duplicate cards in the action.
+        """
+        for player in game.players:
+            if len(player.hand) != len(set(player.hand)):
+                duplicated_cards = [card for card, count in Counter(player.hand).items() if count > 1]
+                print(f"Player {player.pid} has duplicate cards in hand: {duplicated_cards}")
+                return True
+        return False
+    
+    @staticmethod
+    def _do_after_action_wrapper(func):
+        def wrapper(self : 'MoskaAction', game : 'MoskaGame'):
+            state : 'MoskaGameState' = func(self, game)
+            state.set_game_state(game)
+            return self.do_after_action(game)
+        return wrapper
+    
+    def check_every_public_card_is_in_full_cards(self, game : 'MoskaGame') -> bool:
+        """ Check if every public card is in the full cards.
+        """
+        for pid in range(len(game.players)):
+            pub_cards = game.player_public_cards[pid]
+            full_cards = game.player_full_cards[pid]
+            if not all(card in full_cards for card in pub_cards):
+                return False
+        return True
+    
+    def check_valid_state(self, game : 'MoskaGame') -> bool:
+        """ Check if the state is valid.
+        """
+        msg = ""
+        if self.check_has_duplicate_cards_on_players(game):
+            msg += "There are duplicate cards on players hands."
+        if len(game.deck) != len(set(game.deck)):
+            msg += "There are duplicate cards in the deck."
+        if len(game.discarded_cards) != len(set(game.discarded_cards)):
+            msg += "There are duplicate cards in the discarded cards."
+        if len(game.cards_to_kill) != len(set(game.cards_to_kill)):
+            msg += "There are duplicate cards in the cards to kill."
+        if len(game.killed_cards) != len(set(game.killed_cards)):
+            msg += "There are duplicate cards in the killed cards."
+        if not self.check_every_public_card_is_in_full_cards(game):
+            msg += "Some players have extra cards in their public cards."
+        return msg
+        
 
     def do_after_action(self, game : 'MoskaGame') -> 'MoskaGameState':
         """ After a Moska action is done, we set the next player to unknown (-1),
@@ -92,14 +143,37 @@ class MoskaAction(Action):
         Then, the environment makes an action: Add the card to the table, OR add a card to a separate set of cards.
         Then, the player must kill a card on the table, with that card.
         """
+        msg = self.check_valid_state(game)
+        gs : 'MoskaGameState' = game.get_current_state()
+        if msg:
+            msg = f"The game state \n{gs} is not valid: " + msg
+            raise ValueError(msg)
+        
+        # If the target kills cards, and finished, ten we must play the EndBout action.
+        if self.pid == game.target_pid:
+            if game.check_is_player_finished(self.pid, gs):
+                act = EndBout(self.pid, "EndBout", [])
+                return act.modify_game(game)
+            
+        
         if self.move_id == "EndBout":
+            assert hasattr(self, "cards_to_lift"), "EndBout action must have cards_to_lift attribute."
+            gs : 'MoskaGameState' = game.get_current_state()
+            current_player_pids = [i for i in range(len(game.players)) if not game.check_is_player_finished(i, gs)]
+            curr_pid_idx = current_player_pids.index(game.current_pid)
+            curr_target_idx = current_player_pids.index(game.target_pid)
+            
+            # If the player lifts any cards, the target is shifted by two, and the turn by one.
             if len(self.cards_to_lift) > 0:
-                game.target_pid = (game.target_pid + 2) % len(game.players)
-                game.turn_pid = (game.turn_pid + 1) % len(game.players)
+                game.target_pid = current_player_pids[(curr_target_idx + 2) % len(current_player_pids)]
+                game.current_pid = current_player_pids[(curr_target_idx + 1) % len(current_player_pids)]
+            # If the player does not lift any cards, the target is shifted by one, and the turn remains.
             else:
-                game.target_pid = (game.target_pid + 1) % len(game.players)
+                game.target_pid = current_player_pids[(curr_target_idx + 1) % len(current_player_pids)]
+                game.current_pid = current_player_pids[curr_target_idx]
+        # In all other cases, the current_pid is set to -1, so the environment decides the next player.
         else:
-            game.target_pid = -1
+            game.current_pid = -1
         return game.game_state_class.from_game(game, copy = False)
         
     def modify_game(self, game, inplace = False):
@@ -167,8 +241,6 @@ class EndBout(MoskaAction):
         game.killed_cards = []
         game_state = game.game_state_class.from_game(game, copy = False)
         return game_state
-
-
     
     def modify_game(self, game, inplace=False):
         """ We lift the cards to our hand, and update the public cards
@@ -250,7 +322,7 @@ class AttackMove(MoskaAction):
     def _attack_cards_fit(self, game : 'MoskaGame'):
         """ Check if the cards fit the cards to kill.
         """
-        return len(game.player_full_cards[self.pid]) - len(game.cards_to_kill) >= len(self.cards)
+        return len(game.cards_to_kill) + len(self.cards) <= len(game.player_full_cards[self.target_pid])
         
     
     def check_action_is_legal(self, game) -> Tuple[bool, str]:
@@ -274,13 +346,15 @@ class AttackMove(MoskaAction):
     def modify_game(self, game : 'MoskaGame', inplace=False) -> 'MoskaGameState':
         """ Modify the game instance according to the action.
         """
-        gs : MoskaGameState = game.game_state_class.from_game(game, copy = inplace)
+        #gs : MoskaGameState = game.game_state_class.from_game(game, copy = inplace)
         # Remove the cards from the player's hand
         for card in self.cards:
-            gs.player_full_cards[self.pid].remove(card)
+            game.player_full_cards[self.pid].remove(card)
+            if card in game.player_public_cards[self.pid]:
+                game.player_public_cards[self.pid].remove(card)
         # Add the cards to the cards_to_kill
-        gs.cards_to_kill += self.cards
-        return gs
+        game.cards_to_kill += self.cards
+        return game.game_state_class.from_game(game, copy = False)
     
 class AttackInitial(AttackMove):
     
@@ -324,7 +398,7 @@ class AttackSelf(AttackMove):
     def is_move_id_legal(self, game: 'MoskaGame') -> bool:
         """ Target can attack self, at all times, if the board is not empty.
         """
-        gs : MoskaGameState = game.get_current_state()
+        #gs : MoskaGameState = game.get_current_state()
         return self.pid == game.target_pid and not self._board_is_empty(game)
     
     def _attacker_and_target_are_same(self, game):
@@ -346,6 +420,7 @@ class AttackSelf(AttackMove):
             msg += "The attacker and target are not the same player."
         is_legal = True if not msg else False
         return is_legal, msg
+        
         
 class AttackOther(AttackMove):
     def is_move_id_legal(self, game: 'MoskaGame') -> bool:
@@ -402,14 +477,19 @@ class KillFromHand(MoskaAction):
         cards_from_hand = list(self.kill_mapping.keys())
         cards_on_table = list(self.kill_mapping.values())
         # Remove the cards from the player's hand
-        game.player_full_cards[self.pid] = [card for card in game.player_full_cards[self.pid] if card not in cards_from_hand]
+        #game.player_full_cards[self.pid] = [card for card in game.player_full_cards[self.pid] if card not in cards_from_hand]
+        for card in cards_from_hand:
+            game.player_full_cards[self.pid].remove(card)
+            if card in game.player_public_cards[self.pid]:
+                game.player_public_cards[self.pid].remove(card)
         # Remove the killed cards from the table
-        game.cards_to_kill = [card for card in game.cards_to_kill if card not in cards_on_table]
+        for card in cards_on_table:
+            game.cards_to_kill.remove(card)
         # Add the cards from hand, and the killed cards to the killed cards
         cards_to_killed_cards = []
         for hand_card, table_card in self.kill_mapping.items():
-            cards_to_killed_cards.append(hand_card)
             cards_to_killed_cards.append(table_card)
+            cards_to_killed_cards.append(hand_card)
         game.killed_cards += cards_to_killed_cards
         game_state = game.game_state_class.from_game(game, copy = False)
         return game_state

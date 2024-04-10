@@ -184,7 +184,6 @@ class Game(ABC):
                                                           "GameState is not equal to the game according to the ",
                                                           "game state's 'check_is_game_equal' method.")
 
-            print(f"Player pid: {self.current_pid}")
             # Choose an action with the player
             action = player.choose_move(self)
             if action is not None:
@@ -203,7 +202,7 @@ class Game(ABC):
                     new_state = s
                     self.game_states.append(new_state.deepcopy())
                     new_state.set_game_state(self)
-                    print(f"New state after environment action:\n{new_state}")
+                    #print(f"New state after environment action:\n{new_state}")
                     assert new_state.check_is_game_equal(self, player=player), ("The game state was not restored correctly. The created ",
                                                                   "GameState is not equal to the game according to the ",
                                                                   "game state's 'check_is_game_equal' method.")
