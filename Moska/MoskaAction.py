@@ -150,8 +150,10 @@ class MoskaAction(Action):
             raise ValueError(msg)
         
         # If the target kills cards, and finished, ten we must play the EndBout action.
-        if self.pid == game.target_pid:
+        if self.pid == game.target_pid and self.move_id != "EndBout":
             if game.check_is_player_finished(self.pid, gs):
+                #print(f"Player {self.pid} has finished.")
+                #print(game.get_current_state())
                 act = EndBout(self.pid, "EndBout", [])
                 return act.modify_game(game)
             
@@ -159,21 +161,37 @@ class MoskaAction(Action):
         if self.move_id == "EndBout":
             assert hasattr(self, "cards_to_lift"), "EndBout action must have cards_to_lift attribute."
             gs : 'MoskaGameState' = game.get_current_state()
-            current_player_pids = [i for i in range(len(game.players)) if not game.check_is_player_finished(i, gs)]
-            curr_pid_idx = current_player_pids.index(game.current_pid)
+            is_finished = game.check_is_player_finished(self.pid, gs)
+            current_player_pids = [i for i in range(len(game.players)) if not game.check_is_player_finished(i, gs) or i == self.pid]
+            #curr_pid_idx = current_player_pids.index(game.current_pid)
             curr_target_idx = current_player_pids.index(game.target_pid)
-            
-            # If the player lifts any cards, the target is shifted by two, and the turn by one.
-            if len(self.cards_to_lift) > 0:
+            print(f"Current target: {game.target_pid}, current target index: {curr_target_idx}")
+            # If the target finisehs with this EndBout, the target is shifted by two, and the turn by one.
+            if is_finished:
+                current_player_pids = [i for i in range(len(game.players)) if not game.check_is_player_finished(i, gs)]
+                # If everyone is finished, game is over.
+                if not current_player_pids:
+                    return game.game_state_class.from_game(game, copy = False)
                 game.target_pid = current_player_pids[(curr_target_idx + 2) % len(current_player_pids)]
                 game.current_pid = current_player_pids[(curr_target_idx + 1) % len(current_player_pids)]
-            # If the player does not lift any cards, the target is shifted by one, and the turn remains.
+                print(f"Target finished.")
+            # If the player lifts any cards, the target is shifted by two, and the turn by one.
+            elif len(self.cards_to_lift) > 0:
+                game.target_pid = current_player_pids[(curr_target_idx + 2) % len(current_player_pids)]
+                game.current_pid = current_player_pids[(curr_target_idx + 1) % len(current_player_pids)]
+                print(f"Lifted cards")
+            # If the player does not lift any cards, and does not finish, the target is shifted by one, and the turn remains.
             else:
                 game.target_pid = current_player_pids[(curr_target_idx + 1) % len(current_player_pids)]
                 game.current_pid = current_player_pids[curr_target_idx]
+                print(f"Did not lift cards")
+            print(f"New target pid: {game.target_pid}, new current pid: {game.current_pid}")
         # In all other cases, the current_pid is set to -1, so the environment decides the next player.
         else:
             game.current_pid = -1
+
+        if game.check_is_player_finished(self.pid, gs):
+            game.logger.info(f"Player {self.pid} has finished.")
         return game.game_state_class.from_game(game, copy = False)
         
     def modify_game(self, game, inplace = False):
@@ -399,7 +417,7 @@ class AttackSelf(AttackMove):
         """ Target can attack self, at all times, if the board is not empty.
         """
         #gs : MoskaGameState = game.get_current_state()
-        return self.pid == game.target_pid and not self._board_is_empty(game)
+        return self.pid == game.target_pid and not self._board_is_empty(game) and len(game.deck) > 0
     
     def _attacker_and_target_are_same(self, game):
         """ Check if the attacker and target are the same player.
@@ -432,6 +450,8 @@ class AttackOther(AttackMove):
         if self._board_is_empty(game):
             return False
         if self.pid == game.target_pid:
+            return False
+        if game.num_fits_to_table == 0:
             return False
         return True
     
