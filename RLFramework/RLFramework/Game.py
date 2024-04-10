@@ -363,7 +363,7 @@ class Game(ABC):
     def check_is_terminal(self) -> bool:
         """ The game is in a terminal state, if all players are finished.
         """
-        return len(self.unfinished_players) == 0
+        return len(self._get_finished_players(self.get_current_state())) == len(self.players)
     
     @ft.lru_cache(maxsize = 256)
     @abstractmethod
