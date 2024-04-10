@@ -94,7 +94,7 @@ def _get_logger(logger_args: Dict[str, Any] = None):
     logger.setLevel(logger_args.get("log_level", logging.INFO))
     formatter = logging.Formatter(logger_args.get("format", default_args["format"]))
     if logger_args.get("log_file", None):
-        file_handler = logging.FileHandler(logger_args["log_file"], mode = logger_args.get("write_mode", "w"))
+        file_handler = logging.FileHandler(logger_args["log_file"], mode = logger_args.get("write_mode", "w"), encoding="utf-8")
         file_handler.setFormatter(formatter)
         logger.addHandler(file_handler)
     else:
