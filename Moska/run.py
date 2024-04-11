@@ -2,9 +2,11 @@ import multiprocessing
 from MoskaGame import MoskaGame
 from MoskaPlayer import MoskaPlayer
 from MoskaHumanPlayer import MoskaHumanPlayer
+from MoskaNNPlayer import MoskaNNPlayer
 
 for i in range(1):
-   players = [MoskaPlayer("Player 0",
+   players = [MoskaNNPlayer(name="Player 0",
+                            model_path="/home/ilmari/python/RLFramework/MoskaModels/model_0.tflite",
                         logger_args = {
                               "log_file" : "moskaplayer0.log",
                               "log_level" : 10,
@@ -32,7 +34,8 @@ for i in range(1):
                      render_mode = "",
                   gather_data = "moska_data.csv",
                   timeout=2,
+                  model_paths=["/home/ilmari/python/RLFramework/MoskaModels/model_0.tflite"]
    )
-   
-   with multiprocessing.Pool(1) as p:
-      p.map(game.play_game, [players])
+   game.play_game(players)
+   #with multiprocessing.Pool(1) as p:
+   #   p.map(game.play_game, [players])

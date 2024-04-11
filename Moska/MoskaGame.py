@@ -22,8 +22,8 @@ from utils import get_initial_attacks, get_all_matchings
 
 class MoskaGame(Game):
     
-    def __init__(self, logger_args : dict = None, timeout : int = 10, *args, **kwargs):
-        super().__init__(MoskaGameState, logger_args, custom_result_class=MoskaResult, timeout=timeout, *args, **kwargs)
+    def __init__(self, logger_args : dict = None, timeout : int = 10, model_paths = [], *args, **kwargs):
+        super().__init__(MoskaGameState,custom_result_class=MoskaResult, logger_args=logger_args, timeout=timeout, *args, **kwargs)
         self.deck : List[Card] = []
         self.trump_card : Card = None
         self.players : List[MoskaPlayer] = []
@@ -34,9 +34,9 @@ class MoskaGame(Game):
         self.player_public_cards : List[List[Card]] = []
         self.target_pid : int = 0
         self.current_pid : int = 0
-        self.model_paths : List[str] = []
         self.models : Dict[str, TFLiteModel] = {}
         self.ready_players : List[bool] = []
+        self.set_models(model_paths)
 
 
     def get_all_possible_actions(self) -> List['MoskaAction']:
@@ -407,8 +407,10 @@ class MoskaGame(Game):
     def set_models(self, model_paths : List[str]) -> None:
         """ Set the models to the given paths.
         """
+        #print(f"Setting models: {model_paths}")
         self.model_paths = model_paths
         self.models = {path: TFLiteModel(path) for path in model_paths}
+        #print(f"Models set: {self.models}")
         
     @property
     def trump_suit(self) -> str:
