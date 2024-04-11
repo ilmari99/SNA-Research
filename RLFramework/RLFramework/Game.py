@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+import time
 import numpy as np
 from typing import List, TYPE_CHECKING, Dict, Any
 import functools as ft
@@ -20,12 +21,14 @@ class Game(ABC):
                  gather_data : str = "",
                  custom_result_class = None,
                  max_num_total_steps : int = 1000,
+                 timeout : int = 10
                 ):
         """ Initializes the Game instance.
         This is mainly used to set up the logger.
         """
         self.result_class = custom_result_class if custom_result_class else Result
         self.gather_data = gather_data
+        self.timeout = timeout
         if render_mode == "human":
             self.init_render_human()
         self.max_num_total_steps = max_num_total_steps
@@ -42,6 +45,9 @@ class Game(ABC):
         self.current_player_name : str = ""
         self.players : List[Player] = []
         self.total_num_played_turns = 0
+        self.successful = False
+        self.timedout = False
+        self.number_of_turns_exceeded = False
         self.verify_self()
         
     def verify_self(self) -> None:
@@ -66,6 +72,9 @@ class Game(ABC):
         self.current_player_name = ""
         self.players = []
         self.total_num_played_turns = 0
+        self.successful = False
+        self.timedout = False
+        self.number_of_turns_exceeded = False
         
         if self.render_mode == "human":
             self.init_render_human()
@@ -167,6 +176,8 @@ class Game(ABC):
     def play_game(self, players : List['Player']) -> Result:
         """ Play a game with the given players.
         """
+        start_time = time.time()
+        elapsed_time_s = lambda : time.time() - start_time
         self.reset()
         # Initilize the game by setting internal variables, custom variables, and checking the initialization
         self.initialize_game_wrap(players)
@@ -174,7 +185,7 @@ class Game(ABC):
         self.render()
         self.game_states.append(self.get_current_state().deepcopy())
         # Play until all players are finished
-        while not self.check_is_terminal() and self.total_num_played_turns < self.max_num_total_steps:
+        while not self.check_is_terminal() and self.total_num_played_turns < self.max_num_total_steps and elapsed_time_s() < self.timeout:
             # Select the next player to play
             self.current_player_name = players[self.current_pid].name
             player = players[self.current_pid]
@@ -214,6 +225,15 @@ class Game(ABC):
             self.logger.debug(f"Game state:\n{new_state}")
             self.render()
         
+        if self.total_num_played_turns >= self.max_num_total_steps:
+            print(f"Game finished because the maximum number of steps was reached.")
+            self.logger.info(f"Game finished because the maximum number of steps was reached.")
+            self.number_of_turns_exceeded = True
+        if elapsed_time_s() >= self.timeout:
+            print(f"Game finished because the timeout was reached.")
+            self.logger.info(f"Game finished because the timeout was reached.")
+            self.timedout = True
+        self.successful = self.check_is_terminal()
         # Winner is the player with the higher score
         winner = players[np.argmax(self.player_scores)].name
         players_with_max_score = [p.name for p in players if p.score == max(self.player_scores)]
@@ -222,7 +242,7 @@ class Game(ABC):
         if len(players_with_max_score) > 1:
             winner = None
         
-        result = self.result_class(successful = True if self.check_is_terminal() else False,
+        result = self.result_class(successful = self.successful,
                         player_jsons = [player.as_json() for player in players],
                         finishing_order = self.finishing_order,
                         logger_args = self.logger_args,
