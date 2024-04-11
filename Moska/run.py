@@ -6,12 +6,12 @@ from MoskaNNPlayer import MoskaNNPlayer
 
 for i in range(1):
    players = [MoskaNNPlayer(name="Player 0",
-                            model_path="/home/ilmari/python/RLFramework/MoskaModels/model_0.tflite",
+                            model_path="C:\\Users\\ilmari\\Desktop\\Python\\RLFramework\\MoskaModels\\model_0.tflite",
                         logger_args = {
                               "log_file" : "moskaplayer0.log",
                               "log_level" : 10,
                               }),
-            MoskaPlayer("Player 1",
+            MoskaHumanPlayer("Player 1",
                            logger_args = {
                               "log_file" : "moskaplayer1.log",
                               "log_level" : 10,
@@ -31,10 +31,10 @@ for i in range(1):
    game = MoskaGame(logger_args={"log_file" : "moskagame.log",
                                  "log_level" : 10,
                                  },
-                     render_mode = "",
+                     render_mode = "text",
                   gather_data = "moska_data.csv",
-                  timeout=2,
-                  model_paths=["/home/ilmari/python/RLFramework/MoskaModels/model_0.tflite"]
+                  timeout=10000,
+                  model_paths=["C:\\Users\\ilmari\\Desktop\\Python\\RLFramework\\MoskaModels\\model_0.tflite"]
    )
    game.play_game(players)
    #with multiprocessing.Pool(1) as p:
