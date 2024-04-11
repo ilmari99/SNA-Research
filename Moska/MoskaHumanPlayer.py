@@ -33,7 +33,7 @@ class MoskaHumanPlayer(MoskaPlayer):
             #print(f"Checking move ID: {move_id}, action: {action}")
             if action.is_move_id_legal(game):
                 valid_move_ids.append(move_id)
-                print(f"Move ID: {move_id} is valid.")
+                #print(f"Move ID: {move_id} is valid.")
         # Print a numbered list of valid move IDs
         for i, move_id in enumerate(valid_move_ids):
             print(f"{i+1}: {move_id}")
@@ -72,7 +72,7 @@ class MoskaHumanPlayer(MoskaPlayer):
             args = self.get_attack_self_args(game)
             action = get_moska_action(self.pid, selected_move_id, *args[0], **args[1])
         
-        elif selected_move_id == "AttackTarget":
+        elif selected_move_id == "AttackOther":
             args = self.get_attack_target_args(game)
             action = get_moska_action(self.pid, selected_move_id, *args[0], **args[1])
         elif selected_move_id == "AttackInitial":
@@ -80,7 +80,10 @@ class MoskaHumanPlayer(MoskaPlayer):
             action = get_moska_action(self.pid, selected_move_id, *args[0], **args[1])
         else:
             raise ValueError(f"Invalid move ID: {selected_move_id}")
-        print(f"Selected action: {action}")
+        is_legal, msg = action.check_action_is_legal(game)
+        if not is_legal:
+            print(f"The action {action} is not legal: {msg}")
+            return self.choose_move(game)
         return action
     
     def get_input_args_for_moveid(self, game: Game, move_id: int) -> Tuple[Tuple, Dict]:
@@ -135,7 +138,7 @@ class MoskaHumanPlayer(MoskaPlayer):
         except IndexError:
             print("Invalid indices. Please enter the indices of the cards to attack self separated by spaces.")
             return self.get_attack_self_args(game)
-        return (cards,self.pid), {}
+        return (self.pid, cards), {}
     
     def get_attack_target_args(self, game: 'MoskaGame') -> Tuple[Tuple, Dict]:
         """ Select the cards to attack target
@@ -152,6 +155,6 @@ class MoskaHumanPlayer(MoskaPlayer):
         except IndexError:
             print("Invalid indices. Please enter the indices of the cards to attack target separated by spaces.")
             return self.get_attack_target_args(game)
-        return (cards,game.target_pid), {}
+        return (game.target_pid, cards), {}
     
             
