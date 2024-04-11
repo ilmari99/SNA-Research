@@ -244,11 +244,11 @@ class MoskaGame(Game):
         state : MoskaGameState = super().step(action, real_move)
         state.ready_players[current_pid] = True
         if len(self.cards_to_kill + self.killed_cards) != curr_board_len:
-            # Set all unfinished players to not ready
-            ready_players = [True for _ in self.players]
+            # If the board state changes, then set all players (who are not finished) to not ready
+            finished_players = state.get_finished_players()
             for i in range(len(self.players)):
-                if not self.check_is_player_finished(i, state):
-                    ready_players[i] = False
+                if i not in finished_players:
+                    state.ready_players[i] = False
         return state
     
     def fill_hands(self, game_state : MoskaGameState = None, inplace = True) -> None:
@@ -378,6 +378,7 @@ class MoskaGame(Game):
         But in this implementation, we will select the next player randomly.
         """
         if self.current_pid == -1:
+            # If all players are ready, return the target player
             ready_players = [i for i in range(len(players)) if self.ready_players[i]]
             if len(ready_players) == len(players):
                 return self.target_pid
