@@ -27,12 +27,10 @@ def get_moska_action(pid : int, move_id : str, *args, **kwargs) -> 'MoskaAction'
     """ Get a Moska action based on the move_id.
     """
     if move_id == "AttackInitial":
-        print(f"Args: {args}, kwargs: {kwargs}")
         return AttackInitial(pid, move_id, *args, **kwargs)
     if move_id == "AttackOther":
         return AttackOther(pid, move_id, *args, **kwargs)
     if move_id == "AttackSelf":
-        print(f"Args: {args}, kwargs: {kwargs}")
         return AttackSelf(pid, move_id, *args, **kwargs)
     if move_id == "KillFromHand":
         return KillFromHand(pid, move_id, *args, **kwargs)
