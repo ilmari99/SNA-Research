@@ -90,7 +90,7 @@ class MoskaAction(Action):
         for player in game.players:
             if len(player.hand) != len(set(player.hand)):
                 duplicated_cards = [card for card, count in Counter(player.hand).items() if count > 1]
-                print(f"Player {player.pid} has duplicate cards in hand: {duplicated_cards}")
+                #print(f"Player {player.pid} has duplicate cards in hand: {duplicated_cards}")
                 return True
         return False
     
@@ -155,6 +155,7 @@ class MoskaAction(Action):
                 #print(f"Player {self.pid} has finished.")
                 #print(game.get_current_state())
                 act = EndBout(self.pid, "EndBout", [])
+                game.ready_players = [True for _ in range(len(game.players))]
                 return act.modify_game(game)
             
         
@@ -165,7 +166,7 @@ class MoskaAction(Action):
             current_player_pids = [i for i in range(len(game.players)) if not game.check_is_player_finished(i, gs) or i == self.pid]
             #curr_pid_idx = current_player_pids.index(game.current_pid)
             curr_target_idx = current_player_pids.index(game.target_pid)
-            print(f"Current target: {game.target_pid}, current target index: {curr_target_idx}")
+            #print(f"Current target: {game.target_pid}, current target index: {curr_target_idx}")
             # If the target finisehs with this EndBout, the target is shifted by two, and the turn by one.
             if is_finished:
                 current_player_pids = [i for i in range(len(game.players)) if not game.check_is_player_finished(i, gs)]
@@ -174,18 +175,18 @@ class MoskaAction(Action):
                     return game.game_state_class.from_game(game, copy = False)
                 game.target_pid = current_player_pids[(curr_target_idx + 2) % len(current_player_pids)]
                 game.current_pid = current_player_pids[(curr_target_idx + 1) % len(current_player_pids)]
-                print(f"Target finished.")
+                #print(f"Target finished.")
             # If the player lifts any cards, the target is shifted by two, and the turn by one.
             elif len(self.cards_to_lift) > 0:
                 game.target_pid = current_player_pids[(curr_target_idx + 2) % len(current_player_pids)]
                 game.current_pid = current_player_pids[(curr_target_idx + 1) % len(current_player_pids)]
-                print(f"Lifted cards")
+                #print(f"Lifted cards")
             # If the player does not lift any cards, and does not finish, the target is shifted by one, and the turn remains.
             else:
                 game.target_pid = current_player_pids[(curr_target_idx + 1) % len(current_player_pids)]
                 game.current_pid = current_player_pids[curr_target_idx]
-                print(f"Did not lift cards")
-            print(f"New target pid: {game.target_pid}, new current pid: {game.current_pid}")
+                #print(f"Did not lift cards")
+            #print(f"New target pid: {game.target_pid}, new current pid: {game.current_pid}")
         # In all other cases, the current_pid is set to -1, so the environment decides the next player.
         else:
             game.current_pid = -1

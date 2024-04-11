@@ -20,6 +20,7 @@ class MoskaPlayer(Player):
         super().__init__(name, logger_args)
         self.game : 'MoskaGame' = None
         self.max_moves_to_consider = max_moves_to_consider
+        self.has_received_reward = False
         #self.ready = False
         return
     
@@ -37,7 +38,7 @@ class MoskaPlayer(Player):
     
     def choose_move(self, game: Game) -> Action:
         act = super().choose_move(game)
-        print(f"Player {self.pid} chose action: {act}")
+        #print(f"Player {self.pid} chose action: {act}")
         return act
     
     def get_possible_kill_mapping(self) -> Dict['Card', List['Card']]:
@@ -49,6 +50,7 @@ class MoskaPlayer(Player):
         """ Called when a game begins.
         """
         self.game : MoskaGame = game
+        self.has_received_reward = False
         return
     
     def get_playable_ranks_from_hand(self) -> Set[int]:

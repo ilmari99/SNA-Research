@@ -22,8 +22,8 @@ from utils import get_initial_attacks, get_all_matchings
 
 class MoskaGame(Game):
     
-    def __init__(self, logger_args : dict = None, *args, **kwargs):
-        super().__init__(MoskaGameState, logger_args, custom_result_class=MoskaResult, *args, **kwargs)
+    def __init__(self, logger_args : dict = None, timeout : int = 10, *args, **kwargs):
+        super().__init__(MoskaGameState, logger_args, custom_result_class=MoskaResult, timeout=timeout, *args, **kwargs)
         self.deck : List[Card] = []
         self.trump_card : Card = None
         self.players : List[MoskaPlayer] = []
@@ -134,6 +134,16 @@ class MoskaGame(Game):
             
         #print(f"Player {self.current_pid} has {actions} possible actions.", flush=True)
         return actions
+    
+    def calculate_reward(self, pid : int, new_state : 'GameState'):
+        """ Calculate the reward for the player that made the move.
+        """
+        finished_players = [i for i in range(len(self.players)) if self.check_is_player_finished(i, new_state)]
+        player = self.players[pid]
+        if pid in finished_players and not player.has_received_reward and len(finished_players) < len(self.players):
+            player.has_received_reward = True
+            return 1
+        return 0
     
     def __repr__(self) -> str:
         """ Print the game state.
