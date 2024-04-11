@@ -49,8 +49,8 @@ class Card:
     def deepcopy(self):
         return self.__deepcopy__()
 
-    def __dict__(self):
-        return {"suit": self.suit, "rank": self.rank, "kopled": self.kopled}
+    #def __dict__(self):
+    #    return {"suit": self.suit, "rank": self.rank, "kopled": self.kopled}
 
 REFERENCE_DECK = [Card(suit, value) for suit, value in itertools.product(CARD_SUITS, CARD_VALUES)]
     
