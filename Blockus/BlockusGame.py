@@ -13,6 +13,8 @@ from BlockusResult import BlockusResult
 import matplotlib.pyplot as plt
 from RLFramework.utils import TFLiteModel
 
+from BlockusPieces import BLOCKUS_PIECE_MAP
+
 
 class BlockusGame(Game):
     """ A class representing the game TicTacToe.
@@ -21,6 +23,7 @@ class BlockusGame(Game):
         super().__init__(BlockusGameState, custom_result_class=BlockusResult, **kwargs)
         self.board_size = board_size
         self.model_paths = []
+        self.board = None
         
     def play_game(self, players: List[Player]) -> Result:
         # Load the models before playing the game
@@ -30,8 +33,13 @@ class BlockusGame(Game):
         if model_paths - current_models:
             self.set_models(list(model_paths))
         return super().play_game(players)
-        
     
+    def __repr__(self) -> str:
+        s = ""
+        for i, row in enumerate(self.board):
+            s += " ".join([str(x).ljust(2) for x in row]) + "\n"
+        return s
+
     def get_model(self, model_name : str) -> TFLiteModel:
         """ Get the model with the given name.
         """
@@ -51,17 +59,16 @@ class BlockusGame(Game):
         """ When the game is started, we need to set the board.
         """
         self.board = [[-1 for _ in range(self.board_size[1])] for _ in range(self.board_size[0])]
+        #self.board = np.array(self.board)
         self.current_pid = 0
-    
-    def environment_action(self: Game, game_state: GameState) -> GameState:
-        # Select the next player
-        game_state.current_pid = (game_state.current_pid + 1) % len(game_state.player_scores)
+        self.player_remaining_pieces = [list(range(21)) for _ in players]
 
     def restore_game(self, game_state: BlockusGameState) -> None:
         """ Restore the game to the state described by the game_state.
         We don't need to worry about the players states or their scores, as they are automatically restored.
         """
         self.board = game_state.board
+        self.player_remaining_pieces = game_state.player_remaining_pieces
         self.current_pid = game_state.current_pid
         self.previous_turns = game_state.previous_turns
     
@@ -70,16 +77,34 @@ class BlockusGame(Game):
         If the player wins, the reward is 1.0.
         If the game is a draw, the reward is 0.5
         """
-        return 0
+        # Number of squares occupied by player
+        player_board = np.array(game_state.board) == pid
+        player_score = np.sum(player_board)
+        return player_score - game_state.player_scores[pid]
     
-        
     def check_is_player_finished(self, pid : int, game_state: GameState) -> bool:
         """ A player is finished if the game is finished.
         I.e. if the player has won, or if there are no more free spots, or if the other player is finished.
         """
-
+        if pid in game_state.finished_players:
+            return True
+        return False
     
     def get_all_possible_actions(self) -> List[BlockusAction]:
         """ Return all possible actions.
         """
+        available_pieces = self.player_remaining_pieces[self.current_pid]
+        actions = []
+        for piece_id in available_pieces:
+            for x in range(self.board_size[0]):
+                for y in range(self.board_size[1]):
+                    for rotation in range(4):
+                        for flip in [True, False]:
+                            action = BlockusAction(piece_id, x, y, rotation, flip)
+                            is_legal, msg = action.check_action_is_legal(self)
+                            if is_legal:
+                                actions.append(action)
+        if len(actions) == 0:
+            self.finishing_order.append(self.current_pid)
+        return actions
     
