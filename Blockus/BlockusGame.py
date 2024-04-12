@@ -62,6 +62,23 @@ class BlockusGame(Game):
         #self.board = np.array(self.board)
         self.current_pid = 0
         self.player_remaining_pieces = [list(range(21)) for _ in players]
+        self.finished_players = []
+        
+    def render_human(self, ax: plt.Axes = None) -> None:
+        """ Render the game.
+        """
+        if ax is None:
+            fig, ax = plt.subplots()
+        ax.clear()
+        color_map = {-1 : "black", 0 : "red", 1 : "blue", 2 : "green", 3 : "yellow"}
+        ax.imshow(self.board, cmap="tab20", vmin=-1, vmax=3)
+        ax.set_xticks(np.arange(-0.5, self.board_size[1], 1), minor=True)
+        ax.set_yticks(np.arange(-0.5, self.board_size[0], 1), minor=True)
+        ax.grid(which='minor', color='w', linestyle='-', linewidth=2)
+        ax.set_title(f"Scores: {self.player_scores}")
+        ax.set_xticks([])
+        ax.set_yticks([])
+        plt.pause(0.01)
 
     def restore_game(self, game_state: BlockusGameState) -> None:
         """ Restore the game to the state described by the game_state.
@@ -71,16 +88,26 @@ class BlockusGame(Game):
         self.player_remaining_pieces = game_state.player_remaining_pieces
         self.current_pid = game_state.current_pid
         self.previous_turns = game_state.previous_turns
+        self.finished_players = game_state.finished_players
     
     def calculate_reward(self, pid : int, game_state: BlockusGameState) -> float:
         """ Calculate the reward for the player.
         If the player wins, the reward is 1.0.
         If the game is a draw, the reward is 0.5
         """
+        #print("Called calculate_reward")
         # Number of squares occupied by player
         player_board = np.array(game_state.board) == pid
         player_score = np.sum(player_board)
-        return player_score - game_state.player_scores[pid]
+        r = player_score - game_state.player_scores[pid]
+        self.players[pid].logger.info(f"Player {pid} score: {player_score}, reward: {r}")
+        return r
+    
+    def environment_action(self, game_state : 'BlockusGameState') -> 'BlockusGameState':
+        self.update_finished_players_in_gamestate(game_state)
+        self.update_player_scores_in_gamestate(game_state)
+        self.update_player_attributes()
+        return super().environment_action(game_state)
     
     def check_is_player_finished(self, pid : int, game_state: GameState) -> bool:
         """ A player is finished if the game is finished.
@@ -98,13 +125,26 @@ class BlockusGame(Game):
         for piece_id in available_pieces:
             for x in range(self.board_size[0]):
                 for y in range(self.board_size[1]):
-                    for rotation in range(4):
-                        for flip in [True, False]:
+                    # If x,y is is
+                    
+                    num_rotations = 4
+                    # If the piece is full and symmetric, then we only need to check one rotation
+                    piece = BLOCKUS_PIECE_MAP[piece_id]
+                    if len(np.unique(piece)) == 1 and piece.shape[0] == piece.shape[1]:
+                        num_rotations = 1
+                    # If the piece is a line, then there are two unique rotations
+                    if piece.shape[0] == 1 or piece.shape[1] == 1:
+                        num_rotations = 2
+                    for rotation in range(num_rotations):
+                        # If the piece is symmetric, then we only need to check one flip
+                        for flip in [False] if num_rotations < 4 else [False, True]:
                             action = BlockusAction(piece_id, x, y, rotation, flip)
                             is_legal, msg = action.check_action_is_legal(self)
                             if is_legal:
                                 actions.append(action)
         if len(actions) == 0:
-            self.finishing_order.append(self.current_pid)
+            # Add null action
+            actions.append(BlockusAction(-1, -1, -1, -1, False))
+            self.finished_players.append(self.current_pid)
         return actions
     

@@ -13,6 +13,7 @@ class BlockusGameState(GameState):
         super().__init__(state_json)
         self.board = state_json["board"]
         self.player_remaining_pieces : List[List[int]] = state_json["player_remaining_pieces"]
+        self.finished_players : List[int] = state_json["finished_players"]
     
     def game_to_state_json(cls, game : 'BlockusGame', player):
         """ Convert a Game to a state_json.
@@ -20,6 +21,7 @@ class BlockusGameState(GameState):
         state_json = {
             "board" : game.board,
             "player_remaining_pieces" : game.player_remaining_pieces,
+            "finished_players" : game.finished_players,
         }
         return state_json
     
