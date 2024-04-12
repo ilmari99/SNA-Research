@@ -93,8 +93,8 @@ class MoskaGameState(GameState):
         The json describes the game state with perfect information,
         so the 'player' argument is ignored.
         """
-        if player is not None:
-            warnings.warn("The player argument is ignored in MoskaGameState.game_to_state_json")
+        #if player is not None:
+            #warnings.warn("The player argument is ignored in MoskaGameState.game_to_state_json")
         state_json = {
             "deck" : game.deck,
             "trump_card" : game.trump_card,
