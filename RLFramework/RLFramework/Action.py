@@ -52,6 +52,12 @@ class Action(ABC):
             return wrapper
         return decorator
     
+    @classmethod
+    def check_action_is_legal_from_args(cls, game: 'Game', *args) -> bool:
+        """ Check if the action is legal in the given game state.
+        """
+        return cls(*args).check_action_is_legal(game)
+    
     @modify_game_decorator()
     @abstractmethod
     def modify_game(self, game: 'Game', inplace = False) -> GameState:
@@ -64,9 +70,3 @@ class Action(ABC):
         """ Check if the action is legal in the given game state.
         """
         pass
-    
-    @classmethod
-    def check_action_is_legal_from_args(cls, game: 'Game', *args) -> bool:
-        """ Check if the action is legal in the given game state.
-        """
-        return cls(*args).check_action_is_legal(game)

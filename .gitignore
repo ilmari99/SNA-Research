@@ -2,6 +2,8 @@ ModelFiles
 NNCheckpoints
 *Dataset*
 *sandbox*
+*events.out*
+*gathered_data*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
