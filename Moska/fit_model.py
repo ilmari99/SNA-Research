@@ -1,6 +1,7 @@
 import os
 from RLFramework.fit_model import fit_model
 import numpy as np
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
 import tensorflow as tf
 from MoskaGame import MoskaGame
@@ -12,8 +13,8 @@ from MoskaNNPlayer import MoskaNNPlayer
 
 
 def game_constructor(i):
-    model_paths = list(filter(lambda path: path.endswith(".tflite"), os.listdir("/home/ilmari/python/RLFramework/MoskaModels")))
-    model_paths = [os.path.abspath(f"/home/ilmari/python/RLFramework/MoskaModels/{model_path}") for model_path in model_paths]
+    model_paths = list(filter(lambda path: path.endswith(".tflite"), os.listdir("/home/ilmari/RLFramework/MoskaModels")))
+    model_paths = [os.path.abspath(f"/home/ilmari/RLFramework/MoskaModels/{model_path}") for model_path in model_paths]
     return MoskaGame(
         timeout=10,
         logger_args = None,
@@ -29,7 +30,7 @@ def players_constructor(i, model_path):
     model_base_path = model_path.split("/")[-1]
     epoch_num = int(model_base_path.split("_")[1].split(".")[0])
     # The previous models are in the same folder, but with different epoch numbers
-    all_model_paths = [os.path.abspath(f"/home/ilmari/python/RLFramework/MoskaModels/model_{i}.tflite") for i in range(epoch_num + 1)]
+    all_model_paths = [os.path.abspath(f"/home/ilmari/RLFramework/MoskaModels/model_{i}.tflite") for i in range(epoch_num + 1)]
     #print(all_model_paths)
     # In the simulation, we play games with the current and previous models
     # To do that, we'll create a dict of players, where the keys are the model paths, and the values are the weights
@@ -70,18 +71,20 @@ def model_fit(ds, epoch, num_samples):
     
     ds = ds.shuffle(20000)
     
-    train_ds = ds.take(int(0.8*num_samples)).batch(4*1024)
-    val_ds = ds.skip(int(0.2*num_samples)).batch(4*1024)
+    train_ds = ds.take(int(0.8*num_samples)).batch(16384)
+    val_ds = ds.skip(int(0.8*num_samples)).batch(16384)
     
     train_ds = train_ds.prefetch(tf.data.experimental.AUTOTUNE)
 
     if epoch == 0:
         inputs = tf.keras.Input(shape=input_shape)
-        x = tf.keras.layers.Dense(400, activation='relu')(inputs)
+        x = tf.keras.layers.Dense(600, activation='relu')(inputs)
         x = tf.keras.layers.Dropout(0.4)(x)
-        x = tf.keras.layers.Dense(300, activation='relu')(x)
+        x = tf.keras.layers.Dense(500, activation='relu')(x)
         x = tf.keras.layers.Dropout(0.35)(x)
-        x = tf.keras.layers.Dense(200, activation='relu')(x)
+        x = tf.keras.layers.Dense(500, activation='relu')(x)
+        x = tf.keras.layers.Dropout(0.35)(x)
+        x = tf.keras.layers.Dense(500, activation='relu')(x)
         output = tf.keras.layers.Dense(1, activation='sigmoid')(x)
         
         model = tf.keras.Model(inputs=inputs, outputs=output)
@@ -92,24 +95,24 @@ def model_fit(ds, epoch, num_samples):
         )
         print(model.summary())
     else:
-        model = tf.keras.models.load_model(f"/home/ilmari/python/RLFramework/MoskaModels/model_{epoch-1}.keras")
+        model = tf.keras.models.load_model(f"/home/ilmari/RLFramework/MoskaModels/model_{epoch-1}.keras")
 
     tb_log = tf.keras.callbacks.TensorBoard(log_dir=f"logs/fit/{epoch}", histogram_freq=1)
     early_stop = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=3, restore_best_weights=True)
-    model.fit(train_ds, epochs=15, callbacks=[tb_log, early_stop], validation_data=val_ds)
+    model.fit(train_ds, epochs=25, callbacks=[tb_log, early_stop], validation_data=val_ds)
     model.save(f"MoskaModels/model_{epoch}.keras")
     tf.keras.backend.clear_session()
-    return os.path.abspath(f"/home/ilmari/python/RLFramework/MoskaModels/model_{epoch}.keras")
+    return os.path.abspath(f"/home/ilmari/RLFramework/MoskaModels/model_{epoch}.keras")
 
 if __name__ == "__main__":
     fit_model(players_constructor,
               game_constructor,
               model_fit,
               starting_model_path="",
-              num_epochs=5,
-              num_games=1000,
-              num_files=-1,
-              num_cpus=8,
+              num_epochs=10,
+              num_games=10000,
+              num_files=100,
+              num_cpus=25,
               folder="MoskaModelFit",
               starting_epoch=0,
               )
