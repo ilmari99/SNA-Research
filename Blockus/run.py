@@ -1,6 +1,7 @@
 import multiprocessing
 from BlockusGame import BlockusGame
 from BlockusPlayer import BlockusPlayer
+from BlockusNNPlayer import BlockusNNPlayer
 
 for i in range(1):
    players = [BlockusPlayer(name="Player 0",
@@ -18,14 +19,15 @@ for i in range(1):
                               "log_file" : "blockusplayer2.log",
                               "log_level" : 10,
                      }),
-            BlockusPlayer("Player 3",
+            BlockusNNPlayer(name="Player 3",
+                            model_path="/home/ilmari/python/RLFramework/BlockusModels/model_all_data.tflite",
                            logger_args = {
                               "log_file" : "blockusplayer3.log",
                               "log_level" : 10,
                      }),
    ]
    
-   game = BlockusGame(board_size=(20, 20), logger_args={"log_file" : "blockusgame.log",
+   game = BlockusGame(board_size=(14,14), logger_args={"log_file" : "blockusgame.log",
                                                         "log_level" : 10,
                                  },
                      render_mode = "human",
