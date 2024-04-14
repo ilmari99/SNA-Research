@@ -51,16 +51,16 @@ def run_game(args):
     return res
 
 if __name__ == "__main__":
-    num_games = 300
-    num_cpus = 10
+    num_games = 600
+    num_cpus = 30
     loss_percents = {}
-    for model_path in os.listdir("/home/ilmari/python/RLFramework/MoskaModelsRemote/"):
+    for model_path in os.listdir("/home/ilmari/RLFramework/MoskaModels/"):
         if not model_path.endswith(".tflite"):
             continue
-        model_path = os.path.join("/home/ilmari/python/RLFramework/MoskaModelsRemote/", model_path)
+        model_path = os.path.join("/home/ilmari/RLFramework/MoskaModels/", model_path)
         print(f"Testing model: {model_path}")
         with multiprocessing.Pool(num_cpus) as p:
-            results = p.map(run_game, [(i, model_path, random.randint(2**32)) for i in range(num_games)])
+            results = p.map(run_game, [(i, model_path, random.randint(0,2**32)) for i in range(num_games)])
 
         # Find how many times the test player won
         num_losses = 0
