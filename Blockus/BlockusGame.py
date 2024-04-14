@@ -19,11 +19,12 @@ from BlockusPieces import BLOCKUS_PIECE_MAP
 class BlockusGame(Game):
     """ A class representing the game TicTacToe.
     """
-    def __init__(self, board_size : Tuple[int, int] = (20, 20), **kwargs):
+    def __init__(self, board_size : Tuple[int, int] = (20, 20), model_paths=[], **kwargs):
         super().__init__(BlockusGameState, custom_result_class=BlockusResult, **kwargs)
         self.board_size = board_size
         self.model_paths = []
         self.board = None
+        self.set_models(model_paths)
         
     def play_game(self, players: List[Player]) -> Result:
         # Load the models before playing the game
@@ -122,13 +123,25 @@ class BlockusGame(Game):
         """
         available_pieces = self.player_remaining_pieces[self.current_pid]
         actions = []
+        current_grids = np.where(np.array(self.board) == self.current_pid)
         for piece_id in available_pieces:
+            piece_rows = BLOCKUS_PIECE_MAP[piece_id].shape[0]
+            piece_cols = BLOCKUS_PIECE_MAP[piece_id].shape[1]
             for x in range(self.board_size[0]):
                 for y in range(self.board_size[1]):
-                    # If x,y is is
-                    
+                    # The (x,y) location and piece is not valid, if xy is further than
+                    # 1 + piece_rows rows away from the closest piece in the current grid, or if the piece is further than
+                    # 1 + piece_cols columns away from the closest piece in the current grid
+                    if len(current_grids[0]) == 0:
+                        # Every corner
+                        current_grid_corners = [(0, 0), (0, self.board_size[1] - 1), (self.board_size[0] - 1, 0), (self.board_size[0] - 1, self.board_size[1] - 1)]
+                        current_grids = np.array(current_grid_corners).T
+                    min_row_dist = np.min(np.abs(current_grids[0] - x))
+                    min_col_dist = np.min(np.abs(current_grids[1] - y))
+                    if min_row_dist > 1 + piece_rows or min_col_dist > 1 + piece_cols:
+                        continue
                     num_rotations = 4
-                    # If the piece is full and symmetric, then we only need to check one rotation
+                    # If the piece is full and square, then we only need to check one rotation
                     piece = BLOCKUS_PIECE_MAP[piece_id]
                     if len(np.unique(piece)) == 1 and piece.shape[0] == piece.shape[1]:
                         num_rotations = 1
