@@ -42,27 +42,25 @@ def players_constructor(i, model_path = ""):
     return players
 
 def run_game(args):
-    if len(args) == 1:
-        i = args[0]
-        model_path = ""
-    else:
-        i, model_path = args
+    i, model_path, seed = args
+    random.seed(seed)
+    np.random.seed(seed)
     game = game_constructor(i, [model_path])
     players = players_constructor(i, model_path)
     res = game.play_game(players)
     return res
 
 if __name__ == "__main__":
-    num_games = 200
+    num_games = 300
     num_cpus = 10
     loss_percents = {}
-    for model_path in os.listdir("/home/ilmari/python/RLFramework/MoskaModels/"):
+    for model_path in os.listdir("/home/ilmari/python/RLFramework/MoskaModelsRemote/"):
         if not model_path.endswith(".tflite"):
             continue
-        model_path = os.path.join("/home/ilmari/python/RLFramework/MoskaModels/", model_path)
+        model_path = os.path.join("/home/ilmari/python/RLFramework/MoskaModelsRemote/", model_path)
         print(f"Testing model: {model_path}")
         with multiprocessing.Pool(num_cpus) as p:
-            results = p.map(run_game, [(i, model_path) for i in range(num_games)])
+            results = p.map(run_game, [(i, model_path, random.randint(2**32)) for i in range(num_games)])
 
         # Find how many times the test player won
         num_losses = 0
