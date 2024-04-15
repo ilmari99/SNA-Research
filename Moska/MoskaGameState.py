@@ -73,7 +73,7 @@ class MoskaGameState(GameState):
             return []
         
         finished_players = []
-        for pid in range(len(self.players_ready)):
+        for pid in range(len(self.ready_players)):
             if self.check_is_player_finished(pid):
                 finished_players.append(pid)
         return finished_players
@@ -93,8 +93,8 @@ class MoskaGameState(GameState):
         The json describes the game state with perfect information,
         so the 'player' argument is ignored.
         """
-        if player is not None:
-            warnings.warn("The player argument is ignored in MoskaGameState.game_to_state_json")
+        #if player is not None:
+            #warnings.warn("The player argument is ignored in MoskaGameState.game_to_state_json")
         state_json = {
             "deck" : game.deck,
             "trump_card" : game.trump_card,
@@ -104,7 +104,7 @@ class MoskaGameState(GameState):
             "current_pid" : game.current_pid,
             "target_pid" : game.target_pid,
             "ready_players" : game.ready_players,
-            "player_full_cards" : game.player_full_cards,
+            "player_full_cards" : game.player_full_cards,                               
             "player_public_cards" : game.player_public_cards,
         }
         return state_json

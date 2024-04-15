@@ -64,7 +64,7 @@ def fit_model(
         # Simulate the games
         print("Simulating games...")
         
-        simulate_games(game_constructor, player_constructor_temp, folder, num_games, num_files, num_cpus, exists_ok=False)
+        simulate_games(game_constructor, player_constructor_temp, folder, num_games, num_files, num_cpus, exists_ok=True)
         # Read the data
         print("Reading data...")
         ds,nfiles, num_samples = read_to_dataset([folder])

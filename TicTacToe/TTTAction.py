@@ -18,6 +18,7 @@ class TTTAction(Action):
         """ Modify the game instance according to the action.
         """
         game.board[self.x][self.y] = game.current_pid
+        game.current_pid = -1# - game.current_pid
         return TTTGameState.from_game(game)
     
     def check_action_is_legal(self, game : 'TTTGame') -> bool:

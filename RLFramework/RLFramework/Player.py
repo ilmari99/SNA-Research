@@ -54,7 +54,12 @@ class Player(ABC):
         # If there are no possible actions, return None
         if not possible_actions:
             return None
-        next_states = [game.step(action, real_move = False) for action in possible_actions]
+        next_states = []
+        game_state = game.game_state_class.from_game(game, copy=True)
+        for action in possible_actions:
+            next_state = game.step(action, real_move = False)
+            next_states.append(next_state)
+        #next_states = [game.step(action, real_move = False) for action in possible_actions]
         evaluations = self.evaluate_states(next_states)
         self.logger.debug(f"Moves and evaluations:\n{list(zip(possible_actions, evaluations))}")
         assert len(evaluations) == len(possible_actions), f"Number of evaluations ({len(evaluations)}) must match the number of possible actions ({len(possible_actions)})"
