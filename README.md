@@ -3,10 +3,16 @@
 ## Overview
 This project is a reinforcement learning framework designed to facilitate the creation of AI players for single or multi-player environments. It is versatile and simple, focusing on environments with dynamic action spaces.
 
+The main benefits of this framework are: 
+- it's simplicity,
+- the possibility to have a dynamic action space, so even games with a large action space are possible, and further, the model doesn't have to *learn* which moves are possible by negative rewards,
+- the possibility to use any kind of prior evaluation function (for example hand crafted) to improve performance and convergence.
+
+
 ## Features
 - **Discrete Action Spaces**: Works with environments that have discrete or discretizable action spaces.
 - **State-Dependent Future**: The future state depends only on the current state (but the current state can consist of multiple states).
-- **Known Immediate State**: The immediate next state after an action is known. If there is uncertainty, it must be represented in the state.
+- **Known Immediate State**: The immediate next state after an action is known. Or atleast, we need to know what is not known after an action is made.
 
 ## Creating an Environment
 To use this framework, the user must:
