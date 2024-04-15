@@ -19,17 +19,18 @@ for i in range(1):
                               "log_file" : "blockusplayer2.log",
                               "log_level" : 10,
                      }),
-            BlockusNNPlayer(name="Player 3",
-                            model_path="/home/ilmari/python/RLFramework/BlockusModels/model_all_data.tflite",
+            BlockusPlayer(name="Player 3",
+                            #model_path="/home/ilmari/python/RLFramework/BlockusModelsRemote/model_13.tflite",
                            logger_args = {
                               "log_file" : "blockusplayer3.log",
                               "log_level" : 10,
                      }),
    ]
    
-   game = BlockusGame(board_size=(14,14), logger_args={"log_file" : "blockusgame.log",
+   game = BlockusGame(board_size=(20,20), logger_args={"log_file" : "blockusgame.log",
                                                         "log_level" : 10,
                                  },
+                      model_paths=["/home/ilmari/python/RLFramework/BlockusModelsRemote/model_13.tflite"],
                      render_mode = "human",
                   gather_data = "blockus_data.csv",
                   timeout=10000,

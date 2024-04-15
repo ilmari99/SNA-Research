@@ -45,15 +45,15 @@ def get_model(input_shape):
         board = RandomFlipBoardLayer()(board)
         # Now we have the Blokus board, which is 14x14
         # Lets apply a 3x3 convolution, and then 2x2 convolution
-        board = tf.keras.layers.Conv2D(16, (3,3), activation='relu', kernel_regularizer=tf.keras.regularizers.l2(0.01))(board)
         board = tf.keras.layers.Conv2D(32, (3,3), activation='relu')(board)
         board = tf.keras.layers.Conv2D(64, (3,3), activation='relu')(board)
+        board = tf.keras.layers.Conv2D(128, (3,3), activation='relu')(board)
         board = tf.keras.layers.Flatten()(board)
         
         # Concatenate the board and the meta
         x = tf.keras.layers.Concatenate()([meta, board])
-        x = tf.keras.layers.Dense(25, activation='relu')(x)
-        x = tf.keras.layers.Dense(10, activation='relu')(x)
+        x = tf.keras.layers.Dense(8, activation='relu')(x)
+        x = tf.keras.layers.Dense(8, activation='relu')(x)
         output = tf.keras.layers.Dense(1, activation='relu')(x)
         
         model = tf.keras.Model(inputs=inputs, outputs=output)
@@ -62,14 +62,14 @@ def get_model(input_shape):
                 loss='mse',
                 metrics=['mae']
         )
-        
+        print(model.summary())
         return model
 
 if __name__ == "__main__":
     # All fodlers in BlockusModelFit
-    data_folders = os.listdir("/home/ilmari/python/RLFramework/BlockusModelFit/")
+    data_folders = os.listdir("/home/ilmari/python/RLFramework/BlockusModelFitV1/")
     # Filter only folders
-    data_folders = [os.path.join("/home/ilmari/python/RLFramework/BlockusModelFit/", folder) for folder in data_folders if os.path.isdir(os.path.join("/home/ilmari/python/RLFramework/BlockusModelFit/", folder))]
+    data_folders = [os.path.join("/home/ilmari/python/RLFramework/BlockusModelFitV1/", folder) for folder in data_folders if os.path.isdir(os.path.join("/home/ilmari/python/RLFramework/BlockusModelFit/", folder))]
     print(data_folders)
     
     ds, num_files, approx_num_samples = read_to_dataset(data_folders)

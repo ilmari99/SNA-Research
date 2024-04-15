@@ -134,6 +134,7 @@ def model_fit(ds, epoch, num_samples):
                 metrics=['mae']
         )
         print(model.summary())
+        exit()
     else:
         model = tf.keras.models.load_model(f"/home/ilmari/RLFramework/BlockusModels/model_{epoch-1}.keras")
 

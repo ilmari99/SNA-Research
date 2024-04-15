@@ -76,7 +76,10 @@ class BlockusAction(Action):
                     stack.append((new_x, new_y))
         return num_connected_pieces
     
-    def check_action_is_legal(self, game: 'BlockusGame') -> Tuple[bool, str]:
+    def check_action_is_legal(self, game: Game):
+        return True, ""
+    
+    def _check_action_is_legal(self, game: 'BlockusGame') -> Tuple[bool, str]:
         """ Check if the action is legal in the given game state.
         """
         if self.piece_id == -1:

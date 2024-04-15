@@ -50,14 +50,14 @@ def run_game(args):
     return res
 
 if __name__ == "__main__":
-    num_games = 10
+    num_games = 20
     num_cpus = 10
     win_percents = {}
-    for model_path in os.listdir("/home/ilmari/python/RLFramework/BlockusModels/"):
+    for model_path in os.listdir("/home/ilmari/python/RLFramework/BlockusModelsRemote/"):
     #for model_path in ["model_all_data.tflite"]:
         if not model_path.endswith(".tflite"):
             continue
-        model_path = os.path.join("/home/ilmari/python/RLFramework/BlockusModels/", model_path)
+        model_path = os.path.join("/home/ilmari/python/RLFramework/BlockusModelsRemote/", model_path)
         print(f"Testing model: {model_path}")
         with multiprocessing.Pool(num_cpus) as p:
             results = p.map(run_game, [(i, model_path, random.randint(0, 2**32-1)) for i in range(num_games)])

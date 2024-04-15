@@ -24,17 +24,12 @@ class Action(ABC):
         the game state, modifies the game, and then restores the game state.
         """
         def decorator(func):
-            def wrapper(self : 'Action', game: 'Game', inplace: bool = False) -> GameState:
-                out = self.check_action_is_legal(game)
-                if type(out) == bool:
-                    is_legal = out
-                    msg = ""
-                elif len(out) == 2:
+            def wrapper(self : 'Action', game: 'Game', inplace: bool = False, check_is_valid = True) -> GameState:
+                if check_is_valid:
+                    out = self.check_action_is_legal(game)
                     is_legal, msg = out
-                else:
-                    raise ValueError("The return value of check_action_is_legal should be a boolean or a tuple of two elements.")
-                if not is_legal:
-                    raise ValueError("The action is not legal: " + msg)
+                    if not is_legal:
+                        raise ValueError("The action is not legal: " + msg)
                 
                 # If we modify the game inplace, then we just modify, and return the new state
                 if inplace:
@@ -60,7 +55,7 @@ class Action(ABC):
     
     @modify_game_decorator()
     @abstractmethod
-    def modify_game(self, game: 'Game', inplace = False) -> GameState:
+    def modify_game(self, game: 'Game', inplace = False, check_is_valid = True) -> GameState:
         """ Modify the game instance according to the action.
         """
         pass
