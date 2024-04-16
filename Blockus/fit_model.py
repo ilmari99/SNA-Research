@@ -15,7 +15,7 @@ def game_constructor(i, model_base_folder):
     model_paths = list(filter(lambda path: path.endswith(".tflite"), os.listdir(model_base_folder)))
     model_paths = [os.path.abspath(os.path.join(model_base_folder,model_path)) for model_path in model_paths]
     return BlockusGame(
-        board_size=(14,14),
+        board_size=(20,20),
         timeout=60,
         logger_args = None,
         render_mode = "",
@@ -138,7 +138,6 @@ def model_fit(ds, epoch, num_samples, model_base_folder):
                 metrics=['mae']
         )
         print(model.summary())
-        exit()
     else:
         model = tf.keras.models.load_model(os.path.abspath(os.path.join(model_base_folder,f"model_{epoch-1}.keras")))
 
