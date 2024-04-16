@@ -1,6 +1,7 @@
 import os
 from RLFramework.fit_model import fit_model
 import numpy as np
+import argparse
 #os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
 import tensorflow as tf
@@ -10,9 +11,9 @@ from BlockusPlayer import BlockusPlayer
 from BlockusNNPlayer import BlockusNNPlayer
 
 
-def game_constructor(i):
-    model_paths = list(filter(lambda path: path.endswith(".tflite"), os.listdir("/home/ilmari/RLFramework/BlockusModels")))
-    model_paths = [os.path.abspath(f"/home/ilmari/RLFramework/BlockusModels/{model_path}") for model_path in model_paths]
+def game_constructor(i, model_base_folder):
+    model_paths = list(filter(lambda path: path.endswith(".tflite"), os.listdir(model_base_folder)))
+    model_paths = [os.path.abspath(os.path.join(model_base_folder,model_path)) for model_path in model_paths]
     return BlockusGame(
         board_size=(14,14),
         timeout=60,
@@ -22,15 +23,18 @@ def game_constructor(i):
         model_paths=model_paths,
         )
 
-def players_constructor(i, model_path):
+def players_constructor(i, model_path, model_base_folder):
     if not model_path:
         return [BlockusPlayer(name=f"Player{j}_{i}", logger_args=None) for j in range(4)]
     # Get the epoch number from the model path
     model_base_path = model_path.split("/")[-1]
     epoch_num = int(model_base_path.split("_")[1].split(".")[0])
     # The previous models are in the same folder, but with different epoch numbers
-    all_model_paths = [os.path.abspath(f"/home/ilmari/RLFramework/BlockusModels/model_{i}.tflite") for i in range(epoch_num + 1)]
-    #print(all_model_paths)
+    all_model_paths = [os.path.abspath(os.path.join(model_base_folder,f"model_{i}.tflite")) for i in range(epoch_num + 1)]
+    # Filter non-existent
+    for path in all_model_paths.copy():
+        if not os.path.exists(path):
+            all_model_paths.remove(path)
     # In the simulation, we play games with the current and previous models
     # To do that, we'll create a dict of players, where the keys are the model paths, and the values are the weights
     # for picking that player. The weight is the epoch number.
@@ -81,7 +85,7 @@ class RandomFlipBoardLayer(tf.keras.layers.Layer):
             board = tf.image.random_flip_up_down(board)
         return board
 
-def model_fit(ds, epoch, num_samples):
+def model_fit(ds, epoch, num_samples, model_base_folder):
 
     # Randomly drop 1/3 of samples, where y is 1
     #ds = ds.filter(lambda x, y: tf.logical_or(tf.not_equal(y, 1), tf.random.uniform([]) < 0.66))
@@ -136,24 +140,67 @@ def model_fit(ds, epoch, num_samples):
         print(model.summary())
         exit()
     else:
-        model = tf.keras.models.load_model(f"/home/ilmari/RLFramework/BlockusModels/model_{epoch-1}.keras")
+        model = tf.keras.models.load_model(os.path.abspath(os.path.join(model_base_folder,f"model_{epoch-1}.keras")))
 
     tb_log = tf.keras.callbacks.TensorBoard(log_dir=f"logs/fit/{epoch}", histogram_freq=1)
     early_stop = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
     model.fit(train_ds, epochs=25, callbacks=[tb_log, early_stop], validation_data=val_ds)
-    model.save(f"BlockusModels/model_{epoch}.keras")
+    model.save(os.path.abspath(os.path.join(model_base_folder,f"model_{epoch}.keras")))
     tf.keras.backend.clear_session()
-    return os.path.abspath(f"/home/ilmari/RLFramework/BlockusModels/model_{epoch}.keras")
+    return os.path.abspath(os.path.join(model_base_folder,f"model_{epoch}.keras"))
+
+def parse_arguments():
+    """Parses command-line arguments for training script.
+
+    Returns:
+    A namespace containing the parsed arguments.
+    """
+    parser = argparse.ArgumentParser(description="Train a Moska model.")
+
+    # Training parameters
+    parser.add_argument("--num_epochs", type=int, default=10,
+                        help="Number of training epochs.")
+    parser.add_argument("--num_games", type=int, default=100,
+                        help="Number of games to play per epoch.")
+    parser.add_argument("--num_files", type=int, default=-1,
+                        help="Number of data files to use (-1 for all).")
+    parser.add_argument("--num_cpus", type=int, default=10,
+                        help="Number of CPUs to use for training.")
+
+    # Path arguments
+    parser.add_argument("--starting_epoch", type=int, default=0,
+                        help="Epoch to start training from.")
+    parser.add_argument("--model_folder_base", type=str, default=os.path.abspath("./BlockusModels/"),
+                        help="Base path for model storage.")
+    parser.add_argument("--data_folder_base", type=str, default=os.path.abspath("./BlockusModelFit/"),
+                        help="Base path for training data.")
+    parser.add_argument("--starting_model_path", type=str, default="",
+                        help="Path to the starting model (optional).")
+
+    return parser.parse_args()
 
 if __name__ == "__main__":
-    fit_model(players_constructor,
-              game_constructor,
-              model_fit,
-              starting_model_path="",
-              num_epochs=20,
-              num_games=500,
-              num_files=-1,
-              num_cpus=10,
-              folder="BlockusModelFit",
-              starting_epoch=0,
+    args = parse_arguments()
+
+    print(args)
+
+    def players_constructor_(i, model_path):
+        return players_constructor(i,model_path,args.model_folder_base)
+
+    def game_constructor_(i):
+        return game_constructor(i, args.model_folder_base)
+    
+    def model_fit_(ds, epoch, num_samples):
+        return model_fit(ds, epoch, num_samples,args.model_folder_base)
+    
+    fit_model(players_constructor_,
+              game_constructor_,
+              model_fit_,
+              starting_model_path=args.starting_model_path,
+              num_epochs=args.num_epochs,
+              num_games=args.num_games,
+              num_files=args.num_files,
+              num_cpus=args.num_cpus,
+              folder=args.data_folder_base,
+              starting_epoch=args.starting_epoch,
               )
