@@ -141,6 +141,9 @@ if __name__ == "__main__":
     args = parse_arguments()
 
     print(args)
+    
+    os.makedirs(args.model_folder_base, exist_ok=True)
+    os.makedirs(args.data_folder_base, exist_ok=True)
 
     def players_constructor_(i, model_path):
         return players_constructor(i,model_path,args.model_folder_base)
@@ -150,7 +153,6 @@ if __name__ == "__main__":
     
     def model_fit_(ds, epoch, num_samples):
         return model_fit(ds, epoch, num_samples,args.model_folder_base)
-    
 
     fit_model(players_constructor_,
               game_constructor_,

@@ -119,7 +119,8 @@ class MoskaGameState(GameState):
     def deepcopy(self):
         """ Deepcopy self by copying the state_json.
         """
-        return self.__class__(copy.deepcopy(self.state_json))
+        c = self.__class__(copy.deepcopy(self.state_json)) 
+        return c
     
     def cards_to_vector(self, cards : List[Card]) -> List[SupportsFloat]:
         """ Convert a list of cards to a vector.

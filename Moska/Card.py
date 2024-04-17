@@ -24,9 +24,12 @@ class Card:
     def __repr__(self) -> str:
         # If we are using card symbols, then print the card with the symbol
         if USING_CARD_SYMBOLS:
-            return f"{CARD_SUIT_SYMBOLS[self.suit]}{self.rank}"
-        # If we have a different encoding, then print the suit as a letter
-        return f"{self.suit}{self.rank}"
+            s = f"{CARD_SUIT_SYMBOLS[self.suit]}{self.rank}"
+        else:
+            # If we have a different encoding, then print the suit as a letter
+            s = f"{self.suit}{self.rank}"
+        s += "\'" if self.kopled else ""
+        return s
     
     def __hash__(self) -> int:
         return hash((self.suit, self.rank))
@@ -43,7 +46,7 @@ class Card:
     def copy(self):
         return self.__copy__()
     
-    def __deepcopy__(self, memo):
+    def __deepcopy__(self, memo=None):
         return Card(self.suit, self.rank, self.kopled)
     
     def deepcopy(self):

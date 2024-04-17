@@ -128,6 +128,10 @@ class MoskaAction(Action):
             msg += "There are duplicate cards in the killed cards."
         if not self.check_every_public_card_is_in_full_cards(game):
             msg += "Some players have extra cards in their public cards."
+        # Check if someone has kopled cards in hand
+        for player in game.players:
+            if not(player.pid == game.target_pid and game.target_is_kopling) and any(card.kopled for card in player.hand):
+                msg += f"Player {player.pid} has kopled cards in hand, but is not the target."
         return msg
         
 
@@ -324,9 +328,13 @@ class EndBout(MoskaAction):
         # Set all cards kopled to False
         for card in game.cards_to_kill:
             card.kopled = False
+        for card in self.cards_to_lift:
+            card.kopled = False
         if self._lifting_only_cards_to_kill(game):
-            return self._modify_game_only_lifted_cards_to_kill(game)
-        return self._modify_game_lifted_all_cards(game)
+            gs = self._modify_game_only_lifted_cards_to_kill(game)
+        else:
+            gs = self._modify_game_lifted_all_cards(game)
+        return gs
 
 class Skip(MoskaAction):
     """ A class for the Skip action.
@@ -564,6 +572,8 @@ class KillFromHand(MoskaAction):
                 msg += "The target is kopling, and can only kill one card."
             if len(self.kill_mapping.keys()) == 0:
                 msg += "The target is kopling, and must kill a card."
+            k = list(self.kill_mapping.keys())[0]
+            #print(f"Kopled card is: {k}, kopled: {k.kopled}")
             if len(self.kill_mapping.keys()) > 0 and not list(self.kill_mapping.keys())[0].kopled:
                 msg += "The target is kopling, and must use the kopled card to kill."
         is_legal = True if not msg else False
@@ -589,9 +599,11 @@ class KillFromHand(MoskaAction):
             cards_to_killed_cards.append(table_card)
             cards_to_killed_cards.append(hand_card)
         game.killed_cards += cards_to_killed_cards
-        # Set each cards kopled status to False
-        for card in cards_to_killed_cards:
-            card.kopled = False
+        if game.target_is_kopling and inplace:
+            for card in game.killed_cards:
+                card.kopled = False
+            for card in game.cards_to_kill:
+                card.kopled = False
         game.target_is_kopling = False
         game_state = game.game_state_class.from_game(game, copy = False)
         return game_state

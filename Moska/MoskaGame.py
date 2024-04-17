@@ -110,6 +110,12 @@ class MoskaGame(Game):
                                                           trump=self.trump_card.suit,
                                                           max_moves=max_moves_to_consider - len(actions)
                     )
+                    # Since the assignments are based on the indices of from and to,
+                    # we must convert them to indices in our hand. The index is always the last card.
+                    last_idx = len(self.player_full_cards[self.current_pid]) - 1
+                    for possible_killing in possible_killings:
+                        possible_killing.inds = (last_idx, possible_killing.inds[1])
+                        possible_killing._hand_inds = (last_idx,)
                 else:
                     possible_killings = get_all_matchings(self.player_full_cards[self.current_pid],
                                                         self.cards_to_kill,
@@ -216,7 +222,6 @@ class MoskaGame(Game):
             #print(self.players)
             game_state.current_pid = self.select_turn(self.players, game_state.previous_turns)
             game_state.previous_turns.append(game_state.current_pid)
-        # Kopling NOT IMPLEMENTED
         return game_state
         
     def get_finished_players(self) -> List[int]:
