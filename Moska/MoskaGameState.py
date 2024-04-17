@@ -29,8 +29,14 @@ class MoskaGameState(GameState):
         self.ready_players : List[bool] = state_json["ready_players"]
         self.player_full_cards : List[List[Card]] = state_json["player_full_cards"]
         self.player_public_cards : List[List[Card]] = state_json["player_public_cards"]
+        self.target_is_kopling : bool = state_json["target_is_kopling"]
         
         super().__init__(state_json)
+        
+    def is_kopled_card_on_table(self) -> bool:
+        """ Check if there is a kopled card on the table.
+        """
+        return any((c.kopled for c in self.cards_to_kill))
         
     def bout_is_initiated(self) -> bool:
         """ Check if the bout is initiated.
@@ -101,6 +107,7 @@ class MoskaGameState(GameState):
             "cards_to_kill" : game.cards_to_kill,
             "killed_cards" : game.killed_cards,
             "discarded_cards" : game.discarded_cards,
+            "target_is_kopling" : game.target_is_kopling,
             "current_pid" : game.current_pid,
             "target_pid" : game.target_pid,
             "ready_players" : game.ready_players,
@@ -139,11 +146,12 @@ class MoskaGameState(GameState):
         trump_suit = trump_suit_map[self.trump_card.suit]
         target_pid = self.target_pid
         current_pid = self.current_pid
-        is_kopled_card_on_table = 1 if any((c.kopled for c in self.cards_to_kill)) else 0
+        target_is_kopling = 1 if self.target_is_kopling else 0
+        is_kopled_card_on_table = 1 if self.is_kopled_card_on_table() else 0
         player_hand_lens = [len(hand) for hand in self.player_full_cards]
         player_is_ready = [r for r in self.ready_players]
         # Now we know the meta data, we can create the card data
-        meta_data = [perspective_pid, deck_len, trump_suit, target_pid, current_pid, is_kopled_card_on_table]
+        meta_data = [perspective_pid, deck_len, trump_suit, target_pid, current_pid, target_is_kopling, is_kopled_card_on_table]
         meta_data += player_hand_lens + player_is_ready
         card_data = []
         # As card data we have:

@@ -15,7 +15,7 @@ VALID_MOVE_IDS = ["AttackInitial",
                   "AttackOther",
                   "AttackSelf",
                   "KillFromHand",
-                  #"KillFromDeck",
+                  "KillFromDeck",
                   "EndBout",
                   "Skip"
 ]
@@ -75,9 +75,12 @@ class MoskaHumanPlayer(MoskaPlayer):
         elif selected_move_id == "AttackOther":
             args = self.get_attack_target_args(game)
             action = get_moska_action(self.pid, selected_move_id, *args[0], **args[1])
+            
         elif selected_move_id == "AttackInitial":
             args = self.get_attack_target_args(game)
             action = get_moska_action(self.pid, selected_move_id, *args[0], **args[1])
+        elif selected_move_id == "KillFromDeck":
+            action = get_moska_action(self.pid, selected_move_id)
         else:
             raise ValueError(f"Invalid move ID: {selected_move_id}")
         is_legal, msg = action.check_action_is_legal(game)
@@ -93,6 +96,17 @@ class MoskaHumanPlayer(MoskaPlayer):
             return (), {}
         if move_id == "EndBout":
             return self.get_end_bout_args(game)
+        if move_id == "KillFromHand":
+            return self.get_kill_cards_args(game)
+        if move_id == "AttackSelf":
+            return self.get_attack_self_args(game)
+        if move_id == "AttackOther":
+            return self.get_attack_target_args(game)
+        if move_id == "AttackInitial":
+            return self.get_attack_target_args(game)
+        if move_id == "KillFromDeck":
+            return (), {}
+        raise ValueError(f"Invalid move ID: {move_id}")
         
     def get_end_bout_args(self, game: 'MoskaGame') -> Tuple[Tuple, Dict]:
         """ Select whether to pick all cards, or only cards_to_kill
@@ -102,9 +116,25 @@ class MoskaHumanPlayer(MoskaPlayer):
             return (game.cards_to_kill + game.killed_cards,), {}
         return (game.cards_to_kill,), {}
     
+    def get_kill_cards_args_when_kopling(self, game: 'MoskaGame') -> Tuple[Tuple, Dict]:
+        kopled_card = [c for c in game.player_full_cards[self.pid] if c.kopled][0]
+        inp = input(f"Select which cards to kill with the kopled card {kopled_card}: ")
+        ind = inp.split()
+        try:
+            ind = [int(i) for i in ind]
+            ind = ind[0]
+            card_from_table = game.cards_to_kill[ind]
+        except (ValueError, IndexError):
+            print("Invalid input. Please enter the index of the card to kill.")
+            return self.get_kill_cards_args_when_kopling(game)
+        return ({kopled_card : card_from_table},), {}
+            
+    
     def get_kill_cards_args(self, game: 'MoskaGame') -> Tuple[Tuple, Dict]:
         """ Select the cards to kill
         """
+        if game.target_is_kopling:
+            return self.get_kill_cards_args_when_kopling(game)
         inp = input("Enter the indices of the kill cards (from hand) and the killed cards (from table) separated by spaces: ")
         indices = inp.split()
         try:

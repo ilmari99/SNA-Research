@@ -18,7 +18,7 @@ VALID_MOVE_IDS = ["AttackInitial",
                   "AttackOther",
                   "AttackSelf",
                   "KillFromHand",
-                  #"KillFromDeck",
+                  "KillFromDeck",
                   "EndBout",
                   "Skip"
 ]
@@ -187,6 +187,10 @@ class MoskaAction(Action):
                 game.current_pid = current_player_pids[curr_target_idx]
                 #print(f"Did not lift cards")
             #print(f"New target pid: {game.target_pid}, new current pid: {game.current_pid}")
+        elif self.move_id == "KillFromDeck":
+            # If the target is killing from the deck, we do not change the pid here
+            pass
+        
         # In all other cases, the current_pid is set to -1, so the environment decides the next player.
         else:
             game.current_pid = -1
@@ -204,13 +208,64 @@ class MoskaAction(Action):
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(pid={self.pid}, move_id={self.move_id}, args={self.args}, kwargs={self.kwargs})"
     
+class KillFromDeck(MoskaAction):
+    """ Attempt to kill by picking the next card from the deck.
+    This is a special action, that can only be played if:
+    - The player is the target,
+    - There are cards to kill,
+    - There are no card_to_kill that have been played from the deck.
+    - There is deck left,
+    This move works as follows:
+    - When this move is called a target_is_kopling flag is set in the game state,
+    indicating that the target wants to play from the deck. The current_pid is not changed.
+    - The environment then picks the next card from the deck and:
+        - If it can't kill any card: add it to cards_to_kill (set kopled flag of the card to True),
+        change current_pid, set target_is_kopling flag to False.
+        - If it CAN kill a card, add the card to the players hand (set kopled flag of the card to True),
+        keep the current_pid, and keep target_is_kopling flag to True.
+    - If the card is in the player's hand, the player must kill a card from the table using that card.
+    """
+    def __init__(self, pid : int, move_id : str):
+        super().__init__(pid, move_id)
+        
+    def is_move_id_legal(self, game : 'MoskaGame') -> bool:
+        """ Check if the KillFromDeck move can be played.
+        """
+        if game.target_is_kopling:
+            return False
+        gs : 'MoskaGameState' = game.get_current_state()
+        if not self._is_target(game):
+            return False
+        if len(gs.cards_to_kill) == 0:
+            return False
+        if not gs.target_can_play_from_deck():
+            return False
+        return True
+    
+    def check_action_is_legal(self, game : 'MoskaGame') -> Tuple[bool, str]:
+        msg = ""
+        gs : 'MoskaGameState' = game.get_current_state()
+        if not self._is_target(game):
+            msg += "The player is not the target."
+        if not self._is_initiated(game):
+            msg += "The game has not been initiated."
+        if not gs.target_can_play_from_deck():
+            msg += "The target can not play from the deck, since there are kopled cards on the table."
+        is_legal = True if not msg else False
+        return is_legal, msg
+    
+    def modify_game(self, game : 'MoskaGame', inplace=False):
+        """ Modify the game state, if the player is playing from the deck.
+        """
+        game.target_is_kopling = True
+        return game.game_state_class.from_game(game, copy = False)
+    
 class EndBout(MoskaAction):
     """ A class for the EndBout action.
     The EndBout action can be made when
     the game has been initiated, and the target is the player,
     and all other cards have been killed.
     """
-
     def __init__(self, pid : int, move_id : str, cards_to_lift : List[Card] = []):
         super().__init__(pid, move_id, cards_to_lift)
         self.cards_to_lift = cards_to_lift
@@ -223,6 +278,8 @@ class EndBout(MoskaAction):
     def is_move_id_legal(self, game : 'MoskaGame') -> bool:
         """ Check if the EndBout move can be played.
         """
+        if game.target_is_kopling:
+            return False
         if self._all_others_ready(game) and self._is_initiated(game) and self._is_target(game):
             return True
         return False
@@ -264,6 +321,9 @@ class EndBout(MoskaAction):
     def modify_game(self, game, inplace=False):
         """ We lift the cards to our hand, and update the public cards
         """
+        # Set all cards kopled to False
+        for card in game.cards_to_kill:
+            card.kopled = False
         if self._lifting_only_cards_to_kill(game):
             return self._modify_game_only_lifted_cards_to_kill(game)
         return self._modify_game_lifted_all_cards(game)
@@ -279,6 +339,8 @@ class Skip(MoskaAction):
         the player is not initiating, or
         other players are finished, and the player is the target
         """
+        if game.target_is_kopling:
+            return False
         gs : MoskaGameState = game.get_current_state()
         if self._is_target(game) and self._all_others_ready(game):
             return False
@@ -302,7 +364,9 @@ class AttackMove(MoskaAction):
         self.cards = cards
         
     def is_move_id_legal(self, game: 'MoskaGame') -> bool:
-        pass
+        if game.target_is_kopling:
+            return False
+        return
     
     def _target_pid_is_target(self, game : 'MoskaGame') -> bool:
         """ Check if the target_pid is the target player.
@@ -380,6 +444,8 @@ class AttackInitial(AttackMove):
     def is_move_id_legal(self, game: 'MoskaGame') -> bool:
         """ The initial attack move can be played if the board is empty.
         """
+        if game.target_is_kopling:
+            return False
         gs : MoskaGameState = game.get_current_state()
         is_initiating = gs.player_is_initiating(self.pid)
         return is_initiating and self._board_is_empty(game)
@@ -417,6 +483,8 @@ class AttackSelf(AttackMove):
     def is_move_id_legal(self, game: 'MoskaGame') -> bool:
         """ Target can attack self, at all times, if the board is not empty.
         """
+        if game.target_is_kopling:
+            return False
         #gs : MoskaGameState = game.get_current_state()
         return self.pid == game.target_pid and not self._board_is_empty(game) and len(game.deck) > 0
     
@@ -445,6 +513,8 @@ class AttackOther(AttackMove):
     def is_move_id_legal(self, game: 'MoskaGame') -> bool:
         """ The player can attack the target, if the board is not empty, and fits more than 0.
         """
+        if game.target_is_kopling:
+            return False
         gs : MoskaGameState = game.get_current_state()
         if not gs.bout_is_initiated():
             return False
@@ -489,6 +559,13 @@ class KillFromHand(MoskaAction):
             msg += "The killing cards are not in the player's hand."
         if not self._kill_mapping_is_valid(game):
             msg += f"The kill mapping ({self.kill_mapping}) is not valid."
+        if game.target_is_kopling:
+            if len(self.kill_mapping.keys()) > 1:
+                msg += "The target is kopling, and can only kill one card."
+            if len(self.kill_mapping.keys()) == 0:
+                msg += "The target is kopling, and must kill a card."
+            if len(self.kill_mapping.keys()) > 0 and not list(self.kill_mapping.keys())[0].kopled:
+                msg += "The target is kopling, and must use the kopled card to kill."
         is_legal = True if not msg else False
         return is_legal, msg
     
@@ -512,6 +589,10 @@ class KillFromHand(MoskaAction):
             cards_to_killed_cards.append(table_card)
             cards_to_killed_cards.append(hand_card)
         game.killed_cards += cards_to_killed_cards
+        # Set each cards kopled status to False
+        for card in cards_to_killed_cards:
+            card.kopled = False
+        game.target_is_kopling = False
         game_state = game.game_state_class.from_game(game, copy = False)
         return game_state
         

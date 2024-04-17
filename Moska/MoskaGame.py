@@ -17,7 +17,7 @@ from MoskaPlayer import MoskaPlayer
 from MoskaAction import MoskaAction, VALID_MOVE_IDS, get_moska_action
 from Card import Card, REFERENCE_DECK
 
-from utils import get_initial_attacks, get_all_matchings
+from utils import get_initial_attacks, get_all_matchings, check_can_kill_card
 
 
 class MoskaGame(Game):
@@ -36,6 +36,7 @@ class MoskaGame(Game):
         self.current_pid : int = 0
         self.models : Dict[str, TFLiteModel] = {}
         self.ready_players : List[bool] = []
+        self.target_is_kopling : bool = False
         self.set_models(model_paths)
 
 
@@ -102,11 +103,19 @@ class MoskaGame(Game):
                 current_player.logger.debug(f"Player {self.current_pid} has {num_attacks} possible attacks to self.")
                 
             elif move_id == "KillFromHand":
-                possible_killings = get_all_matchings(self.player_full_cards[self.current_pid],
-                                                      self.cards_to_kill,
-                                                      trump=self.trump_card.suit,
-                                                      max_moves=max_moves_to_consider - len(actions)
-                )
+                if self.target_is_kopling:
+                    # If the target is kopling, then we must kill with the kopled card
+                    possible_killings = get_all_matchings([c for c in self.player_full_cards[self.current_pid] if c.kopled == True],
+                                                          self.cards_to_kill,
+                                                          trump=self.trump_card.suit,
+                                                          max_moves=max_moves_to_consider - len(actions)
+                    )
+                else:
+                    possible_killings = get_all_matchings(self.player_full_cards[self.current_pid],
+                                                        self.cards_to_kill,
+                                                        trump=self.trump_card.suit,
+                                                        max_moves=max_moves_to_consider - len(actions)
+                    )
                 # Elements of possble_killings
                 # are Assignments (at utils.py)
                 # They have two attrs: _hand_inds, _table_inds
@@ -122,10 +131,9 @@ class MoskaGame(Game):
                 current_player.logger.debug(f"Player {self.current_pid} has {len(possible_killings_as_cards)} possible killings from hand.")
                 
             elif move_id == "KillFromDeck":
-                # For now, let's just play the Skip move
-                #actions.append(MoskaAction(self.current_pid, "Skip"))
-                pass
-            
+                action = get_moska_action(self.current_pid, move_id)
+                actions.append(action)
+                current_player.logger.debug(f"Player {self.current_pid} can kill from deck.")
             else:
                 raise ValueError(f"Invalid move_id: {move_id}")
             
@@ -178,7 +186,7 @@ class MoskaGame(Game):
             return self.players
         return [player for player in self.players if condition(player)]
     
-    def environment_action(self, game_state : 'GameState') -> 'GameState':
+    def environment_action(self, game_state : 'MoskaGameState') -> 'MoskaGameState':
         """ In Moska,
         The environment_action is called after each move.
         The environment action fills the players hands, if they have less than 6 cards.
@@ -188,6 +196,21 @@ class MoskaGame(Game):
         The environment then picks a card from the deck, and sets it to game_state.kopled_card IF the
         card can kill any card on the table. If not, the kopled card is added to cards_to_kill.
         """
+        if game_state.target_is_kopling:
+            # If the target is kopling, then we must pick a card from the deck
+            kopled_card = game_state.deck.pop(0)
+            kopled_card.kopled = True
+            can_kill_card = any(check_can_kill_card(kopled_card, card, game_state.trump_card.suit) for card in game_state.cards_to_kill)
+            # If the kopled card can kill any card on the table
+            # Then we set it's kopled attribute to True, and add it to the target's hand. The current_pid remains.
+            if can_kill_card:
+                game_state.player_full_cards[game_state.target_pid].append(kopled_card)
+            # Else, we add the kopled card to the cards_to_kill, set the current_pid to -1, and set the target_is_kopling to False
+            else:
+                game_state.cards_to_kill.append(kopled_card)
+                game_state.current_pid = -1
+                game_state.target_is_kopling = False
+                
         self.fill_hands(game_state)
         if game_state.current_pid == -1:
             #print(self.players)
@@ -285,6 +308,7 @@ class MoskaGame(Game):
             return
         # Fill the hand of the player
         pick_n_cards = min(6 - len(self.players[player_with_missing_cards].hand), len(self.deck))
+        self.players[player_with_missing_cards].logger.debug(f"Player {player_with_missing_cards} lifted {pick_n_cards} cards from deck.")
         game_state.player_full_cards[player_with_missing_cards] += [self.deck.pop(0) for _ in range(pick_n_cards)]
         if inplace:
             self.restore_game(game_state)
@@ -319,6 +343,7 @@ class MoskaGame(Game):
         self.discarded_cards = game_state.discarded_cards
         self.current_pid = game_state.current_pid
         self.target_pid = game_state.target_pid
+        self.target_is_kopling = game_state.target_is_kopling
         #self.logger.debug(f"Game restored to state:\n{game_state}")
         
     def reset(self) -> None:
@@ -341,6 +366,7 @@ class MoskaGame(Game):
         self.player_scores = []
         self.total_num_played_turns = 0
         self.current_player_name = ""
+        self.target_is_kopling : bool = False
     
     def initialize_game(self, players: List[Player]) -> None:
         """ Initialize the MoskaGame instance.
