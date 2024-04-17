@@ -36,6 +36,8 @@ class BlockusResult(Result):
         else:
             for winner in winners:
                 final_scores[winner] += 15
+        # The score can be [0,150], so we normalize it to [0,1]
+        final_scores = [score / 150 for score in final_scores]
         return final_scores
             
 
