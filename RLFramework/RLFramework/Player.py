@@ -123,8 +123,7 @@ class Player(ABC):
         super().__init_subclass__()
         cls.initialize_player = cls.initialize_player_decorator()(cls.initialize_player)
         #cls.check_is_finished = cls.check_is_finished_decorator()(cls.check_is_finished)        
-    
-    @initialize_player_decorator()
+
     @abstractmethod
     def initialize_player(self, game : 'Game') -> None:
         """ Set some desired vriables for the player.

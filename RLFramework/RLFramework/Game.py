@@ -295,8 +295,6 @@ class Game(ABC):
             return state
         return wrapper
     
-
-    @_environment_action_wrapper
     def environment_action(self, game_state : 'GameState') -> 'GameState':
         """ When creating a new game, the user can define what happens after every action.
         In an Action, the user should set all variables, that are exactly known after each action.
@@ -385,7 +383,6 @@ class Game(ABC):
         """
         return len(self._get_finished_players(self.get_current_state())) == len(self.players)
     
-    @ft.lru_cache(maxsize = 256)
     @abstractmethod
     def check_is_player_finished(self, pid : int, game_state: GameState) -> bool:
         """ Check if a player has finished in the game_state.

@@ -53,7 +53,6 @@ class Action(ABC):
         """
         return cls(*args).check_action_is_legal(game)
     
-    @modify_game_decorator()
     @abstractmethod
     def modify_game(self, game: 'Game', inplace = False, check_is_valid = True) -> GameState:
         """ Modify the game instance according to the action.
