@@ -97,12 +97,24 @@ class BlockusGame(Game):
         If the game is a draw, the reward is 0.5
         """
         #print("Called calculate_reward")
+        all_players_finished = len(game_state.finished_players) == len(self.players)
         # Number of squares occupied by player
-        player_board = np.array(game_state.board) == pid
-        player_score = np.sum(player_board)
-        r = player_score - game_state.player_scores[pid]
-        self.players[pid].logger.info(f"Player {pid} score: {player_score}, reward: {r}")
-        return r
+        if not all_players_finished:
+            player_board = np.array(game_state.board) == pid
+            player_area = np.sum(player_board)
+            # Return how much new area the player has occupied
+            score_boost = player_area - game_state.player_scores[pid]
+            self.players[pid].logger.info(f"Player {pid} score: {game_state.player_scores[pid]}, new reward: {score_boost}")
+            return score_boost
+        
+        # If the game is finished: +50 for win, +25 for draw, 0 for loss, and +15 if all pieces placed
+        all_pieces_placed = len(game_state.player_remaining_pieces[pid]) == 0
+        score_boost = 0
+        if all_pieces_placed:
+            self.players[pid].logger.info(f"Player {pid} placed all pieces")
+            score_boost += 15
+        self.players[pid].logger.info(f"Player {pid} score: {game_state.player_scores[pid]}, new reward: {score_boost}")
+        return score_boost
     
     def environment_action(self, game_state : 'BlockusGameState') -> 'BlockusGameState':
         self.update_finished_players_in_gamestate(game_state)
@@ -264,7 +276,7 @@ class BlockusGame(Game):
                             is_legal, msg = action._check_action_is_legal(self)
                             if is_legal:
                                 actions.append(action)
-        print(f"Number of possible actions: {len(actions)}") 
+        #print(f"Number of possible actions: {len(actions)}") 
         if len(actions) == 0:
             # Add null action
             actions.append(BlockusAction(-1, -1, -1, -1, False))
