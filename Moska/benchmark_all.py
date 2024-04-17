@@ -1,3 +1,4 @@
+import argparse
 import multiprocessing
 import random
 import numpy as np
@@ -51,13 +52,22 @@ def run_game(args):
     return res
 
 if __name__ == "__main__":
-    num_games = 600
-    num_cpus = 30
+    parser = argparse.ArgumentParser(description='Benchmark all models in a directory.')
+    
+    parser.add_argument('--num_games', type=int, required=True, help='The number of games to play for each model.')
+    parser.add_argument('--num_cpus', type=int, help='The number of CPUs to use.', default=os.cpu_count()-1)
+    parser.add_argument('--folder', type=str, required=True, help='The folder containing the models.')
+    
+    parser.parse_args()
+    
+    num_games = parser.num_games
+    num_cpus = parser.num_cpus
+    folder = os.path.abspath(parser.folder)
     loss_percents = {}
-    for model_path in os.listdir("/home/ilmari/RLFramework/MoskaModels/"):
+    for model_path in os.listdir(folder):
         if not model_path.endswith(".tflite"):
             continue
-        model_path = os.path.join("/home/ilmari/RLFramework/MoskaModels/", model_path)
+        model_path = os.path.join(folder, model_path)
         print(f"Testing model: {model_path}")
         with multiprocessing.Pool(num_cpus) as p:
             results = p.map(run_game, [(i, model_path, random.randint(0,2**32)) for i in range(num_games)])

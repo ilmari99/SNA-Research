@@ -131,6 +131,8 @@ def parse_arguments():
                         help="Base path for training data.")
     parser.add_argument("--starting_model_path", type=str, default="",
                         help="Path to the starting model (optional).")
+    parser.add_argument("--cumulate_data", action="store_true",
+                        help="Whether to keep old datasets or not.")
 
     return parser.parse_args()
 
@@ -160,4 +162,5 @@ if __name__ == "__main__":
               num_cpus=args.num_cpus,
               folder=args.data_folder_base,
               starting_epoch=args.starting_epoch,
-              )
+              cumulate_data=args.cumulate_data,
+    )
