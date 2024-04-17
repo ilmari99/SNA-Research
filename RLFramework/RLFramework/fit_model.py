@@ -48,6 +48,7 @@ def fit_model(
         num_cpus : int = -1,
         folder : str = "RLData",
         starting_epoch : int = 0,
+        cumulate_data : bool = False,
     ):
     """ Fit a model to play a game.
     The model is fitted by alternating between simulating games, and training a model.
@@ -58,6 +59,7 @@ def fit_model(
     ds = None
     base_folder = folder
     model_path = starting_model_path
+    data_folders = []
     for epoch in range(starting_epoch, num_epochs):
         folder = f"{base_folder}/epoch_{epoch}"
         player_constructor_temp = PickleableFunction(player_constructor, model_path=model_path)
@@ -67,7 +69,10 @@ def fit_model(
         simulate_games(game_constructor, player_constructor_temp, folder, num_games, num_files, num_cpus, exists_ok=True)
         # Read the data
         print("Reading data...")
-        ds,nfiles, num_samples = read_to_dataset([folder])
+        if not cumulate_data:
+            data_folders = []
+        data_folders.append(folder)
+        ds,nfiles, num_samples = read_to_dataset(data_folders)
         # Fit the model
         print("Fitting model...")
         model_path = model_fit(ds, epoch, num_samples)

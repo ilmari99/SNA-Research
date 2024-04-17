@@ -1,19 +1,20 @@
 import multiprocessing
 import random
 import numpy as np
-from BlockusGame import BlockusGame
-from BlockusPlayer import BlockusPlayer
-from BlockusNNPlayer import BlockusNNPlayer
-
 import multiprocessing
 import os
 import random
 import numpy as np
+import argparse
+
+from BlockusGame import BlockusGame
+from BlockusPlayer import BlockusPlayer
+from BlockusNNPlayer import BlockusNNPlayer
 
 
 def game_constructor(i, model_paths = []):
     return BlockusGame(
-        board_size=(14,14),
+        board_size=(20,20),
         timeout=45,
         logger_args = None,
         render_mode = "",
@@ -50,20 +51,27 @@ def run_game(args):
     return res
 
 if __name__ == "__main__":
-    num_games = 20
-    num_cpus = 10
+    parser = argparse.ArgumentParser(description='Benchmark all models in a directory.')
+    parser.add_argument('--folder', type=str, required=True, help='The folder containing the models.')
+    parser.add_argument('--num_games', type=int, required=True, help='The number of games to play for each model.')
+    parser.add_argument('--num_cpus', type=int, help='The number of CPUs to use.', default=os.cpu_count()-1)
+    args = parser.parse_args()
+    print(args)
+
+    num_games = args.num_games
+    num_cpus = args.num_cpus
     win_percents = {}
-    for model_path in os.listdir("/home/ilmari/python/RLFramework/BlockusModelsRemote/"):
-    #for model_path in ["model_all_data.tflite"]:
+    for model_path in os.listdir(args.folder):
         if not model_path.endswith(".tflite"):
             continue
-        model_path = os.path.join("/home/ilmari/python/RLFramework/BlockusModelsRemote/", model_path)
+        model_path = os.path.join(args.folder, model_path)
         print(f"Testing model: {model_path}")
         with multiprocessing.Pool(num_cpus) as p:
             results = p.map(run_game, [(i, model_path, random.randint(0, 2**32-1)) for i in range(num_games)])
 
         # Find how many times the test player won
         num_wins = 0
+        num_ties = 0
         total_games = 0
         for result in results:
             print(result)
@@ -77,12 +85,16 @@ if __name__ == "__main__":
             if not result.successful:
                 print(f"Game failed: {result}")
                 continue
+            if result.winner == None:
+                num_ties += 1 
             if result.winner == test_player_name:
                 num_wins += 1
             total_games += 1
         
         print(f"Test player won {num_wins} out of {total_games} games")
+        print(f"Test player tied {num_ties} out of {total_games} games")
         print(f"Win rate: {num_wins / total_games}")
+        print(f"Tie rate: {num_ties / total_games}")
         win_percents[model_path] = num_wins / total_games
     sorted_win_percents = sorted(win_percents.items(), key=lambda x: x[1], reverse=True)
     for model_path, win_percent in sorted_win_percents:
