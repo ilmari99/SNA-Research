@@ -75,10 +75,8 @@ def main(data_folder,
          validation_split=0.2,
          batch_size=64,
          ):
-    data_folders = os.listdir(data_folder)
-    # Check that all paths are folders
-    data_folders = [os.path.abspath(folder) for folder in data_folders]
-    assert all([os.path.isdir(folder) for folder in data_folders]), f"All data folders must be directories: {data_folders}"
+    # Find all folders inside the data_folder
+    data_folders = [os.path.join(data_folder, f) for f in os.listdir(data_folder) if os.path.isdir(os.path.join(data_folder, f))]
     print(data_folders)
     
     ds, num_files, approx_num_samples = read_to_dataset(data_folders)
@@ -108,7 +106,7 @@ def main(data_folder,
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Train a model with given data.')
     parser.add_argument('--data_folder', type=str, required=True,
-                        help='Folders containing the data. Provide as a space separated list.')
+                        help='Folder containing the data.')
     parser.add_argument('--load_model_path', type=str, help='Path to load a model from.', default=None)
     parser.add_argument('--model_save_path', type=str, required=True, help='Path to save the trained model.')
     parser.add_argument('--log_dir', type=str, required=False, help='Directory for TensorBoard logs.', default="./logs/")

@@ -57,6 +57,7 @@ mkdir -p $MODEL_FOLDER
 if [ -z "$(ls -A $MODEL_FOLDER)" ]; then
     echo "No models found in $MODEL_FOLDER"
     MODEL_FILE=""
+    EPOCH_NUM=0
 else
     # Count the number of tflite files
     num_tf_files=$(ls -1 $MODEL_FOLDER/*.tflite 2>/dev/null | wc -l)
