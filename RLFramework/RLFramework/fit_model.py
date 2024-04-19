@@ -1,6 +1,8 @@
+import os
 from typing import Callable, List
-
+import shutil
 import tensorflow as tf
+
 from .simulate import simulate_games
 from RLFramework import Game, Player
 from RLFramework.read_to_dataset import read_to_dataset
@@ -49,6 +51,7 @@ def fit_model(
         folder : str = "RLData",
         starting_epoch : int = 0,
         cumulate_data : bool = False,
+        delete_data_after_fit : bool = False,
     ):
     """ Fit a model to play a game.
     The model is fitted by alternating between simulating games, and training a model.
@@ -56,6 +59,8 @@ def fit_model(
     """
     if starting_epoch > 0 and not starting_model_path:
         raise ValueError("starting_model_path must be specified when starting_epoch > 0")
+    if delete_data_after_fit and cumulate_data:
+        raise ValueError(f"Cannot cumulate data if 'delete_data_after_fit' is False.")
     ds = None
     base_folder = folder
     model_path = starting_model_path
@@ -76,6 +81,8 @@ def fit_model(
         # Fit the model
         print("Fitting model...")
         model_path = model_fit(ds, epoch, num_samples)
+        if delete_data_after_fit:
+            shutil.rmtree(folder)
         model_path = convert_model_to_tflite(model_path)
         
         print(f"Model path: {model_path}")

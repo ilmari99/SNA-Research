@@ -16,7 +16,7 @@ def game_constructor(i, model_base_folder):
     model_paths = [os.path.abspath(os.path.join(model_base_folder,model_path)) for model_path in model_paths]
     return BlockusGame(
         board_size=(20,20),
-        timeout=60,
+        timeout=80,
         logger_args = None,
         render_mode = "",
         gather_data = f"gathered_data_{i}.csv",
@@ -175,7 +175,10 @@ def parse_arguments():
                         help="Base path for training data.")
     parser.add_argument("--starting_model_path", type=str, default="",
                         help="Path to the starting model (optional).")
-
+    parser.add_argument("--cumulate_data", action="store_true",
+                        help="Whether to keep old datasets or not.",default=False)
+    parser.add_argument(f"--remove_data_after_fit", action="store_true", default=False)
+    
     return parser.parse_args()
 
 if __name__ == "__main__":
@@ -205,4 +208,6 @@ if __name__ == "__main__":
               num_cpus=args.num_cpus,
               folder=args.data_folder_base,
               starting_epoch=args.starting_epoch,
+              cumulate_data=args.cumulate_data,
+              remove_data_after_fit=args.remove_data_after_fit
               )
