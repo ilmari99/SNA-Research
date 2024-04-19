@@ -78,7 +78,7 @@ def main(data_folder,
     data_folders = os.listdir(data_folder)
     # Check that all paths are folders
     data_folders = [os.path.abspath(folder) for folder in data_folders]
-    assert all([os.path.isdir(folder) for folder in data_folders]), "All data folders must be directories."
+    assert all([os.path.isdir(folder) for folder in data_folders]), f"All data folders must be directories: {data_folders}"
     print(data_folders)
     
     ds, num_files, approx_num_samples = read_to_dataset(data_folders)
