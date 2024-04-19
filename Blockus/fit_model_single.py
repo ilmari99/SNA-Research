@@ -118,7 +118,7 @@ if __name__ == "__main__":
     parser.add_argument('--batch_size', type=int, help='Batch size.', default=64)
     args = parser.parse_args()
     print(args)
-    main(data_folders=args.data_folder,
+    main(data_folder=args.data_folder,
             model_save_path=args.model_save_path,
             load_model_path=args.load_model_path,
             log_dir=args.log_dir,
