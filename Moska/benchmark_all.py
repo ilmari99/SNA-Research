@@ -58,11 +58,13 @@ if __name__ == "__main__":
     parser.add_argument('--num_cpus', type=int, help='The number of CPUs to use.', default=os.cpu_count()-1)
     parser.add_argument('--folder', type=str, required=True, help='The folder containing the models.')
     
-    parser.parse_args()
+    args = parser.parse_args()
     
-    num_games = parser.num_games
-    num_cpus = parser.num_cpus
-    folder = os.path.abspath(parser.folder)
+    print(args)
+    
+    num_games = args.num_games
+    num_cpus = args.num_cpus
+    folder = os.path.abspath(args.folder)
     loss_percents = {}
     for model_path in os.listdir(folder):
         if not model_path.endswith(".tflite"):
@@ -76,7 +78,6 @@ if __name__ == "__main__":
         num_losses = 0
         total_games = 0
         for result in results:
-            print(result)
             test_player_pid = 0
             for player_json in result.player_jsons:
                 if "TestPlayer" in player_json["name"]:

@@ -11,7 +11,7 @@ from MoskaHeuristicPlayer import MoskaHeuristicPlayer
 
 
 def game_constructor(i):
-    model_paths = ["/home/ilmari/python/RLFramework/MoskaModels/model_4.tflite"]
+    model_paths = ["/home/ilmari/python/RLFramework/MoskaModelsNoCumulate/model_5.tflite"]
     return MoskaGame(
         timeout=15,
         logger_args = None,
@@ -50,11 +50,11 @@ def run_game(args):
 
 if __name__ == "__main__":
     # Run games with multiprocessing pool
-    num_games = 200
-    model_path = "/home/ilmari/python/RLFramework/MoskaModels/model_4.tflite"
+    num_games = 100
+    model_path = "/home/ilmari/python/RLFramework/MoskaModelsNoCumulate/model_5.tflite"
     num_cpus = 10
     with multiprocessing.Pool(num_cpus) as p:
-        results = p.map(run_game, [(i, model_path, random.randint(2**32)) for i in range(num_games)])
+        results = p.map(run_game, [(i, model_path, random.randint(0,2**32)) for i in range(num_games)])
 
     # Find how many times the test player won
     num_losses = 0
