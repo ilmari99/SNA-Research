@@ -51,8 +51,7 @@ MODEL_FOLDER=$RLF_BLOCKUS_SCRATCH/TestModels
 mkdir -p $DATA_FOLDER
 mkdir -p $MODEL_FOLDER
 
-# The folders are all folders found in the data folder
-FOLDERS=$(ls $DATA_FOLDER)
+
 # If there are files in the MODEL_FOLDER,
 # We will take the model last modified
 if [ -z "$(ls -A $MODEL_FOLDER)" ]; then
@@ -76,7 +75,7 @@ fi
 MODEL_SAVE_PATH=$MODEL_FOLDER/model_$EPOCH_NUM.keras
 
 $PYTHON_EXE ./Blockus/fit_model_single.py \
---data_folders=$DATA_FOLDER \
+--data_folder=$DATA_FOLDER \
 --load_model_path=$MODEL_FILE \
 --model_save_path=$MODEL_SAVE_PATH \
 --num_epochs=25 \

@@ -66,7 +66,7 @@ def get_model(input_shape):
         )
         return model
     
-def main(data_folders,
+def main(data_folder,
          model_save_path,
          load_model_path = None,
          log_dir = "./logs/",
@@ -75,6 +75,7 @@ def main(data_folders,
          validation_split=0.2,
          batch_size=64,
          ):
+    data_folders = os.listdir(data_folder)
     # Check that all paths are folders
     data_folders = [os.path.abspath(folder) for folder in data_folders]
     assert all([os.path.isdir(folder) for folder in data_folders]), "All data folders must be directories."
@@ -106,7 +107,7 @@ def main(data_folders,
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Train a model with given data.')
-    parser.add_argument('--data_folders', type=str, required=True, nargs='+',
+    parser.add_argument('--data_folder', type=str, required=True,
                         help='Folders containing the data. Provide as a space separated list.')
     parser.add_argument('--load_model_path', type=str, help='Path to load a model from.', default=None)
     parser.add_argument('--model_save_path', type=str, required=True, help='Path to save the trained model.')
@@ -117,7 +118,7 @@ if __name__ == "__main__":
     parser.add_argument('--batch_size', type=int, help='Batch size.', default=64)
     args = parser.parse_args()
     print(args)
-    main(data_folders=args.data_folders,
+    main(data_folders=args.data_folder,
             model_save_path=args.model_save_path,
             load_model_path=args.load_model_path,
             log_dir=args.log_dir,
