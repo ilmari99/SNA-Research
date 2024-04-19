@@ -154,10 +154,17 @@ class MoskaGame(Game):
         """
         finished_players = [i for i in range(len(self.players)) if self.check_is_player_finished(i, new_state)]
         player = self.players[pid]
-        if pid in finished_players and not player.has_received_reward and len(finished_players) < len(self.players):
+        if pid in finished_players and not player.has_received_reward:
             player.has_received_reward = True
             return 1
         return 0
+    
+    def check_is_terminal(self) -> bool:
+        finished_players = self.get_finished_players()
+        if len(finished_players) == len(self.players)-1:
+            return True
+        return False
+        
     
     def __repr__(self) -> str:
         """ Print the game state.
@@ -400,19 +407,7 @@ class MoskaGame(Game):
         Also, if the player is the target, then additionally,
         all the cards on the table have to have been killed (cards_to_kill is empty)
         """
-        player_hand = game_state.player_full_cards[pid]
-
-        # If the player is the last player, then they are finished
-        if len(game_state.get_finished_players()) == len(self.players) - 1:
-            return True
-        
-        if pid == game_state.target_pid:
-            return (len(player_hand) == 0 and
-                    len(self.deck) == 0 and
-                    len(game_state.cards_to_kill) == 0)
-        elif (len(player_hand) == 0 and len(self.deck) == 0):
-            return True
-        return False
+        return game_state.check_is_player_finished(pid)
         
     def select_turn(self, players: List[Player], previous_turns: List[int]) -> int:
         """ In Moska, the turns are mostly based on speed.
