@@ -37,26 +37,33 @@ def main(data_folder,
     data_folders = [os.path.join(data_folder, f) for f in os.listdir(data_folder) if os.path.isdir(os.path.join(data_folder, f))]
     print(data_folders)
     
-    ds, num_files, approx_num_samples = read_to_dataset(data_folders)
-    
-    input_shape = ds.take(1).as_numpy_iterator().next()[0].shape
-    print(f"Input shape: {input_shape}")
-    print(f"Num samples: {approx_num_samples}")
-    
-    train_ds = ds.take(int((1-validation_split)*approx_num_samples)).batch(batch_size)
-    val_ds = ds.skip(int((1-validation_split)*approx_num_samples)).batch(batch_size)
-    
-    train_ds = train_ds.prefetch(tf.data.experimental.AUTOTUNE)
-    
-    if load_model_path:
-        model = tf.keras.models.load_model(load_model_path)
+    if len(tf.config.experimental.list_physical_devices('GPU')) > 1:
+        print("Using multiple GPUs")
+        strategy = tf.distribute.MirroredStrategy()
     else:
-        model = get_model(input_shape)
-        print(model.summary())
-    
-    tb_log = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
-    early_stop = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=patience, restore_best_weights=True)
-    model.fit(train_ds, epochs=num_epochs, callbacks=[tb_log, early_stop], validation_data=val_ds)
+        print("Using single GPU")
+        strategy = tf.distribute.OneDeviceStrategy(device="/gpu:0")
+    with strategy.scope():
+        ds, num_files, approx_num_samples = read_to_dataset(data_folders)
+        
+        input_shape = ds.take(1).as_numpy_iterator().next()[0].shape
+        print(f"Input shape: {input_shape}")
+        print(f"Num samples: {approx_num_samples}")
+        
+        train_ds = ds.take(int((1-validation_split)*approx_num_samples)).batch(batch_size)
+        val_ds = ds.skip(int((1-validation_split)*approx_num_samples)).batch(batch_size)
+        
+        train_ds = train_ds.prefetch(tf.data.experimental.AUTOTUNE)
+        
+        if load_model_path:
+            model = tf.keras.models.load_model(load_model_path)
+        else:
+            model = get_model(input_shape)
+            print(model.summary())
+        
+        tb_log = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
+        early_stop = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=patience, restore_best_weights=True)
+        model.fit(train_ds, epochs=num_epochs, callbacks=[tb_log, early_stop], validation_data=val_ds)
     model.save(model_save_path)
 
 if __name__ == "__main__":
