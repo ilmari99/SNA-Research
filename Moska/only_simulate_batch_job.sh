@@ -2,17 +2,17 @@
 
 #SBATCH --job-name=moska_simulate
 #SBATCH --account=project_2010270
-#SBATCH --time=00:12:00
-#SBATCH --partition=test
+#SBATCH --time=03:00:00
+#SBATCH --partition=medium
 #SBATCH --output=moska_simulate_%j.out
 #SBATCH --error=moska_simulate_%j.err
 #SBATCH --mail-type=END
 
 # Reserve compute
-#SBATCH --cpus-per-task=256
-#SBATCH --nodes=2
-#SBATCH --ntasks=2
-#SBATCH --hint=multithread
+#SBATCH --cpus-per-task=128
+#SBATCH --nodes=10
+#SBATCH --ntasks=10
+##SBATCH --hint=multithread
 # Print all arguments
 echo "All arguments: $@"
 
@@ -45,8 +45,8 @@ $PYTHON_EXE -c "import tensorflow as tf; print(tf.__version__)"
 $PYTHON_EXE -c "import tensorflow as tf; print(tf.config.list_physical_devices('GPU'))"
 $PYTHON_EXE --version
 
-DATA_FOLDER=$RLF_MOSKA_SCRATCH/TestData
-MODEL_FOLDER=$RLF_MOSKA_SCRATCH/TestModels
+DATA_FOLDER=$RLF_MOSKA_SCRATCH/Data
+MODEL_FOLDER=$RLF_MOSKA_SCRATCH/Models
 
 rm -r $DATA_FOLDER
 
@@ -62,11 +62,11 @@ for node in $(scontrol show hostname $SLURM_JOB_NODELIST); do
         rm -r $new_data_folder
     fi
 
-    srun --nodes=1 --ntasks=1 --cpus-per-task=256 --hint=multithread -w $node $PYTHON_EXE ./Moska/only_simulate.py \
+    srun --nodes=1 --ntasks=1 --cpus-per-task=128 -w $node $PYTHON_EXE ./Moska/only_simulate.py \
     --folder=$new_data_folder \
     --model_base_folder=$MODEL_FOLDER \
-    --num_games=896 \
-    --num_cpus=256 \
-    --num_files=256 &
+    --num_games=14400 \
+    --num_cpus=120 \
+    --num_files=3600 &
 done
 wait

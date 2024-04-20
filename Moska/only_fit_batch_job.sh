@@ -2,17 +2,17 @@
 
 #SBATCH --job-name=moska_fit
 #SBATCH --account=project_2010270
-#SBATCH --time=00:12:00
-#SBATCH --partition=gputest
+#SBATCH --time=07:00:00
+#SBATCH --partition=gpusmall
 #SBATCH --output=moska_fit_%j.out
 #SBATCH --error=moska_fit_%j.err
 #SBATCH --mail-type=END
 
 # Reserve compute
-#SBATCH --cpus-per-task=32
+#SBATCH --cpus-per-task=64
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --gres=gpu:a100:1,nvme:100
+#SBATCH --gres=gpu:a100:1,nvme:30
 # Print all arguments
 echo "All arguments: $@"
 
