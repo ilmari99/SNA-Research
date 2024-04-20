@@ -19,7 +19,7 @@ echo "All arguments: $@"
 module purge
 module load tensorflow/2.15
 
-RLF_BLOCKUS_SCRATCH="/scratch/project_2010270/Moska"
+RLF_MOSKA_SCRATCH="/scratch/project_2010270/Moska"
 
 PIP_EXE=./venv/bin/pip3
 PYTHON_EXE=./venv/bin/python3
@@ -45,8 +45,8 @@ $PYTHON_EXE -c "import tensorflow as tf; print(tf.__version__)"
 $PYTHON_EXE -c "import tensorflow as tf; print(tf.config.list_physical_devices('GPU'))"
 $PYTHON_EXE --version
 
-DATA_FOLDER=$RLF_BLOCKUS_SCRATCH/TestData
-MODEL_FOLDER=$RLF_BLOCKUS_SCRATCH/TestModels
+DATA_FOLDER=$RLF_MOSKA_SCRATCH/TestData
+MODEL_FOLDER=$RLF_MOSKA_SCRATCH/TestModels
 
 mkdir -p $DATA_FOLDER
 mkdir -p $MODEL_FOLDER
@@ -82,7 +82,7 @@ $PYTHON_EXE ./Moska/fit_model_single.py \
 --num_epochs=25 \
 --patience=5 \
 --validation_split=0.2 \
---batch_size=64 \
+--batch_size=16384 \
 
 
 
