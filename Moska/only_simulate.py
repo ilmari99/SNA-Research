@@ -12,7 +12,7 @@ def game_constructor(i, model_base_folder):
     model_paths = list(filter(lambda path: path.endswith(".tflite"), os.listdir(model_base_folder)))
     model_paths = [os.path.abspath(os.path.join(model_base_folder,model_path)) for model_path in model_paths]
     return MoskaGame(
-        timeout=80,
+        timeout=16,
         logger_args = None,
         render_mode = "",
         gather_data = f"gathered_data_{i}.csv",
