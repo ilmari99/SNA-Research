@@ -1,11 +1,11 @@
 #!/bin/bash
 
-#SBATCH --job-name=moska_simulate
+#SBATCH --job-name=blockus_simulate
 #SBATCH --account=project_2009838
 #SBATCH --time=00:15:00
 #SBATCH --partition=test
-#SBATCH --output=moska_simulate_%j.out
-#SBATCH --error=moska_simulate_%j.err
+#SBATCH --output=blockus_simulate_%j.out
+#SBATCH --error=blockus_simulate_%j.err
 #SBATCH --mail-type=END
 
 # Reserve compute
@@ -19,7 +19,7 @@ echo "All arguments: $@"
 module purge
 module load tensorflow/2.15
 
-RLF_MOSKA_SCRATCH="/scratch/project_2009838/Moska"
+RLF_BLOCKUS_SCRATCH="/scratch/project_2009838/Blockus"
 
 PIP_EXE=./venv/bin/pip3
 PYTHON_EXE=./venv/bin/python3
@@ -45,8 +45,8 @@ $PYTHON_EXE -c "import tensorflow as tf; print(tf.__version__)"
 $PYTHON_EXE -c "import tensorflow as tf; print(tf.config.list_physical_devices('GPU'))"
 $PYTHON_EXE --version
 
-DATA_FOLDER=$RLF_MOSKA_SCRATCH/TestData
-MODEL_FOLDER=$RLF_MOSKA_SCRATCH/TestModels
+DATA_FOLDER=$RLF_BLOCKUS_SCRATCH/TestData
+MODEL_FOLDER=$RLF_BLOCKUS_SCRATCH/TestModels
 
 rm -r $DATA_FOLDER
 
@@ -62,11 +62,11 @@ for node in $(scontrol show hostname $SLURM_JOB_NODELIST); do
         rm -r $new_data_folder
     fi
 
-    srun --nodes=1 --ntasks=1 --cpus-per-task=40 -w $node $PYTHON_EXE ./Moska/only_simulate.py \
+    srun --nodes=1 --ntasks=1 --cpus-per-task=40 -w $node $PYTHON_EXE ./Blockus/only_simulate.py \
     --folder=$new_data_folder \
     --model_base_folder=$MODEL_FOLDER \
-    --num_games=1050 \
+    --num_games=105 \
     --num_cpus=35 \
-    --num_files=350 &
+    --num_files=105 &
 done
 wait
