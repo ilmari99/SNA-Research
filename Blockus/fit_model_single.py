@@ -79,12 +79,16 @@ def main(data_folder,
     data_folders = [os.path.join(data_folder, f) for f in os.listdir(data_folder) if os.path.isdir(os.path.join(data_folder, f))]
     print(data_folders)
     
-    if len(tf.config.experimental.list_physical_devices('GPU')) > 1:
+    if len(tf.config.experimental.list_physical_devices('GPU')) == 1:
+        print("Using single GPU")
+        strategy = tf.distribute.OneDeviceStrategy(device="/gpu:0")
+    elif len(tf.config.experimental.list_physical_devices('GPU')) > 1:
         print("Using multiple GPUs")
         strategy = tf.distribute.MirroredStrategy()
     else:
-        print("Using single GPU")
-        strategy = tf.distribute.OneDeviceStrategy(device="/gpu:0")
+        print("Using CPU")
+        strategy = tf.distribute.OneDeviceStrategy(device="/cpu:0")
+    
     with strategy.scope():
         
         ds, num_files, approx_num_samples = read_to_dataset(data_folders)
