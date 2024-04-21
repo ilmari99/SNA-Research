@@ -8,11 +8,13 @@ from typing import Dict, Iterable, List
 CARD_VALUES = tuple(range(2,15))                            # Initialize the standard deck
 CARD_SUITS = ("C","D","H","S") 
 CARD_SUIT_SYMBOLS = {"S":'♠', "D":'♦',"H": '♥',"C": '♣',"X":"X"}    #Conversion table
-USING_CARD_SYMBOLS = True
+USING_CARD_SYMBOLS = False
 
 class Card:
     """ A class representing a card.
     """
+    __slots__ = ['suit', 'rank', 'kopled']
+    
     def __init__(self, suit : str, rank : int, kopled = False):
         self.suit = suit
         self.rank = rank
