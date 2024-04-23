@@ -10,10 +10,17 @@ class Assignment:
     """ An assignment is a mapping from cards in the hand to cards on the table.
     Two assignments are equal if the same cards are played to the same cards, regardless of order.
     """
+    __slots__ = ['inds']
     def __init__(self, inds : Tuple[int]):
         self.inds = inds
-        self._hand_inds = self.inds[::2]
-        self._table_inds = self.inds[1::2]
+    
+    @property
+    def _hand_inds(self):
+        return self.inds[::2]
+    
+    @property
+    def _table_inds(self):
+        return self.inds[1::2]
     
     def __eq__(self, other):
         """ Two assignments are equal if the same cards are played to the same cards, regardless of order."""
@@ -24,8 +31,9 @@ class Assignment:
     
     def __hash__(self):
         """ Two assignments are equal if the same cards are played to the same cards, regardless of order."""
-        #return hash(frozenset(self._hand_inds)) + hash(frozenset(self._table_inds))
-        return hash(tuple(sorted(list(self._hand_inds)) + sorted(list(self._table_inds))))
+        hand_inds = sorted(self._hand_inds)
+        table_inds = sorted(self._table_inds)
+        return hash((tuple(hand_inds), tuple(table_inds)))
 
 def get_initial_attacks(cards : List[Card], fits : int, max_moves : int = 1000) -> List[List[Card]]:
     single_solutions = itertools.combinations(cards,1)
