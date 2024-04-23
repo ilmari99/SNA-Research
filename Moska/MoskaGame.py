@@ -1,6 +1,7 @@
 import itertools
 import os
 import sys
+import tracemalloc
 from RLFramework import GameState
 from RLFramework.Action import Action
 from RLFramework.Player import Player
@@ -115,7 +116,6 @@ class MoskaGame(Game):
                     last_idx = len(self.player_full_cards[self.current_pid]) - 1
                     for possible_killing in possible_killings:
                         possible_killing.inds = (last_idx, possible_killing.inds[1])
-                        possible_killing._hand_inds = (last_idx,)
                 else:
                     possible_killings = get_all_matchings(self.player_full_cards[self.current_pid],
                                                         self.cards_to_kill,
@@ -164,7 +164,6 @@ class MoskaGame(Game):
         if len(finished_players) == len(self.players)-1:
             return True
         return False
-        
     
     def __repr__(self) -> str:
         """ Print the game state.
@@ -282,6 +281,8 @@ class MoskaGame(Game):
     def step(self, action: Action, real_move=True) -> MoskaGameState:
         # Super step automatically sets the next player,
         # and appends them to the previous turns
+        msg = f"State changed from:\n--------------------------------------------------------------------\n"
+        msg += f"{self.get_current_state()}\n\n"
         self.logger.debug(f"Stepping (Real={real_move}) with action {action}")
         curr_board_len = len(self.cards_to_kill + self.killed_cards)
         current_pid = self.current_pid
@@ -294,6 +295,8 @@ class MoskaGame(Game):
             for i in range(len(self.players)):
                 if i not in finished_players:
                     state.ready_players[i] = False
+        msg += f"To state:\n{state}\n--------------------------------------------------------------------\n"
+        self.logger.debug(msg)
         return state
     
     def fill_hands(self, game_state : MoskaGameState = None, inplace = True) -> None:
