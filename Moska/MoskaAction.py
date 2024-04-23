@@ -366,6 +366,7 @@ class Skip(MoskaAction):
 class AttackMove(MoskaAction):
     """ A superclass for attacking type moves
     """
+    __slots__ = ["pid", "move_id", "target_pid", "cards"]
     def __init__(self, pid : int, move_id : str, target_pid : int = None, cards : List[Card] = []):
         super().__init__(pid, move_id, target_pid, cards)
         self.target_pid = target_pid
@@ -538,6 +539,7 @@ class AttackOther(AttackMove):
         return super().check_action_is_legal(game)
     
 class KillFromHand(MoskaAction):
+    __slots__ = ["pid", "move_id", "kill_mapping"]
     def __init__(self, pid : int, move_id : str, kill_mapping : dict = {}):
         super().__init__(pid, move_id, kill_mapping)
         self.kill_mapping = kill_mapping
