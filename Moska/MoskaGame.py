@@ -1,7 +1,6 @@
 import itertools
 import os
 import sys
-import tracemalloc
 from RLFramework import GameState
 from RLFramework.Action import Action
 from RLFramework.Player import Player
@@ -307,24 +306,22 @@ class MoskaGame(Game):
         if len(game_state.deck) == 0:
             return
         # Find a player with less than 6 cards
-        player_with_missing_cards = None
+        players_with_missing_cards = []
         for i, player_full_cards in enumerate(game_state.player_full_cards):
             if len(player_full_cards) < 6:
-                player_with_missing_cards = i
-                break
+                players_with_missing_cards.append(i)
+                #break
         # The else block is executed if the loop completes without breaking
-        else:
+        if len(players_with_missing_cards) == 0:
             return
-        player = self.players[player_with_missing_cards]
-        if player.pid == game_state.target_pid:
-            return
-            
-        if player_with_missing_cards is None:
-            return
-        # Fill the hand of the player
-        pick_n_cards = min(6 - len(self.players[player_with_missing_cards].hand), len(self.deck))
-        self.players[player_with_missing_cards].logger.debug(f"Player {player_with_missing_cards} lifted {pick_n_cards} cards from deck.")
-        game_state.player_full_cards[player_with_missing_cards] += [self.deck.pop(0) for _ in range(pick_n_cards)]
+        for pid in players_with_missing_cards:
+            player = self.players[pid]
+            if player.pid == game_state.target_pid:
+                return
+            # Fill the hand of the player
+            pick_n_cards = min(6 - len(game_state.player_full_cards[pid]), len(self.deck))
+            player.logger.debug(f"Player {pid} lifted {pick_n_cards} cards from deck.")
+            game_state.player_full_cards[pid] += [self.deck.pop(0) for _ in range(pick_n_cards)]
         if inplace:
             self.restore_game(game_state)
         return
