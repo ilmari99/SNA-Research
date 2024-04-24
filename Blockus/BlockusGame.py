@@ -33,7 +33,10 @@ class BlockusGame(Game):
         # If there are any new models, load them
         if model_paths - current_models:
             self.set_models(list(model_paths))
-        return super().play_game(players)
+        out = super().play_game(players)
+        if self.render_mode == "human":
+            plt.savefig("blockus.png")
+        return out
     
     def __repr__(self) -> str:
         s = ""
@@ -64,21 +67,62 @@ class BlockusGame(Game):
         self.current_pid = 0
         self.player_remaining_pieces = [list(range(21)) for _ in players]
         self.finished_players = []
+    
+    def init_render_human(self) -> None:
+        plt.cla()
+        plt.clf()
+        plt.close()
+        self.fig, self.ax = plt.subplots(1, 2)
+        plt.ion()
+        plt.show()
         
     def render_human(self, ax: plt.Axes = None) -> None:
         """ Render the game.
         """
-        if ax is None:
-            fig, ax = plt.subplots()
-        ax.clear()
+        board_ax : plt.Axes = self.ax[0]
+        pieces_ax : plt.Axes = self.ax[1]
+        board_ax.clear()
         color_map = {-1 : "black", 0 : "red", 1 : "blue", 2 : "green", 3 : "yellow"}
-        ax.imshow(self.board, cmap="tab20", vmin=-1, vmax=3)
-        ax.set_xticks(np.arange(-0.5, self.board_size[1], 1), minor=True)
-        ax.set_yticks(np.arange(-0.5, self.board_size[0], 1), minor=True)
-        ax.grid(which='minor', color='w', linestyle='-', linewidth=2)
-        ax.set_title(f"Scores: {self.player_scores}")
-        ax.set_xticks([])
-        ax.set_yticks([])
+        board_ax.imshow(self.board, cmap="tab20", vmin=-1, vmax=3)
+        board_ax.set_xticks(np.arange(-0.5, self.board_size[1], 1), minor=True)
+        board_ax.set_yticks(np.arange(-0.5, self.board_size[0], 1), minor=True)
+        board_ax.grid(which='minor', color='w', linestyle='-', linewidth=2)
+        board_ax.set_title(f"Scores: {self.player_scores}")
+        board_ax.set_xticks([])
+        board_ax.set_yticks([])
+
+        # Add section to show remaining pieces for current player
+        remaining_pieces = self.player_remaining_pieces[self.current_pid]
+        remaining_pieces = [BLOCKUS_PIECE_MAP[piece] for piece in remaining_pieces]
+        
+        pieces_ax.clear()
+        # Place all the pieces in the pieces_ax
+        # We place the pieces on 20x20 grid, where each piece is placed in a 4x4 grid
+                
+        remaining_pieces_board = np.zeros_like(self.board) - 1
+        row = 0
+        col = 0
+        for i, piece in enumerate(remaining_pieces):
+            piece = np.where(piece == 0, -1, self.current_pid)
+            remaining_pieces_board[row:row+piece.shape[0], col:col+piece.shape[1]] = piece
+            col += 4
+            if col >= 20:
+                col = 0
+                row += 4
+        
+        pieces_ax.imshow(remaining_pieces_board, cmap="tab20", vmin=-1, vmax=3)
+        pieces_ax.set_xticks(np.arange(-0.5, 20, 1), minor=True)
+        pieces_ax.set_yticks(np.arange(-0.5, 20, 1), minor=True)
+        pieces_ax.grid(which='minor', color='w', linestyle='-', linewidth=2)
+        pieces_ax.set_title(f"Player {self.current_pid} remaining pieces")
+        pieces_ax.set_xticks([])
+        pieces_ax.set_yticks([])
+        # Add a grid dividing the pieces in to 4x4 grids by addding black lines
+        for i in range(5):
+            pieces_ax.axhline(i * 4 - 0.5, color='black', linewidth=2)
+            pieces_ax.axvline(i * 4 - 0.5, color='black', linewidth=2)
+            
+        
         plt.pause(0.01)
 
     def restore_game(self, game_state: BlockusGameState) -> None:

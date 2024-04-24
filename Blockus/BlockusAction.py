@@ -53,6 +53,23 @@ class BlockusAction(Action):
         """
         return grid[0] >= 0 and grid[0] < board_size[0] and grid[1] >= 0 and grid[1] < board_size[1]
     
+    def __repr__(self) -> str:
+        if self.piece_id == -1:
+            return "BlockusAction(None)"
+        piece_mat = BLOCKUS_PIECE_MAP[self.piece_id]
+        return f"BlockusAction({piece_mat}, x: {self.x}, y: {self.y})"
+    
+    def get_piece_coordinates(self):
+        """ Return a list of coordinates of the piece.
+        """
+        piece = BLOCKUS_PIECE_MAP[self.piece_id]
+        piece = np.rot90(piece, k=self.rotation)
+        if self.flip:
+            piece = np.flip(piece, axis=0)
+        piece_grids = np.where(piece != 0)
+        piece_grids = [(self.x + piece_grids[0][i], self.y + piece_grids[1][i]) for i in range(len(piece_grids[0]))]
+        return piece_grids
+    
     def find_num_connected_pieces(self, board, pid, x, y):
         """ Find the number of connected pieces, starting from the grid (x, y).
         """
