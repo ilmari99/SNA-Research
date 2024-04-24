@@ -284,10 +284,17 @@ class MoskaGame(Game):
         msg += f"{self.get_current_state()}\n\n"
         self.logger.debug(f"Stepping (Real={real_move}) with action {action}")
         curr_board_len = len(self.cards_to_kill + self.killed_cards)
+        curr_hand_len = len(self.players[self.current_pid].hand)
         current_pid = self.current_pid
         # After the step, the current_pid is -1, since we do not know the next player
         state : MoskaGameState = super().step(action, real_move)
         state.ready_players[current_pid] = True
+        new_hand_len = len(state.player_full_cards[current_pid])
+        # If the player has less than 6 cards, there is deck left, and the player is not the target
+        # -> Player has to fill, and is not ready
+        if new_hand_len < 6 and len(state.deck) > 0 and current_pid != state.target_pid:
+            state.ready_players[current_pid] = False
+        
         if len(self.cards_to_kill + self.killed_cards) != curr_board_len:
             # If the board state changes, then set all players (who are not finished) to not ready
             finished_players = state.get_finished_players()
@@ -317,7 +324,7 @@ class MoskaGame(Game):
         for pid in players_with_missing_cards:
             player = self.players[pid]
             if player.pid == game_state.target_pid:
-                return
+                continue
             # Fill the hand of the player
             pick_n_cards = min(6 - len(game_state.player_full_cards[pid]), len(self.deck))
             player.logger.debug(f"Player {pid} lifted {pick_n_cards} cards from deck.")
