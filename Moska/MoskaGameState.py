@@ -5,6 +5,8 @@ import warnings
 # named tuple class
 from collections import namedtuple
 
+from RLFramework.Game import Game
+from RLFramework.Player import Player
 import numpy as np
 if TYPE_CHECKING:
     from MoskaGame import MoskaGame
@@ -42,6 +44,39 @@ class MoskaGameState(GameState):
         """ Check if the bout is initiated.
         """
         return len(self.cards_to_kill + self.killed_cards) > 0
+    
+        
+    def __repr__(self) -> str:
+        """ Print the game state.
+        Number of cards in deck: {len(self.deck)}
+        Trump card: {self.trump_card}
+        Player1 (4)*: self.public_cards[0]
+        Player2 (6): self.public_cards[1]
+        player3 (6): self.public_cards[2]...
+        etc.
+        Cards to kill: {self.cards_to_kill}
+        Killed cards: {self.killed_cards}
+
+        """
+        s = ""
+        s += f"Ready players: {self.ready_players}\n"
+        s += f"Is kopled card on table: {self.is_kopled_card_on_table()}\n"
+        s += f"Bout is initiated: {self.bout_is_initiated()}\n"
+        s += f"Target is kopling: {self.target_is_kopling}\n"
+        s += f"Number of discarded cards: {len(self.discarded_cards)}\n"
+        s += f"Last 5 discarded cards: {self.discarded_cards[:min(5, len(self.discarded_cards))]}...\n"
+        s += f"Current player: {self.current_pid}\n"
+        s += f"Number of cards in deck: {len(self.deck)}\n"
+        s += f"First 5 cards of the deck: {self.deck[:min(5, len(self.deck))]}...\n"
+        s += f"Trump card: {self.trump_card}\n"
+        for i,full_cards in enumerate(self.player_full_cards):
+            s += f"Player{i} ({len(full_cards)})"
+            if i == self.target_pid:
+                s += "*"
+            s += f": {full_cards}\n"
+        s += f"Cards to kill: {self.cards_to_kill}\n"
+        s += f"Killed cards: {self.killed_cards}\n"
+        return s
     
     def player_is_initiating(self, pid) -> bool:
         """ Check if the current player is initiating the bout.
