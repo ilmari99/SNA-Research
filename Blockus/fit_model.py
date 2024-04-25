@@ -27,8 +27,14 @@ def players_constructor(i, model_path, model_base_folder):
     if not model_path:
         return [BlockusPlayer(name=f"Player{j}_{i}", logger_args=None) for j in range(4)]
     # Get the epoch number from the model path
+    print(f"Model path: {model_path}")
+    print(f"Model base folder: {model_base_folder}")
     model_base_path = model_path.split("/")[-1]
-    epoch_num = int(model_base_path.split("_")[1].split(".")[0])
+    print(f"Model base path: {model_base_path}")
+    try:
+        epoch_num = int(model_base_path.split("_")[1].split(".")[0])
+    except IndexError:
+        epoch_num = 0
     # The previous models are in the same folder, but with different epoch numbers
     all_model_paths = [os.path.abspath(os.path.join(model_base_folder,f"model_{i}.tflite")) for i in range(epoch_num + 1)]
     # Filter non-existent
