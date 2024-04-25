@@ -50,7 +50,7 @@ class BlockusHumanPlayer(BlockusPlayer):
         # Receive graphical input from the user
         clicked_tiles = []
         def onclick(event):
-            # Check that the click is in eitehr ax
+            # Check that the click is in either ax
             if event.inaxes not in [board_ax, pieces_ax]:
                 return
             # The board is a 20x20 grid
@@ -73,15 +73,11 @@ class BlockusHumanPlayer(BlockusPlayer):
                     col -= 1
                 # Now, find the piece that was clicked
                 piece_idx = row // 4 * 5 + col // 4
-                print(f"Piece idx: {piece_idx}")
                 piece_id = game.player_remaining_pieces[game.current_pid][piece_idx]
-                print(f"Piece id: {piece_id}")
                 piece_arr = BLOCKUS_PIECE_MAP[piece_id]
                 piece_arr = np.array(piece_arr)
-                print("Piece array: ", piece_arr)
                 # Rotate the piece 90 degrees clockwise
                 piece_arr = np.rot90(piece_arr)
-                print("New piece array: ", piece_arr)
                 # Convert to a list
                 #piece_arr = piece_arr.tolist()
                 #print(f"New piece array: {piece_arr}")
@@ -92,16 +88,15 @@ class BlockusHumanPlayer(BlockusPlayer):
             # Draw the clicked tile
             board_ax.plot(col, row, 'ro')
             fig.canvas.draw()
-            
+            return
+        
         cid = fig.canvas.mpl_connect('button_press_event', onclick)
-        # Wait for the user to press enter
-        input("Press enter to confirm the selection.")
-        print(f"Clicked tiles: {clicked_tiles}")
-        # Remove the red dots
-        #board_ax.clear()
-        game.render()
-        # Disconnect the click event
+        
+        input("Press enter to confirm selection.")
+        
         fig.canvas.mpl_disconnect(cid)
+        print("Clicked tiles: ", clicked_tiles)
+        
         # Check if the selection is valid
         valid_grid_selections = [action.get_piece_coordinates() for action in valid_actions]
         clicked_tiles_set = set(clicked_tiles)
