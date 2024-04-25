@@ -29,7 +29,7 @@ class BlockusGame(Game):
     def play_game(self, players: List[Player]) -> Result:
         # Load the models before playing the game
         current_models = set(self.model_paths)
-        model_paths = set([p.model_path for p in players if (hasattr(p, "model_path") and p.model_path is not None)])
+        model_paths = set([os.path.abspath(p.model_path) for p in players if (hasattr(p, "model_path") and p.model_path is not None)])
         # If there are any new models, load them
         if model_paths - current_models:
             self.set_models(list(model_paths))
@@ -121,8 +121,8 @@ class BlockusGame(Game):
         for i in range(5):
             pieces_ax.axhline(i * 4 - 0.5, color='black', linewidth=2)
             pieces_ax.axvline(i * 4 - 0.5, color='black', linewidth=2)
-            
-        
+
+
         plt.pause(0.01)
 
     def restore_game(self, game_state: BlockusGameState) -> None:
