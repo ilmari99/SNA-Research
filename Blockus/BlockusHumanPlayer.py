@@ -97,6 +97,12 @@ class BlockusHumanPlayer(BlockusPlayer):
         fig.canvas.mpl_disconnect(cid)
         print("Clicked tiles: ", clicked_tiles)
         
+        # Remove the dots
+        board_ax.clear()
+        game.render()
+        
+        
+        
         # Check if the selection is valid
         valid_grid_selections = [action.get_piece_coordinates() for action in valid_actions]
         clicked_tiles_set = set(clicked_tiles)
