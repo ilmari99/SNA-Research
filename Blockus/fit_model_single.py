@@ -91,18 +91,17 @@ def main(data_folder,
     
     with strategy.scope():
         
-        ds, num_files, approx_num_samples = read_to_dataset(data_folders)
+        train_ds, val_ds, num_files, approx_num_samples = read_to_dataset(data_folders, frac_test_files=validation_split)
         
-        input_shape = ds.take(1).as_numpy_iterator().next()[0].shape
+        input_shape = train_ds.take(1).as_numpy_iterator().next()[0].shape
         print(f"Input shape: {input_shape}")
         print(f"Num samples: {approx_num_samples}")
         
-        ds = ds.shuffle(2000)
-        
-        train_ds = ds.take(int((1-validation_split)*approx_num_samples)).batch(batch_size)
-        val_ds = ds.skip(int((1-validation_split)*approx_num_samples)).batch(batch_size)
+        train_ds = train_ds.batch(batch_size)
+        val_ds = val_ds.batch(batch_size)
         
         train_ds = train_ds.prefetch(tf.data.experimental.AUTOTUNE)
+        val_ds = val_ds.prefetch(tf.data.experimental.AUTOTUNE)
         
         if load_model_path:
             model = tf.keras.models.load_model(load_model_path)
