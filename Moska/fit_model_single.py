@@ -7,23 +7,33 @@ import argparse
 
 def get_model(input_shape):
     
-        inputs = tf.keras.Input(shape=input_shape)
-        x = tf.keras.layers.Dense(600, activation='relu')(inputs)
-        x = tf.keras.layers.Dropout(0.4)(x)
-        x = tf.keras.layers.Dense(500, activation='relu')(x)
-        x = tf.keras.layers.Dropout(0.35)(x)
-        x = tf.keras.layers.Dense(500, activation='relu')(x)
-        x = tf.keras.layers.Dropout(0.35)(x)
-        x = tf.keras.layers.Dense(500, activation='relu')(x)
-        output = tf.keras.layers.Dense(1, activation='sigmoid')(x)
-        
-        model = tf.keras.Model(inputs=inputs, outputs=output)
-
-        model.compile(optimizer="adam",
-                loss='binary_crossentropy',
-                metrics=['mae', "accuracy"]
-        )
-        return model
+    inputs = tf.keras.Input(shape=input_shape)
+    
+    # First separate the input into misc and card data:
+    # The first 15 values are miscellanous
+    misc = tf.keras.layers.Lambda(lambda x: x[:,:15])(inputs)
+    # The rest are card data
+    cards = tf.keras.layers.Lambda(lambda x: x[:,15:])(inputs)
+    # We then reshape the card data to 8x52x1
+    # 8 players, 52 cards (1 means the card is in the set, 0 means it is not), 1 channel
+    cards = tf.keras.layers.Reshape((8,52,1))(cards)
+    # And apply convolutional layers
+    x = tf.keras.layers.Conv2D(16, (3,3), activation='relu')(cards)
+    x = tf.keras.layers.Conv2D(32, (3,3), activation='relu')(x)
+    x = tf.keras.layers.Conv2D(64, (3,3), activation='relu')(x)
+    x = tf.keras.layers.Flatten()(x)
+    # Concatenate the misc data to the convolutional layers
+    x = tf.keras.layers.Concatenate()([x, misc])
+    # And apply dense layers
+    x = tf.keras.layers.Dense(128, activation='relu')(x)
+    x = tf.keras.layers.Dropout(0.5)(x)
+    x = tf.keras.layers.Dense(64, activation='relu')(x)
+    x = tf.keras.layers.Dropout(0.5)(x)
+    x = tf.keras.layers.Dense(1, activation='sigmoid')(x)
+    model = tf.keras.Model(inputs=inputs, outputs=x)
+    model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy', "mae"])
+    print(model.summary())
+    return model
     
 def main(data_folder,
          model_save_path,
@@ -47,16 +57,17 @@ def main(data_folder,
         print("Using CPU")
         strategy = tf.distribute.OneDeviceStrategy(device="/cpu:0")
     with strategy.scope():
-        ds, num_files, approx_num_samples = read_to_dataset(data_folders)
+        train_ds, val_ds, num_files, approx_num_samples = read_to_dataset(data_folders, frac_test_files=validation_split)
         
-        input_shape = ds.take(1).as_numpy_iterator().next()[0].shape
+        input_shape = train_ds.take(1).as_numpy_iterator().next()[0].shape
         print(f"Input shape: {input_shape}")
         print(f"Num samples: {approx_num_samples}")
         
-        train_ds = ds.take(int((1-validation_split)*approx_num_samples)).batch(batch_size)
-        val_ds = ds.skip(int((1-validation_split)*approx_num_samples)).batch(batch_size)
+        train_ds = train_ds.batch(batch_size)
+        val_ds = val_ds.batch(batch_size)
         
         train_ds = train_ds.prefetch(tf.data.experimental.AUTOTUNE)
+        val_ds = val_ds.prefetch(tf.data.experimental.AUTOTUNE)
         
         if load_model_path:
             model = tf.keras.models.load_model(load_model_path)
@@ -66,7 +77,7 @@ def main(data_folder,
         
         tb_log = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
         early_stop = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=patience, restore_best_weights=True)
-        model.fit(train_ds, epochs=num_epochs, callbacks=[tb_log, early_stop], validation_data=val_ds)
+        model.fit(train_ds, epochs=num_epochs, callbacks=[tb_log, early_stop], validation_data=val_ds,class_weight={0: 0.75, 1: 0.25})
     model.save(model_save_path)
 
 if __name__ == "__main__":
