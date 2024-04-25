@@ -60,39 +60,76 @@ def count_num_samples_in_ds(ds):
         num_samples[y.numpy()] += 1
     return num_samples
 
-def model_fit(ds, epoch, num_samples, model_base_folder):
+def get_conv_model(input_shape):
+        
+        inputs = tf.keras.Input(shape=input_shape)
+        
+        # First separate the input into misc and card data:
+        # The first 15 values are miscellanous
+        misc = tf.gather(inputs, [i for i in range(15)], axis=1)
+        # The rest are card data
+        cards = tf.gather(inputs, [i for i in range(15, input_shape[0])], axis=1)
+        # We then reshape the card data to 8x52x1
+        # 8 players, 52 cards (1 means the card is in the set, 0 means it is not), 1 channel
+        cards = tf.keras.layers.Reshape((8,52,1))(cards)
+        # And apply convolutional layers
+        x = tf.keras.layers.Conv2D(16, (3,3), activation='relu')(cards)
+        x = tf.keras.layers.Conv2D(32, (3,3), activation='relu')(x)
+        x = tf.keras.layers.Conv2D(64, (3,3), activation='relu')(x)
+        x = tf.keras.layers.Flatten()(x)
+        # Concatenate the misc data to the convolutional layers
+        x = tf.keras.layers.Concatenate()([x, misc])
+        # And apply dense layers
+        x = tf.keras.layers.Dense(128, activation='relu')(x)
+        x = tf.keras.layers.Dropout(0.5)(x)
+        x = tf.keras.layers.Dense(64, activation='relu')(x)
+        x = tf.keras.layers.Dropout(0.5)(x)
+        x = tf.keras.layers.Dense(1, activation='sigmoid')(x)
+        model = tf.keras.Model(inputs=inputs, outputs=x)
+        model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy', "mae"])
+        return model
+
+def get_mlp_model(input_shape):
+    inputs = tf.keras.Input(shape=input_shape)
+    x = tf.keras.layers.Dense(600, activation='relu')(inputs)
+    x = tf.keras.layers.Dropout(0.4)(x)
+    x = tf.keras.layers.Dense(500, activation='relu')(x)
+    x = tf.keras.layers.Dropout(0.35)(x)
+    x = tf.keras.layers.Dense(500, activation='relu')(x)
+    x = tf.keras.layers.Dropout(0.35)(x)
+    x = tf.keras.layers.Dense(500, activation='relu')(x)
+    output = tf.keras.layers.Dense(1, activation='sigmoid')(x)
+    
+    model = tf.keras.Model(inputs=inputs, outputs=output)
+
+    model.compile(optimizer="adam",
+            loss='binary_crossentropy',
+            metrics=['mae', "accuracy"]
+    )
+    return model
+
+def model_fit(train_ds, val_ds, epoch, num_samples, model_base_folder, model_type="mlp"):
 
     # Randomly drop 1/3 of samples, where y is 1
     #ds = ds.filter(lambda x, y: tf.logical_or(tf.not_equal(y, 1), tf.random.uniform([]) < 0.66))
     
     # Get the input shape from the first element of the dataset
-    input_shape = ds.take(1).as_numpy_iterator().next()[0].shape
+    input_shape = train_ds.take(1).as_numpy_iterator().next()[0].shape
     print(f"Input shape: {input_shape}")
     print(f"Num samples: {num_samples}")
     
-    train_ds = ds.take(int(0.8*num_samples)).batch(16384)
-    val_ds = ds.skip(int(0.8*num_samples)).batch(16384)
+    train_ds = train_ds.batch(4096)
+    val_ds = val_ds.batch(4096)
     
-    train_ds = train_ds.shuffle(20000).prefetch(tf.data.experimental.AUTOTUNE)
+    train_ds = train_ds.prefetch(tf.data.experimental.AUTOTUNE)
 
     if epoch == 0:
-        inputs = tf.keras.Input(shape=input_shape)
-        x = tf.keras.layers.Dense(600, activation='relu')(inputs)
-        x = tf.keras.layers.Dropout(0.4)(x)
-        x = tf.keras.layers.Dense(500, activation='relu')(x)
-        x = tf.keras.layers.Dropout(0.35)(x)
-        x = tf.keras.layers.Dense(500, activation='relu')(x)
-        x = tf.keras.layers.Dropout(0.35)(x)
-        x = tf.keras.layers.Dense(500, activation='relu')(x)
-        output = tf.keras.layers.Dense(1, activation='sigmoid')(x)
-        
-        model = tf.keras.Model(inputs=inputs, outputs=output)
-
-        model.compile(optimizer="adam",
-                loss='binary_crossentropy',
-                metrics=['mae', "accuracy"]
-        )
+        if model_type == "mlp":
+            model = get_mlp_model(input_shape)
+        else:
+            model = get_conv_model(input_shape)
         print(model.summary())
+        
     else:
         model = tf.keras.models.load_model(os.path.join(model_base_folder,f"model_{epoch-1}.keras"))
 
@@ -121,6 +158,10 @@ def parse_arguments():
                         help="Number of data files to use (-1 for all).")
     parser.add_argument("--num_cpus", type=int, default=10,
                         help="Number of CPUs to use for training.")
+    parser.add_argument("--validation_frac", type=float, default=0.2,
+                        help="Fraction of data to use for validation.")
+    parser.add_argument("--model_type", type=str, default="mlp",
+                        help="Type of model to use (mlp or conv).")
 
     # Path arguments
     parser.add_argument("--starting_epoch", type=int, default=0,
@@ -145,15 +186,17 @@ if __name__ == "__main__":
     
     os.makedirs(args.model_folder_base, exist_ok=True)
     os.makedirs(args.data_folder_base, exist_ok=True)
+    
+    model_folder_base = os.path.abspath(args.model_folder_base)
 
     def players_constructor_(i, model_path):
-        return players_constructor(i,model_path,args.model_folder_base)
+        return players_constructor(i,model_path,model_folder_base)
 
     def game_constructor_(i):
-        return game_constructor(i, args.model_folder_base)
+        return game_constructor(i, model_folder_base)
     
-    def model_fit_(ds, epoch, num_samples):
-        return model_fit(ds, epoch, num_samples,args.model_folder_base)
+    def model_fit_(train_ds, val_ds, epoch, num_samples):
+        return model_fit(train_ds, val_ds, epoch, num_samples,model_folder_base, model_type=args.model_type)
 
     fit_model(players_constructor_,
               game_constructor_,
@@ -165,6 +208,7 @@ if __name__ == "__main__":
               num_cpus=args.num_cpus,
               folder=args.data_folder_base,
               starting_epoch=args.starting_epoch,
+              validation_frac=args.validation_frac,
               cumulate_data=args.cumulate_data,
-              remove_data_after_fit=args.delete_data_after_fit
+              delete_data_after_fit=args.delete_data_after_fit
     )

@@ -24,9 +24,24 @@ class MoskaHumanPlayer(MoskaPlayer):
         super().__init__(name, max_moves_to_consider, logger_args)
         return
     
+    def get_player_evals(self, game: 'MoskaGame') -> np.ndarray:
+        """ Get the player evaluations.
+        """
+        gs = game.get_current_state()
+        evals = []
+        for i in range(len(game.players)):
+            gs_vector = gs.to_vector(i)
+            model = game.get_model(game.model_paths[0])
+            evaluation = model.predict(np.array([gs_vector], dtype=np.float32))
+            evals.append(evaluation[0][0])
+        return evals
+            
+    
     def choose_move(self, game: Game) -> Action:
         """ Show the valid move IDs,
         """
+        evals = self.get_player_evals(game)
+        print(f"Player evaluations: {evals}")
         valid_move_ids = []
         for move_id in VALID_MOVE_IDS:
             action = get_moska_action(self.pid, move_id)
