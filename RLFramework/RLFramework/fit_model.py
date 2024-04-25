@@ -52,6 +52,7 @@ def fit_model(
         starting_epoch : int = 0,
         cumulate_data : bool = False,
         delete_data_after_fit : bool = False,
+        validation_frac : float = 0.2
     ):
     """ Fit a model to play a game.
     The model is fitted by alternating between simulating games, and training a model.
@@ -77,10 +78,10 @@ def fit_model(
         if not cumulate_data:
             data_folders = []
         data_folders.append(folder)
-        ds,nfiles, num_samples = read_to_dataset(data_folders)
+        train_ds, val_ds, num_files, approx_num_samples = read_to_dataset(data_folders, frac_test_files=validation_frac)
         # Fit the model
         print("Fitting model...")
-        model_path = model_fit(ds, epoch, num_samples)
+        model_path = model_fit(train_ds, val_ds, epoch, approx_num_samples)
         if delete_data_after_fit:
             shutil.rmtree(folder)
         model_path = convert_model_to_tflite(model_path)
