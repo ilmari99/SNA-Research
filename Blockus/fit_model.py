@@ -16,7 +16,7 @@ def game_constructor(i, model_base_folder):
     model_paths = [os.path.abspath(os.path.join(model_base_folder,model_path)) for model_path in model_paths]
     return BlockusGame(
         board_size=(20,20),
-        timeout=80,
+        timeout=65,
         logger_args = None,
         render_mode = "",
         gather_data = f"gathered_data_{i}.csv",
@@ -85,20 +85,18 @@ class RandomFlipBoardLayer(tf.keras.layers.Layer):
             board = tf.image.random_flip_up_down(board)
         return board
 
-def model_fit(ds, epoch, num_samples, model_base_folder):
+def model_fit(train_ds, val_ds, epoch, num_samples, model_base_folder):
 
     # Randomly drop 1/3 of samples, where y is 1
     #ds = ds.filter(lambda x, y: tf.logical_or(tf.not_equal(y, 1), tf.random.uniform([]) < 0.66))
     
     # Get the input shape from the first element of the dataset
-    input_shape = ds.take(1).as_numpy_iterator().next()[0].shape
+    input_shape = train_ds.take(1).as_numpy_iterator().next()[0].shape
     print(f"Input shape: {input_shape}")
     print(f"Num samples: {num_samples}")
     
-    ds = ds.shuffle(2000)
-    
-    train_ds = ds.take(int(0.7*num_samples)).batch(64)
-    val_ds = ds.skip(int(0.7*num_samples)).batch(64)
+    train_ds = train_ds.batch(64)
+    val_ds = val_ds.batch(64)
     
     train_ds = train_ds.prefetch(tf.data.experimental.AUTOTUNE)
 
@@ -165,6 +163,8 @@ def parse_arguments():
                         help="Number of data files to use (-1 for all).")
     parser.add_argument("--num_cpus", type=int, default=10,
                         help="Number of CPUs to use for training.")
+    parser.add_argument("--validation_frac", type=float, default=0.2,
+                        help="Fraction of data to use for validation.")
 
     # Path arguments
     parser.add_argument("--starting_epoch", type=int, default=0,
@@ -177,7 +177,7 @@ def parse_arguments():
                         help="Path to the starting model (optional).")
     parser.add_argument("--cumulate_data", action="store_true",
                         help="Whether to keep old datasets or not.",default=False)
-    parser.add_argument(f"--remove_data_after_fit", action="store_true", default=False)
+    parser.add_argument(f"--delete_data_after_fit", action="store_true", default=False)
     
     return parser.parse_args()
 
@@ -188,26 +188,28 @@ if __name__ == "__main__":
     
     os.makedirs(args.model_folder_base, exist_ok=True)
     os.makedirs(args.data_folder_base, exist_ok=True)
+    model_folder_base = os.path.abspath(args.model_folder_base)
 
     def players_constructor_(i, model_path):
-        return players_constructor(i,model_path,args.model_folder_base)
+        return players_constructor(i,model_path,model_folder_base)
 
     def game_constructor_(i):
-        return game_constructor(i, args.model_folder_base)
+        return game_constructor(i, model_base_folder=model_folder_base)
     
-    def model_fit_(ds, epoch, num_samples):
-        return model_fit(ds, epoch, num_samples,args.model_folder_base)
+    def model_fit_(train_ds, test_ds, epoch, num_samples):
+        return model_fit(train_ds, test_ds, epoch, num_samples,model_folder_base)
     
     fit_model(players_constructor_,
               game_constructor_,
               model_fit_,
-              starting_model_path=args.starting_model_path,
+              starting_model_path=os.path.abspath(args.starting_model_path),
               num_epochs=args.num_epochs,
               num_games=args.num_games,
               num_files=args.num_files,
               num_cpus=args.num_cpus,
-              folder=args.data_folder_base,
+              folder=os.path.abspath(args.data_folder_base),
               starting_epoch=args.starting_epoch,
               cumulate_data=args.cumulate_data,
-              remove_data_after_fit=args.remove_data_after_fit
+              delete_data_after_fit=args.delete_data_after_fit,
+            validation_frac=args.validation_frac
               )
