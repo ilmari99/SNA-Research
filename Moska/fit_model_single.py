@@ -5,15 +5,14 @@ from RLFramework.read_to_dataset import read_to_dataset
 from RLFramework.utils import convert_model_to_tflite
 import argparse
 
-def get_model(input_shape):
-    
+def get_conv_model(input_shape):
     inputs = tf.keras.Input(shape=input_shape)
     
     # First separate the input into misc and card data:
     # The first 15 values are miscellanous
-    misc = tf.keras.layers.Lambda(lambda x: x[:,:15])(inputs)
+    misc = tf.gather(inputs, [i for i in range(15)], axis=1)
     # The rest are card data
-    cards = tf.keras.layers.Lambda(lambda x: x[:,15:])(inputs)
+    cards = tf.gather(inputs, [i for i in range(15, input_shape[0])], axis=1)
     # We then reshape the card data to 8x52x1
     # 8 players, 52 cards (1 means the card is in the set, 0 means it is not), 1 channel
     cards = tf.keras.layers.Reshape((8,52,1))(cards)
@@ -32,7 +31,25 @@ def get_model(input_shape):
     x = tf.keras.layers.Dense(1, activation='sigmoid')(x)
     model = tf.keras.Model(inputs=inputs, outputs=x)
     model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy', "mae"])
-    print(model.summary())
+    return model
+
+def get_mlp_model(input_shape):
+    inputs = tf.keras.Input(shape=input_shape)
+    x = tf.keras.layers.Dense(600, activation='relu')(inputs)
+    x = tf.keras.layers.Dropout(0.4)(x)
+    x = tf.keras.layers.Dense(500, activation='relu')(x)
+    x = tf.keras.layers.Dropout(0.35)(x)
+    x = tf.keras.layers.Dense(500, activation='relu')(x)
+    x = tf.keras.layers.Dropout(0.35)(x)
+    x = tf.keras.layers.Dense(500, activation='relu')(x)
+    output = tf.keras.layers.Dense(1, activation='sigmoid')(x)
+    
+    model = tf.keras.Model(inputs=inputs, outputs=output)
+
+    model.compile(optimizer="adam",
+            loss='binary_crossentropy',
+            metrics=['mae', "accuracy"]
+    )
     return model
     
 def main(data_folder,
@@ -43,6 +60,7 @@ def main(data_folder,
          patience=5,
          validation_split=0.2,
          batch_size=64,
+         model_type="conv",
          ):
     data_folders = [os.path.join(data_folder, f) for f in os.listdir(data_folder) if os.path.isdir(os.path.join(data_folder, f))]
     print(data_folders)
@@ -72,7 +90,10 @@ def main(data_folder,
         if load_model_path:
             model = tf.keras.models.load_model(load_model_path)
         else:
-            model = get_model(input_shape)
+            if model_type == "mlp":
+                model = get_mlp_model(input_shape)
+            else:
+                model = get_conv_model(input_shape)
             print(model.summary())
         
         tb_log = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
@@ -91,6 +112,7 @@ if __name__ == "__main__":
     parser.add_argument('--patience', type=int, help='Patience for early stopping.', default=5)
     parser.add_argument('--validation_split', type=float, help='Validation split.', default=0.2)
     parser.add_argument('--batch_size', type=int, help='Batch size.', default=64)
+    parser.add_argument('--model_type', type=str, help='Type of model to use (mlp or conv).', default="conv")
     args = parser.parse_args()
     print(args)
     main(data_folder=args.data_folder,
@@ -100,7 +122,9 @@ if __name__ == "__main__":
             num_epochs=args.num_epochs,
             patience=args.patience,
             validation_split=args.validation_split,
-            batch_size=args.batch_size)
+            batch_size=args.batch_size,
+            model_type=args.model_type,
+            )
     convert_model_to_tflite(args.model_save_path)
     exit(0)
     
