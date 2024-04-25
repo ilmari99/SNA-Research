@@ -1,11 +1,20 @@
 import os
 import random
 from typing import Tuple
+import warnings
 import tensorflow as tf
 
 
-def read_to_dataset(paths, add_channel=False, shuffle_files=True, filter_files_fn = None) -> Tuple[tf.data.Dataset, int, int]:
-    """ Create a tf dataset from a folder of files"""
+def read_to_dataset(paths,
+                    frac_test_files=0,
+                    add_channel=False,
+                    shuffle_files=True,
+                    filter_files_fn = None) -> Tuple[tf.data.Dataset, int, int]:
+    """ Create a tf dataset from a folder of files.
+    If split_files_to_test_set is True, then frac_test_files of the files are used for testing.
+    
+    """
+    assert 0 <= frac_test_files <= 1, "frac_test_files must be between 0 and 1"
     if not isinstance(paths, (list, tuple)):
         paths = [paths]
     if filter_files_fn is None:
@@ -33,14 +42,25 @@ def read_to_dataset(paths, add_channel=False, shuffle_files=True, filter_files_f
                     deterministic=False)
         return ds
     
+    test_files = file_paths[:int(frac_test_files*len(file_paths))]
+    train_files = file_paths[int(frac_test_files*len(file_paths)):]
     
-    dataset = tf.data.Dataset.from_tensor_slices(file_paths)
-    dataset = dataset.interleave(ds_maker,
+    if len(test_files) > 0:
+        test_ds = tf.data.Dataset.from_tensor_slices(test_files)
+        test_ds = test_ds.interleave(ds_maker,
                                 cycle_length=tf.data.experimental.AUTOTUNE,
                                 num_parallel_calls=tf.data.experimental.AUTOTUNE,
                                 deterministic=False)
-
+        if add_channel:
+            test_ds = test_ds.map(lambda x, y: (tf.expand_dims(x, axis=-1), y), num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    train_ds = tf.data.Dataset.from_tensor_slices(train_files)
+    train_ds = train_ds.interleave(ds_maker,
+                                cycle_length=tf.data.experimental.AUTOTUNE,
+                                num_parallel_calls=tf.data.experimental.AUTOTUNE,
+                                deterministic=False)
     # Add a channel dimension if necessary
     if add_channel:
-        dataset = dataset.map(lambda x, y: (tf.expand_dims(x, axis=-1), y), num_parallel_calls=tf.data.experimental.AUTOTUNE)
-    return dataset, len(file_paths), num_samples*len(file_paths)
+        train_ds = train_ds.map(lambda x, y: (tf.expand_dims(x, axis=-1), y), num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    if len(test_files) > 0:
+        return train_ds, test_ds, len(file_paths), num_samples*len(file_paths)
+    return train_ds, len(file_paths), num_samples*len(file_paths)
