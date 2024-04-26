@@ -27,6 +27,14 @@ class RandomFlipBoardLayer(tf.keras.layers.Layer):
             board = tf.image.random_flip_left_right(board)
             board = tf.image.random_flip_up_down(board)
         return board
+    
+class SaveModelCallback(tf.keras.callbacks.Callback):
+    def __init__(self, model_save_path):
+        super(SaveModelCallback, self).__init__()
+        self.model_save_path = model_save_path
+
+    def on_epoch_end(self, epoch, logs=None):
+        self.model.save(self.model_save_path)
 
 def get_model(input_shape):
     
@@ -111,7 +119,8 @@ def main(data_folder,
         
         tb_log = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
         early_stop = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=patience, restore_best_weights=True)
-        model.fit(train_ds, epochs=num_epochs, callbacks=[tb_log, early_stop], validation_data=val_ds)
+        save_model_cb = SaveModelCallback(model_save_path)
+        model.fit(train_ds, epochs=num_epochs, callbacks=[tb_log, early_stop, save_model_cb], validation_data=val_ds)
     model.save(model_save_path)
 
 if __name__ == "__main__":
