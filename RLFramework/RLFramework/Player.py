@@ -100,8 +100,13 @@ class Player(ABC):
         indices = [x[0] for x in valid_choices]
         #print(f"valid_choices: {valid_choices}")
         return np.random.choice(indices, p = evals)
-        
-        
+    
+    def _select_epsilon_greedy_action(self, evaluations : List[float], epsilon : float = 0.1) -> int:
+        """ Select a random action with probability epsilon, and the best action with probability 1-epsilon.
+        """
+        if random.random() < epsilon:
+            return self._select_random_action(evaluations)
+        return self._select_best_action(evaluations)
         
         
     @staticmethod
