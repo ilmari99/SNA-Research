@@ -1,4 +1,5 @@
-from typing import List
+from typing import Dict, List, Tuple
+import warnings
 from BlockusGameState import BlockusGameState
 from BlockusPlayer import BlockusPlayer
 import numpy as np
@@ -7,13 +8,30 @@ class BlockusNNPlayer(BlockusPlayer):
     
     def __init__(self,name : str = "NNPlayer",
                  model_path : str = "",
-                 move_selection_temp = 0,
-                 logger_args : dict = None):
+                 action_selection_strategy = "greedy",
+                 action_selection_args : Tuple[Tuple,Dict] = ((), {}),
+                 logger_args : dict = None,
+                 ):
         super().__init__(name=name, logger_args=logger_args)
         assert model_path, "A model path must be given."
         self.model_path = model_path
-        self.move_selection_temp = move_selection_temp
-        self.select_action_strategy = lambda evaluations : self._select_weighted_action(evaluations, move_selection_temp)
+        
+        action_selection_map = {
+            "greedy" : self._select_best_action,
+            "random" : self._select_random_action,
+            "weighted" : self._select_weighted_action,
+            "epsilon_greedy" : self._select_epsilon_greedy_action,
+        }
+        if action_selection_strategy not in action_selection_map:
+            raise ValueError(f"Unknown action selection strategy '{action_selection_strategy}'")
+        if action_selection_strategy in ["greedy", "random"]:
+            if action_selection_args != ((), {}):
+                warnings.warn(f"action selection strategy '{action_selection_strategy}' does not use arguments.")
+                action_selection_args = ((), {})
+        f = action_selection_map[action_selection_strategy]
+        self.select_action_strategy = lambda evaluations : f(evaluations, *action_selection_args[0], **action_selection_args[1])
+        
+            
         
     def evaluate_states(self, states : List[BlockusGameState]) -> List[float]:
         """ Evaluate the given states using the neural network.
