@@ -35,6 +35,7 @@ class SaveModelCallback(tf.keras.callbacks.Callback):
 
     def on_epoch_end(self, epoch, logs=None):
         self.model.save(self.model_save_path)
+        convert_model_to_tflite(self.model_save_path)
 
 def get_model(input_shape):
     
@@ -144,7 +145,6 @@ if __name__ == "__main__":
             patience=args.patience,
             validation_split=args.validation_split,
             batch_size=args.batch_size)
-    convert_model_to_tflite(args.model_save_path)
     exit(0)
     
     
