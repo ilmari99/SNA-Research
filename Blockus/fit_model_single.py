@@ -35,6 +35,7 @@ class SaveModelCallback(tf.keras.callbacks.Callback):
 
     def on_epoch_end(self, epoch, logs=None):
         self.model.save(self.model_save_path)
+        convert_model_to_tflite(self.model_save_path)
 
 def get_model(input_shape):
     
@@ -53,18 +54,18 @@ def get_model(input_shape):
         board = tf.keras.layers.Reshape((board_side_len, board_side_len, 1))(board)
         board = RandomRotateBoardLayer()(board)
         board = RandomFlipBoardLayer()(board)
-        # Now we have the Blokus board, which is 14x14
-        # Lets apply a 3x3 convolution, and then 2x2 convolution
-        board = tf.keras.layers.Conv2D(32, (3,3), activation='relu')(board)
-        board = tf.keras.layers.Conv2D(64, (3,3), activation='relu')(board)
-        board = tf.keras.layers.Conv2D(128, (3,3), activation='relu')(board)
+        # Now we have the 20x20 board as a 3D tensor
+        # Lets apply convolutions
+        board = tf.keras.layers.Conv2D(32, (3,3), activation='relu',kernel_regularizer=tf.keras.regularizers.l2(0.01))(board)
+        board = tf.keras.layers.Conv2D(64, (3,3), activation='relu',kernel_regularizer=tf.keras.regularizers.l2(0.01))(board)
+        board = tf.keras.layers.Conv2D(128, (3,3), activation='relu',kernel_regularizer=tf.keras.regularizers.l2(0.01))(board)
         board = tf.keras.layers.Flatten()(board)
         
         # Concatenate the board and the meta
         x = tf.keras.layers.Concatenate()([meta, board])
         x = tf.keras.layers.Dense(8, activation='relu')(x)
         x = tf.keras.layers.Dense(8, activation='relu')(x)
-        output = tf.keras.layers.Dense(1, activation='relu')(x)
+        output = tf.keras.layers.Dense(1, activation='sigmoid')(x)
         
         model = tf.keras.Model(inputs=inputs, outputs=output)
 
@@ -144,7 +145,6 @@ if __name__ == "__main__":
             patience=args.patience,
             validation_split=args.validation_split,
             batch_size=args.batch_size)
-    convert_model_to_tflite(args.model_save_path)
     exit(0)
     
     

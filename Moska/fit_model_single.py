@@ -59,6 +59,7 @@ class SaveModelCallback(tf.keras.callbacks.Callback):
 
     def on_epoch_end(self, epoch, logs=None):
         self.model.save(self.model_save_path)
+        convert_model_to_tflite(self.model_save_path)
     
 def main(data_folder,
          model_save_path,
