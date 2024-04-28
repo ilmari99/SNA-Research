@@ -27,6 +27,15 @@ class RandomFlipBoardLayer(tf.keras.layers.Layer):
             board = tf.image.random_flip_left_right(board)
             board = tf.image.random_flip_up_down(board)
         return board
+    
+class SaveModelCallback(tf.keras.callbacks.Callback):
+    def __init__(self, model_save_path):
+        super(SaveModelCallback, self).__init__()
+        self.model_save_path = model_save_path
+
+    def on_epoch_end(self, epoch, logs=None):
+        self.model.save(self.model_save_path)
+        convert_model_to_tflite(self.model_save_path)
 
 def get_model(input_shape):
     
@@ -45,18 +54,18 @@ def get_model(input_shape):
         board = tf.keras.layers.Reshape((board_side_len, board_side_len, 1))(board)
         board = RandomRotateBoardLayer()(board)
         board = RandomFlipBoardLayer()(board)
-        # Now we have the Blokus board, which is 14x14
-        # Lets apply a 3x3 convolution, and then 2x2 convolution
-        board = tf.keras.layers.Conv2D(32, (3,3), activation='relu')(board)
-        board = tf.keras.layers.Conv2D(64, (3,3), activation='relu')(board)
-        board = tf.keras.layers.Conv2D(128, (3,3), activation='relu')(board)
+        # Now we have the 20x20 board as a 3D tensor
+        # Lets apply convolutions
+        board = tf.keras.layers.Conv2D(32, (3,3), activation='relu',kernel_regularizer=tf.keras.regularizers.l2(0.01))(board)
+        board = tf.keras.layers.Conv2D(64, (3,3), activation='relu',kernel_regularizer=tf.keras.regularizers.l2(0.01))(board)
+        board = tf.keras.layers.Conv2D(128, (3,3), activation='relu',kernel_regularizer=tf.keras.regularizers.l2(0.01))(board)
         board = tf.keras.layers.Flatten()(board)
         
         # Concatenate the board and the meta
         x = tf.keras.layers.Concatenate()([meta, board])
         x = tf.keras.layers.Dense(8, activation='relu')(x)
         x = tf.keras.layers.Dense(8, activation='relu')(x)
-        output = tf.keras.layers.Dense(1, activation='relu')(x)
+        output = tf.keras.layers.Dense(1, activation='sigmoid')(x)
         
         model = tf.keras.Model(inputs=inputs, outputs=output)
 
@@ -91,18 +100,17 @@ def main(data_folder,
     
     with strategy.scope():
         
-        ds, num_files, approx_num_samples = read_to_dataset(data_folders)
+        train_ds, val_ds, num_files, approx_num_samples = read_to_dataset(data_folders, frac_test_files=validation_split)
         
-        input_shape = ds.take(1).as_numpy_iterator().next()[0].shape
+        input_shape = train_ds.take(1).as_numpy_iterator().next()[0].shape
         print(f"Input shape: {input_shape}")
         print(f"Num samples: {approx_num_samples}")
         
-        ds = ds.shuffle(2000)
-        
-        train_ds = ds.take(int((1-validation_split)*approx_num_samples)).batch(batch_size)
-        val_ds = ds.skip(int((1-validation_split)*approx_num_samples)).batch(batch_size)
+        train_ds = train_ds.batch(batch_size)
+        val_ds = val_ds.batch(batch_size)
         
         train_ds = train_ds.prefetch(tf.data.experimental.AUTOTUNE)
+        val_ds = val_ds.prefetch(tf.data.experimental.AUTOTUNE)
         
         if load_model_path:
             model = tf.keras.models.load_model(load_model_path)
@@ -112,7 +120,8 @@ def main(data_folder,
         
         tb_log = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
         early_stop = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=patience, restore_best_weights=True)
-        model.fit(train_ds, epochs=num_epochs, callbacks=[tb_log, early_stop], validation_data=val_ds)
+        save_model_cb = SaveModelCallback(model_save_path)
+        model.fit(train_ds, epochs=num_epochs, callbacks=[tb_log, early_stop, save_model_cb], validation_data=val_ds)
     model.save(model_save_path)
 
 if __name__ == "__main__":
@@ -136,7 +145,6 @@ if __name__ == "__main__":
             patience=args.patience,
             validation_split=args.validation_split,
             batch_size=args.batch_size)
-    convert_model_to_tflite(args.model_save_path)
     exit(0)
     
     

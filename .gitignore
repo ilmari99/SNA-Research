@@ -4,6 +4,8 @@ NNCheckpoints
 *sandbox*
 *events.out*
 *gathered_data*
+*model*.keras
+*model*.tflite
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
