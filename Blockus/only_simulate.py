@@ -14,7 +14,7 @@ def game_constructor(i, model_base_folder):
     model_paths = [os.path.abspath(os.path.join(model_base_folder,model_path)) for model_path in model_paths]
     return BlockusGame(
         board_size=(20,20),
-        timeout=80,
+        timeout=60,
         logger_args = None,
         render_mode = "",
         gather_data = f"gathered_data_{i}.csv",
