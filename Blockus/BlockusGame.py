@@ -318,8 +318,8 @@ class BlockusGame(Game):
                             # Check that the move is valid through the Action
                             action = BlockusAction(piece_id, lu_corner[0], lu_corner[1], rot, flip)
                             # Check if an equivalent action is already in the list
-                            if action in actions:
-                                continue
+                            #if action in actions:
+                            #    continue
                             is_legal, msg = action._check_action_is_legal(self)
                             if is_legal:
                                 actions.append(action)
