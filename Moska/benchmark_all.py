@@ -86,15 +86,18 @@ if __name__ == "__main__":
                     continue
                 if not result:
                     continue
-                test_player_pid = 0
+                test_player_pid = None
                 for player_json in result.player_jsons:
                     if "TestPlayer" in player_json["name"]:
                         test_player_pid = player_json["pid"]
                         break
+                if test_player_pid is None:
+                    print(f"No player with 'TestPlayer' found.")
+                    continue
                 if not result.successful:
                     print(f"Game failed: {result}")
                     continue
-                if result.finishing_order[-1] == test_player_pid:
+                if result.player_jsons[test_player_pid]["score"] == 0:
                     num_losses += 1
                 total_games += 1
         
