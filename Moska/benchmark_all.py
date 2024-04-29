@@ -71,24 +71,32 @@ if __name__ == "__main__":
             continue
         model_path = os.path.join(folder, model_path)
         print(f"Testing model: {model_path}")
-        with multiprocessing.Pool(num_cpus) as p:
-            results = p.map(run_game, [(i, model_path, random.randint(0,2**32)) for i in range(num_games)])
-
-        # Find how many times the test player won
         num_losses = 0
         total_games = 0
-        for result in results:
-            test_player_pid = 0
-            for player_json in result.player_jsons:
-                if "TestPlayer" in player_json["name"]:
-                    test_player_pid = player_json["pid"]
+        with multiprocessing.Pool(num_cpus) as p:
+            #results = p.map(run_game, [(i, model_path, random.randint(0,2**32)) for i in range(num_games)])
+            res_gen = p.imap_unordered(run_game, [(i, model_path, random.randint(0,2**32)) for i in range(num_games)])
+            while True:
+                try:
+                    result = next(res_gen)
+                except StopIteration:
                     break
-            if not result.successful:
-                print(f"Game failed: {result}")
-                continue
-            if result.finishing_order[-1] == test_player_pid:
-                num_losses += 1
-            total_games += 1
+                except Exception as e:
+                    print(e)
+                    continue
+                if not result:
+                    continue
+                test_player_pid = 0
+                for player_json in result.player_jsons:
+                    if "TestPlayer" in player_json["name"]:
+                        test_player_pid = player_json["pid"]
+                        break
+                if not result.successful:
+                    print(f"Game failed: {result}")
+                    continue
+                if result.finishing_order[-1] == test_player_pid:
+                    num_losses += 1
+                total_games += 1
         
         print(f"Test player lost {num_losses} out of {total_games} games.")
         print(f"Loss rate: {num_losses / total_games}")
