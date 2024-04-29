@@ -90,7 +90,7 @@ def main(data_folder,
         print(f"Input shape: {input_shape}")
         print(f"Num samples: {approx_num_samples}")
         
-        train_ds = train_ds.batch(batch_size)
+        train_ds = train_ds.batch(batch_size).shuffle(40000)
         val_ds = val_ds.batch(batch_size)
         
         train_ds = train_ds.prefetch(tf.data.experimental.AUTOTUNE)

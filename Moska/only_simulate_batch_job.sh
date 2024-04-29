@@ -65,8 +65,8 @@ for node in $(scontrol show hostname $SLURM_JOB_NODELIST); do
     srun --nodes=1 --ntasks=1 --cpus-per-task=128 -w $node $PYTHON_EXE ./Moska/only_simulate.py \
     --folder=$new_data_folder \
     --model_base_folder=$MODEL_FOLDER \
-    --num_games=14400 \
+    --num_games=8000 \
     --num_cpus=120 \
-    --num_files=3600 &
+    --num_files=-1 &
 done
 wait

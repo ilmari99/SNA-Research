@@ -92,5 +92,5 @@ if __name__ == "__main__":
                         num_cpus=num_cpus,
                         num_files=num_files,
                         exists_ok=True,
-                        return_results=True,
+                        return_results=False,
                         )

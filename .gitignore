@@ -6,6 +6,8 @@ NNCheckpoints
 *gathered_data*
 *model*.keras
 *model*.tflite
+*.err
+*.out
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

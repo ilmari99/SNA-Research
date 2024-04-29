@@ -45,8 +45,8 @@ $PYTHON_EXE -c "import tensorflow as tf; print(tf.__version__)"
 $PYTHON_EXE -c "import tensorflow as tf; print(tf.config.list_physical_devices('GPU'))"
 $PYTHON_EXE --version
 
-DATA_FOLDER=$RLF_MOSKA_SCRATCH/TestData
-MODEL_FOLDER=$RLF_MOSKA_SCRATCH/TestModels
+DATA_FOLDER=$RLF_MOSKA_SCRATCH/Data
+MODEL_FOLDER=$RLF_MOSKA_SCRATCH/Models
 
 mkdir -p $DATA_FOLDER
 mkdir -p $MODEL_FOLDER
@@ -80,9 +80,10 @@ $PYTHON_EXE ./Moska/fit_model_single.py \
 --load_model_path=$MODEL_FILE \
 --model_save_path=$MODEL_SAVE_PATH \
 --num_epochs=25 \
---patience=5 \
+--patience=2 \
 --validation_split=0.2 \
 --batch_size=16384 \
+--model_type=mlp
 
 
 
