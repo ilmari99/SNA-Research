@@ -19,7 +19,7 @@ echo "All arguments: $@"
 module purge
 module load tensorflow/2.15
 
-RLF_BLOCKUS_SCRATCH="/scratch/project_2010270/Blockus"
+RLF_BLOCKUS_SCRATCH="/scratch/project_2010270/BlockusEpsilon2"
 
 PIP_EXE=./venv/bin/pip3
 PYTHON_EXE=./venv/bin/python3
