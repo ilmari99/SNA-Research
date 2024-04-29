@@ -36,7 +36,7 @@ def players_constructor(i, model_path = ""):
         test_player = BlockusNNPlayer(name=f"TestPlayer_{i}",
                                     logger_args=None,
                                     model_path=model_path,
-                                    move_selection_temp=0.0,
+                                    action_selection_strategy="greedy",
                                     )
     players = random_players + [test_player]
     random.shuffle(players)
