@@ -56,21 +56,22 @@ def get_model(input_shape):
         board = RandomFlipBoardLayer()(board)
         # Now we have the 20x20 board as a 3D tensor
         # Lets apply convolutions
-        board = tf.keras.layers.Conv2D(32, (3,3), activation='relu',kernel_regularizer=tf.keras.regularizers.l2(0.01))(board)
-        board = tf.keras.layers.Conv2D(64, (3,3), activation='relu',kernel_regularizer=tf.keras.regularizers.l2(0.01))(board)
-        board = tf.keras.layers.Conv2D(128, (3,3), activation='relu',kernel_regularizer=tf.keras.regularizers.l2(0.01))(board)
+        board = tf.keras.layers.Conv2D(32, (3,3), activation='relu')(board)
+        board = tf.keras.layers.Conv2D(64, (3,3), activation='relu')(board)
+        #board = tf.keras.layers.Conv2D(128, (3,3), activation='relu',kernel_regularizer=tf.keras.regularizers.l2(0.01))(board)
         board = tf.keras.layers.Flatten()(board)
         
         # Concatenate the board and the meta
         x = tf.keras.layers.Concatenate()([meta, board])
-        x = tf.keras.layers.Dense(8, activation='relu')(x)
-        x = tf.keras.layers.Dense(8, activation='relu')(x)
+        x = tf.keras.layers.Dense(64, activation='relu')(x)
+        x = tf.keras.layers.Dropout(0.3)(x)
+        x = tf.keras.layers.Dense(64, activation='relu')(x)
         output = tf.keras.layers.Dense(1, activation='sigmoid')(x)
         
         model = tf.keras.Model(inputs=inputs, outputs=output)
 
         model.compile(optimizer="adam",
-                loss='mse',
+                loss='binary_crossentropy',
                 metrics=['mae']
         )
         return model
@@ -106,7 +107,7 @@ def main(data_folder,
         print(f"Input shape: {input_shape}")
         print(f"Num samples: {approx_num_samples}")
         
-        train_ds = train_ds.batch(batch_size)
+        train_ds = train_ds.batch(batch_size).shuffle(10000)
         val_ds = val_ds.batch(batch_size)
         
         train_ds = train_ds.prefetch(tf.data.experimental.AUTOTUNE)
