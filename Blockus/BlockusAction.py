@@ -17,7 +17,18 @@ class BlockusAction(Action):
         self.y = y
         self.rotation = rotation
         self.flip = flip
-
+    
+    def __eq__(self, other: 'BlockusAction') -> bool:
+        """ Two actions are equal, if they take the same coordinates
+        """
+        if not isinstance(other, BlockusAction):
+            return False
+        other_coords = other.get_piece_coordinates()
+        self_coords = self.get_piece_coordinates()
+        # Check that the coordinates are the same, regardless of order
+        return set(other_coords) == set(self_coords)
+        
+        
     def modify_game(self, game: 'BlockusGame', inplace: bool = False) -> GameState:
         """ Place the piece on the board.
         We set 0 values to -1, and 1 values to the player id.

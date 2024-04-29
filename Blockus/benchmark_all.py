@@ -10,6 +10,7 @@ import argparse
 from BlockusGame import BlockusGame
 from BlockusPlayer import BlockusPlayer
 from BlockusNNPlayer import BlockusNNPlayer
+from BlockusGreedyPlayer import BlockusGreedyPlayer
 
 
 def game_constructor(i, model_paths = []):

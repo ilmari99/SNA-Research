@@ -14,7 +14,7 @@ def game_constructor(i, model_base_folder):
     model_paths = [os.path.abspath(os.path.join(model_base_folder,model_path)) for model_path in model_paths]
     return BlockusGame(
         board_size=(20,20),
-        timeout=60,
+        timeout=80,
         logger_args = None,
         render_mode = "",
         gather_data = f"gathered_data_{i}.csv",
@@ -51,7 +51,8 @@ def players_constructor(i, model_base_folder):
     players = [BlockusNNPlayer(name=f"Player{j}_{i}",
                                     logger_args=None,
                                     model_path=np.random.choice(list(models_weighted_set.keys()), p=list(models_weighted_set.values())),
-                                    move_selection_temp=1.0,
+                                    action_selection_strategy="epsilon_greedy",
+                                    action_selection_args=((),{"epsilon":0.15})
                                     )
                 for j in range(4)]
     
@@ -94,5 +95,5 @@ if __name__ == "__main__":
                         num_cpus=num_cpus,
                         num_files=num_files,
                         exists_ok=True,
-                        return_results=True,
+                        return_results=False,
                         )
