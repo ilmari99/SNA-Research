@@ -8,21 +8,21 @@ from BlockusGreedyPlayer import BlockusGreedyPlayer
 from BlockusHumanPlayer import BlockusHumanPlayer
 
 players = [BlockusNNPlayer(name="Player 0",
-                           model_path="./BlockusModels/model_15.tflite",
+                           model_path="./BlockusModels/model_6.tflite",
                            action_selection_strategy = "greedy",
                         logger_args = {
                            "log_file" : "blockusplayer0.log",
                            "log_level" : 10,
                   }),
            BlockusNNPlayer(name="Player 1",
-                           model_path="./BlockusModels/model_15.tflite",
+                           model_path="./BlockusModels/model_6.tflite",
                            action_selection_strategy = "greedy",
                            logger_args = {
                               "log_file" : "blockusplayer1.log",
                               "log_level" : 10,
                      }),
            BlockusNNPlayer(name="Player 2",
-                           model_path="./BlockusModels/model_15.tflite",
+                           model_path="./BlockusModels/model_6.tflite",
                            action_selection_strategy = "greedy",
                            logger_args = {
                               "log_file" : "blockusplayer2.log",
@@ -40,7 +40,7 @@ players = [BlockusNNPlayer(name="Player 0",
 game = BlockusGame(board_size=(20,20), logger_args={"log_file" : "blockusgame.log",
                                                       "log_level" : 10,
                               },
-                     model_paths=["./BlockusModels/model_15.tflite"],#,"/home/ilmari/python/RLFramework/BlockusModelsMahti/model_15.tflite"],
+                     model_paths=["./BlockusModels/model_6.tflite"],#,"/home/ilmari/python/RLFramework/BlockusModelsMahti/model_15.tflite"],
                   render_mode = "human",
                gather_data = "blockus_data.csv",
                timeout=10000,
