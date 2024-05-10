@@ -55,6 +55,8 @@ class BlockusAction(Action):
         # Remove the piece from the player's remaining pieces
         game.player_remaining_pieces[game.current_pid].remove(self.piece_id)
         # Update the current player
+        print(game.players)
+        print(game.get_current_state())
         game.current_pid = (game.current_pid + 1) % len(game.players)
         # Return the new game state
         return game.game_state_class.from_game(game, copy = False)
@@ -209,6 +211,9 @@ class BlockusAction(Action):
         if not has_connected_corner:
             return False, f"The selected piece is not connected to another piece with a corner."
         return True, ""
+    
+    def __hash__(self):
+        return hash((self.piece_id, self.x, self.y, self.rotation, self.flip))
 
         
 
