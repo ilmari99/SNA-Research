@@ -6,8 +6,7 @@ from RLFramework.GameState import GameState
 from BlockusAction import BlockusAction
 from BlockusPieces import BLOCKUS_PIECE_MAP
 from BlockusPlayer import BlockusPlayer
-if TYPE_CHECKING:
-    from BlockusGame import BlockusGame
+from BlockusGame import BlockusGame
 
 class BlockusGameState(GameState):
     """ A class representing the state of the game TicTacToe.
@@ -19,8 +18,7 @@ class BlockusGameState(GameState):
         self.finished_players : List[int] = state_json["finished_players"]
         
     @property
-    def game(self):# -> 'BlockusGame':
-        from BlockusGame import BlockusGame
+    def game(self) -> 'BlockusGame':
         game = BlockusGame(board_size=(len(self.board), len(self.board[0])))
         game.initialize_game_wrap([BlockusPlayer(name=f"Player{i}", logger_args=None) for i in range(4)])
         game.restore_game(self)
