@@ -21,9 +21,9 @@ module purge
 module load tensorflow/2.15
 
 # Create the folder
-mkdir -p $SBATCH_JOB_NAME
+mkdir -p $SLURM_JOB_NAME
 
-RLF_BLOCKUS_SCRATCH="/scratch/project_2010270/$SBATCH_JOB_NAME"
+RLF_BLOCKUS_SCRATCH="/scratch/project_2010270/$SLURM_JOB_NAME"
 
 PIP_EXE=./venv/bin/pip3
 PYTHON_EXE=./venv/bin/python3
@@ -83,7 +83,7 @@ $PYTHON_EXE ./Blockus/fit_model_single.py \
 --data_folder=$DATA_FOLDER \
 --load_model_path=$MODEL_FILE \
 --model_save_path=$MODEL_SAVE_PATH \
---log_dir=$SBATCH_JOB_NAME/tblog_$SBATCH_JOB_ID \
+--log_dir=$SLURM_JOB_NAME/tblog_$SLURM_JOB_ID \
 --num_epochs=25 \
 --patience=3 \
 --validation_split=0.2 \

@@ -19,9 +19,12 @@ echo "All arguments: $@"
 module purge
 module load tensorflow/2.15
 
-mkdir -p $SBATCH_JOB_NAME
 
-RLF_BLOCKUS_SCRATCH="/scratch/project_2010270/$SBATCH_JOB_NAME"
+mkdir -p $SLURM_JOB_NAME
+
+echo "Job name: "$SLURM_JOB_NAME
+
+RLF_BLOCKUS_SCRATCH="/scratch/project_2010270/"$SLURM_JOB_NAME
 
 PIP_EXE=./venv/bin/pip3
 PYTHON_EXE=./venv/bin/python3
