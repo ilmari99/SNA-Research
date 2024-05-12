@@ -1,11 +1,12 @@
 #!/bin/bash
 
-#SBATCH --job-name=blokus_fit
+#SBATCH --job-name=BlokusGreedyNoDiscount
 #SBATCH --account=project_2010270
+# Write the output files to the folder wth job-name
+#SBATCH --output=%x/fit_%j.out
+#SBATCH --error=%x/fit_%j.err
 #SBATCH --time=08:00:00
 #SBATCH --partition=gpusmall
-#SBATCH --output=blokus_fit_%j.out
-#SBATCH --error=blokus_fit_%j.err
 #SBATCH --mail-type=END
 
 # Reserve compute
@@ -19,7 +20,10 @@ echo "All arguments: $@"
 module purge
 module load tensorflow/2.15
 
-RLF_BLOCKUS_SCRATCH="/scratch/project_2010270/BlockusGreedy"
+# Create the folder
+mkdir -p $SBATCH_JOB_NAME
+
+RLF_BLOCKUS_SCRATCH="/scratch/project_2010270/$SBATCH_JOB_NAME"
 
 PIP_EXE=./venv/bin/pip3
 PYTHON_EXE=./venv/bin/python3
@@ -79,8 +83,9 @@ $PYTHON_EXE ./Blockus/fit_model_single.py \
 --data_folder=$DATA_FOLDER \
 --load_model_path=$MODEL_FILE \
 --model_save_path=$MODEL_SAVE_PATH \
+--log_dir=$SBATCH_JOB_NAME/tblog_$SBATCH_JOB_ID \
 --num_epochs=25 \
---patience=5 \
+--patience=3 \
 --validation_split=0.2 \
 --batch_size=1024 \
 
