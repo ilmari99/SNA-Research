@@ -33,9 +33,6 @@ class BlockusResult(Result):
         winners = [i for i, score in enumerate(final_scores) if score == max_score]
         if len(winners) == 1:
             final_scores[winners[0]] += 50
-        else:
-            for winner in winners:
-                final_scores[winner] += 15
         # The score can be [0,150], so we normalize it to [0,1]
         final_scores = [score / 150 for score in final_scores]
         return final_scores
@@ -52,4 +49,4 @@ class BlockusResult(Result):
         the final score of the game state should be multiplied.
         """
         # Linear discount, starting from 1 and ending at 0.
-        return 1 - curr_game_state_num / total_game_states
+        return 0#1 - curr_game_state_num / total_game_states
