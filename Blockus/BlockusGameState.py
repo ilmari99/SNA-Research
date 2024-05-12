@@ -1,4 +1,5 @@
-from typing import List, SupportsFloat, Tuple, TYPE_CHECKING
+from typing import List, Set, SupportsFloat, Tuple, TYPE_CHECKING
+import functools as ft
 
 import numpy as np
 from RLFramework.Game import Game
@@ -118,6 +119,7 @@ class BlockusGameState(GameState):
             for start_idx in range(8 - 2):
                 for end_idx in range(start_idx, start_idx + 3):
                     changes = all_adjacent_grid_changes[start_idx:end_idx+1]
+                    # If all the changes are in the same row or column, then continue
                     if len(set([c[0] for c in changes])) == 1 or len(set([c[1] for c in changes])) == 1:
                         continue
                     adjacent_grids = [(x + dx, y + dy) for dx, dy in changes]
@@ -147,6 +149,19 @@ class BlockusGameState(GameState):
         if not has_connected_corner:
             return False, f"The selected piece is not connected to another piece with a corner."
         return True, ""
+    
+    @ft.lru_cache(maxsize=None)
+    def get_piece_transformations(self, piece_id : int) -> List[Tuple[int, bool]]:
+        """ Return the transformed piece.
+        """
+        piece = BLOCKUS_PIECE_MAP[piece_id]
+        piece_transformations = {}
+        for num_rots in range(4):
+            for flip in [True, False]:
+                transformed_piece = np.rot90(piece, k=num_rots)
+                transformed_piece = np.flip(transformed_piece, axis=0) if flip else transformed_piece
+                piece_transformations[transformed_piece.tobytes()] = (num_rots, flip)
+        return list(piece_transformations.values())
         
     def get_all_possible_actions(self) -> List[BlockusAction]:
         """ Return all possible actions.
@@ -163,6 +178,7 @@ class BlockusGameState(GameState):
         for valid_shared_corner in grids_sharing_corner:
             for piece_id in available_pieces:
                 piece = BLOCKUS_PIECE_MAP[piece_id]
+                """
                 piece_grids = np.where(piece != 0)
                 max_block_size = self.find_num_connected_pieces(np.array(self.board),
                                                                 -1,
@@ -172,41 +188,31 @@ class BlockusGameState(GameState):
                 if max_block_size < len(piece_grids[0]):
                     #print(f"Largest possible block size {max_block_size}. Can not place piece with {len(piece_grids[0])} blocks")
                     continue
-                # Now, we test all the possible placements of the piece
-                # to the grid valid_shared_corner
-                # The piece can be rotated and flipped, so we need to test all the possible combinations
-                num_rotations = 4
-                # If the piece is full (only has one value), and square, we only have 1 rotation
-                if len(set(piece.flatten())) == 1 and piece.shape[0] == piece.shape[1]:
-                    num_rotations = 1
-                # If the piece is full, but not square, we have 2
-                if len(set(piece.flatten())) == 1 and piece.shape[0] != piece.shape[1]:
-                    num_rotations = 2
-                    
-                for rot in range(num_rotations):
-                    for flip in [True, False] if num_rotations == 4 else [False]:
-                        transformed_piece = np.rot90(piece, k=rot)
-                        transformed_piece = np.flip(transformed_piece, axis=0) if flip else transformed_piece
-                        transformed_piece_grids = np.where(transformed_piece != 0)
-                        # Let 'piece_grid' be the grid in the piece, that is placed on the grid valid_shared_corner
-                        for piece_grid in zip(transformed_piece_grids[0], transformed_piece_grids[1]):
-                            # The lu corner of the piece
-                            lu_corner = (valid_shared_corner[0] - piece_grid[0], valid_shared_corner[1] - piece_grid[1])
-                            # Check that all corners of the piece are inside the board
-                            all_corners = [lu_corner, (lu_corner[0] + transformed_piece.shape[0] - 1, lu_corner[1]),
-                                             (lu_corner[0], lu_corner[1] + transformed_piece.shape[1] - 1),
-                                             (lu_corner[0] + transformed_piece.shape[0] - 1, lu_corner[1] + transformed_piece.shape[1] - 1)]
-                            if not all([self.is_grid_inside_board(corner) for corner in all_corners]):
-                                #print(f"Piece {piece_id} not inside board")
-                                continue
-                            # Check that the move is valid through the Action
-                            action = BlockusAction(piece_id, lu_corner[0], lu_corner[1], rot, flip)
-                            # Check if an equivalent action is already in the list
-                            #if action in actions:
-                            #    continue
-                            is_legal, msg = self._check_action_is_legal(action)
-                            if is_legal:
-                                actions.append(action)
+                """
+                for rot_flip in self.get_piece_transformations(piece_id):
+                    rot,flip = rot_flip
+                    transformed_piece = np.rot90(piece, k=rot)
+                    transformed_piece = np.flip(transformed_piece, axis=0) if flip else transformed_piece
+                    transformed_piece_grids = np.where(transformed_piece != 0)
+                    # Let 'piece_grid' be the grid in the piece, that is placed on the grid valid_shared_corner
+                    for piece_grid in zip(transformed_piece_grids[0], transformed_piece_grids[1]):
+                        # The lu corner of the piece
+                        lu_corner = (valid_shared_corner[0] - piece_grid[0], valid_shared_corner[1] - piece_grid[1])
+                        # Check that all corners of the piece are inside the board
+                        all_corners = [lu_corner, (lu_corner[0] + transformed_piece.shape[0] - 1, lu_corner[1]),
+                                        (lu_corner[0], lu_corner[1] + transformed_piece.shape[1] - 1),
+                                        (lu_corner[0] + transformed_piece.shape[0] - 1, lu_corner[1] + transformed_piece.shape[1] - 1)]
+                        if not all([self.is_grid_inside_board(corner) for corner in all_corners]):
+                            #print(f"Piece {piece_id} not inside board")
+                            continue
+                        # Check that the move is valid through the Action
+                        action = BlockusAction(piece_id, lu_corner[0], lu_corner[1], rot, flip)
+                        # Check if an equivalent action is already in the list
+                        #if action in actions:
+                        #    continue
+                        is_legal, msg = self._check_action_is_legal(action)
+                        if is_legal:
+                            actions.append(action)
         #print(f"Number of possible actions: {len(actions)}") 
         if len(actions) == 0:
             # Add null action
@@ -227,6 +233,9 @@ class BlockusGameState(GameState):
                 continue
             visited.append((x, y))
             num_connected_pieces += 1
+            # If the number of connected pieces is 5, we can stop, since no piece is bigger than 5
+            if num_connected_pieces == 5:
+                break
             # Now we need to check the neighbors
             for dx, dy in [(0, 1), (0, -1), (1, 0), (-1, 0)]:
                 new_x, new_y = x + dx, y + dy
