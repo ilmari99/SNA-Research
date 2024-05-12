@@ -55,8 +55,8 @@ class BlockusAction(Action):
         # Remove the piece from the player's remaining pieces
         game.player_remaining_pieces[game.current_pid].remove(self.piece_id)
         # Update the current player
-        print(game.players)
-        print(game.get_current_state())
+        #print(game.players)
+        #print(game.get_current_state())
         game.current_pid = (game.current_pid + 1) % len(game.players)
         # Return the new game state
         return game.game_state_class.from_game(game, copy = False)

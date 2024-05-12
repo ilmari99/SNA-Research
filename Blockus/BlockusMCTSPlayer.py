@@ -26,19 +26,22 @@ class BlockusStateForMCTS(BlockusGameState):
         return self.get_all_possible_actions()
     
     def takeAction(self, action : BlockusAction):
-        return action.modify_game(self.game, inplace=False)
+        state = action.modify_game(self.game, inplace=False)
+        return self.__class__(state)
     
     def isTerminal(self) -> bool:
         return self.is_terminal()
     
     def getReward(self) -> float:
-        return self.calculate_reward(self.perspective_pid)
+        r = self.calculate_reward(self.perspective_pid)
+        print(f"Reward: {r}")
+        return r
     
 
 class BlockusMCTSPlayer(BlockusPlayer):
     
     def __init__(self,name : str = "MCTSPlayer",
-                 mcts_timelimit : float = 1.0,
+                 mcts_timelimit : float = 0.1,
                  action_selection_strategy = "greedy",
                  action_selection_args : Tuple[Tuple,Dict] = ((), {}),
                  logger_args : dict = None,
@@ -61,13 +64,13 @@ class BlockusMCTSPlayer(BlockusPlayer):
         f = action_selection_map[action_selection_strategy]
         self.select_action_strategy = lambda evaluations : f(evaluations, *action_selection_args[0], **action_selection_args[1])
         
-            
         
     def evaluate_states(self, states : List[BlockusGameState]) -> List[float]:
         """ With the MCTS player we wont evaluate.
         Rather, we will run MCTS, find the best action, and return evaluations (1 for the best action, 0 for the rest)
         """
         curr_state = self.game.get_current_state()
+        curr_state = curr_state.deepcopy()
         best_action = mcts(timeLimit=self.mcts_timelimit).search(initialState=BlockusStateForMCTS(curr_state))
         print(f"Best action: {best_action}")
         return [1 if a == best_action else 0 for a in states]

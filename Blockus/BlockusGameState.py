@@ -22,7 +22,7 @@ class BlockusGameState(GameState):
     def game(self):# -> 'BlockusGame':
         from BlockusGame import BlockusGame
         game = BlockusGame(board_size=(len(self.board), len(self.board[0])))
-        game.initialize_game([BlockusPlayer(name=f"Player{i}", logger_args=None) for i in range(4)])
+        game.initialize_game_wrap([BlockusPlayer(name=f"Player{i}", logger_args=None) for i in range(4)])
         game.restore_game(self)
         return game
     
