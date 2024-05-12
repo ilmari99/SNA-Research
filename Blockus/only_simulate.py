@@ -7,6 +7,7 @@ from BlockusGame import BlockusGame
 from BlockusResult import BlockusResult
 from BlockusPlayer import BlockusPlayer
 from BlockusNNPlayer import BlockusNNPlayer
+from BlockusGreedyPlayer import BlockusGreedyPlayer
 
 
 def game_constructor(i, model_base_folder):
@@ -28,7 +29,10 @@ def players_constructor(i, model_base_folder):
     all_model_paths = [os.path.abspath(os.path.join(model_base_folder, model_file)) for model_file in files_in_model_folder if model_file.endswith(".tflite")]
     if len(all_model_paths) == 0:
         print(f"No models found in {model_base_folder}")
-        return [BlockusPlayer(name=f"Player{j}_{i}", logger_args=None) for j in range(4)]
+        return [BlockusGreedyPlayer(name=f"Player{j}_{i}",
+                                    logger_args=None,
+                                    action_selection_strategy="weighted",
+                                    action_selection_args=((),{"temperature":1.0})) for j in range(4)]
     # Find the epoch number of each model
     epoch_nums = []
     for model_path in all_model_paths:
@@ -45,14 +49,14 @@ def players_constructor(i, model_base_folder):
     # Softmax the weights
     model_weights = np.array(list(models_weighted_set.values()))
     model_weights = np.exp(model_weights) / np.sum(np.exp(model_weights))
-    
+    latest_model_path = all_model_paths[np.argmax(epoch_nums)]
     models_weighted_set = {model_path_ : w for model_path_, w in zip(all_model_paths, model_weights)}
     #print(models_weighted_set)
     players = [BlockusNNPlayer(name=f"Player{j}_{i}",
                                     logger_args=None,
-                                    model_path=np.random.choice(list(models_weighted_set.keys()), p=list(models_weighted_set.values())),
-                                    action_selection_strategy="epsilon_greedy",
-                                    action_selection_args=((),{"epsilon":0.15})
+                                    model_path=latest_model_path,
+                                    action_selection_strategy="weighted",
+                                    action_selection_args=((),{"temperature":1.0})
                                     )
                 for j in range(4)]
     

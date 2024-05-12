@@ -19,7 +19,7 @@ echo "All arguments: $@"
 module purge
 module load tensorflow/2.15
 
-RLF_BLOCKUS_SCRATCH="/scratch/project_2010270/BlockusEpsilon2"
+RLF_BLOCKUS_SCRATCH="/scratch/project_2010270/BlockusGreedy"
 
 PIP_EXE=./venv/bin/pip3
 PYTHON_EXE=./venv/bin/python3
@@ -65,7 +65,7 @@ for node in $(scontrol show hostname $SLURM_JOB_NODELIST); do
     srun --nodes=1 --ntasks=1 --cpus-per-task=128 -w $node $PYTHON_EXE ./Blockus/only_simulate.py \
     --folder=$new_data_folder \
     --model_base_folder=$MODEL_FOLDER \
-    --num_games=6000 \
+    --num_games=9000 \
     --num_cpus=120 \
     --num_files=-1 &
 done

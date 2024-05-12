@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=blokus_benchmark
 #SBATCH --account=project_2010270
-#SBATCH --time=03:00:00
+#SBATCH --time=04:00:00
 #SBATCH --partition=medium
 #SBATCH --output=benchmark_blokus_models_%j.out
 #SBATCH --error=benchmark_blokus_models_%j.err
@@ -14,7 +14,7 @@
 module purge
 module load tensorflow/2.15
 
-RLF_BLOCKUS_SCRATCH="/scratch/project_2010270/BlockusEpsilon2"
+RLF_BLOCKUS_SCRATCH="/scratch/project_2010270/BlockusGreedy"
 
 PIP_EXE=./venv/bin/pip3
 PYTHON_EXE=./venv/bin/python3
@@ -42,7 +42,7 @@ $PYTHON_EXE --version
 
 
 $PYTHON_EXE ./Blockus/benchmark_all.py --folder=$RLF_BLOCKUS_SCRATCH/Models/ \
---num_games=300 \
+--num_games=800 \
 --num_cpus=100
 
 

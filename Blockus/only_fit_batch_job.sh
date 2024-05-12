@@ -19,7 +19,7 @@ echo "All arguments: $@"
 module purge
 module load tensorflow/2.15
 
-RLF_BLOCKUS_SCRATCH="/scratch/project_2010270/BlockusEpsilon2"
+RLF_BLOCKUS_SCRATCH="/scratch/project_2010270/BlockusGreedy"
 
 PIP_EXE=./venv/bin/pip3
 PYTHON_EXE=./venv/bin/python3
@@ -82,7 +82,7 @@ $PYTHON_EXE ./Blockus/fit_model_single.py \
 --num_epochs=25 \
 --patience=5 \
 --validation_split=0.2 \
---batch_size=128 \
+--batch_size=1024 \
 
 
 

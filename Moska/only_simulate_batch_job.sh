@@ -19,7 +19,7 @@ echo "All arguments: $@"
 module purge
 module load tensorflow/2.15
 
-RLF_MOSKA_SCRATCH="/scratch/project_2010270/Moska"
+RLF_MOSKA_SCRATCH="/scratch/project_2010270/MoskaNew2"
 
 PIP_EXE=./venv/bin/pip3
 PYTHON_EXE=./venv/bin/python3

@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=moska_benchmark
 #SBATCH --account=project_2010270
-#SBATCH --time=03:00:00
+#SBATCH --time=04:00:00
 #SBATCH --partition=medium
 #SBATCH --output=moska_benchmark_%j.out
 #SBATCH --error=moska_benchmark_%j.err
@@ -43,6 +43,6 @@ $PYTHON_EXE --version
 
 $PYTHON_EXE ./Moska/benchmark_all.py --folder=$RLF_MOSKA_SCRATCH/Models \
 --num_games=2000 \
---num_cpus=110
+--num_cpus=100
 
 
