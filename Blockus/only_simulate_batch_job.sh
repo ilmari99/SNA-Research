@@ -1,11 +1,11 @@
 #!/bin/bash
 
-#SBATCH --job-name=blockus_simulate
+#SBATCH --job-name=BlokusGreedyNoDiscount
 #SBATCH --account=project_2010270
 #SBATCH --time=03:00:00
 #SBATCH --partition=medium
-#SBATCH --output=blockus_simulate_%j.out
-#SBATCH --error=blockus_simulate_%j.err
+#SBATCH --output=%x/simulate_%j.out
+#SBATCH --error=%x/simulate_%j.err
 #SBATCH --mail-type=END
 
 # Reserve compute
@@ -19,7 +19,9 @@ echo "All arguments: $@"
 module purge
 module load tensorflow/2.15
 
-RLF_BLOCKUS_SCRATCH="/scratch/project_2010270/BlockusGreedy"
+mkdir -p $SBATCH_JOB_NAME
+
+RLF_BLOCKUS_SCRATCH="/scratch/project_2010270/$SBATCH_JOB_NAME"
 
 PIP_EXE=./venv/bin/pip3
 PYTHON_EXE=./venv/bin/python3
