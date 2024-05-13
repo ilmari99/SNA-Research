@@ -1,5 +1,6 @@
 import multiprocessing
 import random
+import time
 import numpy as np
 import multiprocessing
 import os
@@ -58,7 +59,8 @@ if __name__ == "__main__":
     parser.add_argument('--num_cpus', type=int, help='The number of CPUs to use.', default=os.cpu_count()-1)
     args = parser.parse_args()
     print(args)
-
+    
+    t_start = time.time()
     num_games = args.num_games
     num_cpus = args.num_cpus
     win_percents = {}
@@ -92,12 +94,13 @@ if __name__ == "__main__":
             if result.winner == test_player_name:
                 num_wins += 1
             total_games += 1
-        
         print(f"Test player won {num_wins} out of {total_games} games")
         print(f"Test player tied {num_ties} out of {total_games} games")
         print(f"Win rate: {num_wins / total_games}")
         print(f"Tie rate: {num_ties / total_games}")
         win_percents[model_path] = num_wins / total_games
+    t_end = time.time()
+    print(f"Time taken: {t_end - t_start}")
     sorted_win_percents = sorted(win_percents.items(), key=lambda x: x[1], reverse=True)
     for model_path, win_percent in sorted_win_percents:
         print(f"{model_path}: {win_percent}")
