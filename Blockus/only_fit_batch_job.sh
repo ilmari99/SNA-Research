@@ -5,7 +5,7 @@
 # Write the output files to the folder wth job-name
 #SBATCH --output=%x/fit_%j.out
 #SBATCH --error=%x/fit_%j.err
-#SBATCH --time=08:00:00
+#SBATCH --time=05:58:00
 #SBATCH --partition=gpusmall
 #SBATCH --mail-type=END
 
@@ -79,7 +79,12 @@ fi
 # We save the model to the model folder with the epoch number
 MODEL_SAVE_PATH=$MODEL_FOLDER/model_$EPOCH_NUM.keras
 
-$PYTHON_EXE ./Blockus/fit_model_single.py \
+if [ ! -e ./$SLURM_JOB_NAME/Blockus ]; then
+    echo Copying Blokus Python folder to ./$SLURM_JOB_NAME/Blockus
+    cp -r ./Blockus ./$SLURM_JOB_NAME/Blockus
+fi
+
+$PYTHON_EXE ./$SLURM_JOB_NAME/Blockus/fit_model_single.py \
 --data_folder=$DATA_FOLDER \
 --load_model_path=$MODEL_FILE \
 --model_save_path=$MODEL_SAVE_PATH \
@@ -87,7 +92,7 @@ $PYTHON_EXE ./Blockus/fit_model_single.py \
 --num_epochs=25 \
 --patience=3 \
 --validation_split=0.2 \
---batch_size=1024 \
+--batch_size=2056 \
 
 
 

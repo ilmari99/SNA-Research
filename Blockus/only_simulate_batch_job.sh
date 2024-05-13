@@ -58,6 +58,11 @@ rm -r $DATA_FOLDER
 mkdir -p $DATA_FOLDER
 mkdir -p $MODEL_FOLDER
 
+if [ ! -e ./$SLURM_JOB_NAME/Blockus ]; then
+    echo Copying Blokus Python folder to ./$SLURM_JOB_NAME/Blockus
+    cp -r ./Blockus ./$SLURM_JOB_NAME/Blockus
+fi
+
 for node in $(scontrol show hostname $SLURM_JOB_NODELIST); do
 
     new_data_folder=$DATA_FOLDER"/"$node
@@ -67,10 +72,10 @@ for node in $(scontrol show hostname $SLURM_JOB_NODELIST); do
         rm -r $new_data_folder
     fi
 
-    srun --nodes=1 --ntasks=1 --cpus-per-task=128 -w $node $PYTHON_EXE ./Blockus/only_simulate.py \
+    srun --nodes=1 --ntasks=1 --cpus-per-task=128 -w $node $PYTHON_EXE ./$SLURM_JOB_NAME/Blockus/only_simulate.py \
     --folder=$new_data_folder \
     --model_base_folder=$MODEL_FOLDER \
-    --num_games=9000 \
+    --num_games=10000 \
     --num_cpus=120 \
     --num_files=-1 &
 done
