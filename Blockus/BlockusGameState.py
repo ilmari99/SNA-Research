@@ -156,11 +156,17 @@ class BlockusGameState(GameState):
         """
         piece = BLOCKUS_PIECE_MAP[piece_id]
         piece_transformations = {}
+        # Always the original
+        piece_transformations[piece.tobytes()] = (0, False)
         for num_rots in range(4):
             for flip in [True, False]:
                 transformed_piece = np.rot90(piece, k=num_rots)
                 transformed_piece = np.flip(transformed_piece, axis=0) if flip else transformed_piece
-                piece_transformations[transformed_piece.tobytes()] = (num_rots, flip)
+                hash_val = transformed_piece.tobytes()
+                if hash_val in piece_transformations:
+                    continue
+                piece_transformations[hash_val] = (num_rots, flip)
+            
         return list(piece_transformations.values())
         
     def get_all_possible_actions(self) -> List[BlockusAction]:

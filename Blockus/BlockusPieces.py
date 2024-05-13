@@ -48,3 +48,8 @@ BLOCKUS_PIECE_MAP = {
           [1,1,1]],
 }
 BLOCKUS_PIECE_MAP = {k: np.array(v) for k, v in BLOCKUS_PIECE_MAP.items()}
+# Pad all pieces according to their longest dimension
+for k, v in BLOCKUS_PIECE_MAP.items():
+    max_dim = max(v.shape)
+    pad = (max_dim - v.shape[0], max_dim - v.shape[1])
+    BLOCKUS_PIECE_MAP[k] = np.pad(v, ((0, pad[0]), (0, pad[1])), mode='constant', constant_values=0)
