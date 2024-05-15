@@ -47,9 +47,11 @@ class BlockusGameState(GameState):
             score_boost += 15
         return score_boost
         
-    def _check_action_is_legal(self, action) -> Tuple[bool, str]:
+    def _check_action_is_legal(self, action : 'BlockusAction') -> Tuple[bool, str]:
         """ Check if the action is legal in the given game state.
         """
+        game = self.game
+        return action.check_action_is_legal(game)
         if action.piece_id == -1:
             return True, ""
         # Check if the piece is in the player's remaining pieces

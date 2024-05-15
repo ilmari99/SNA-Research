@@ -27,8 +27,7 @@ class BlockusAction(Action):
         self_coords = self.get_piece_coordinates()
         # Check that the coordinates are the same, regardless of order
         return set(other_coords) == set(self_coords)
-        
-        
+    
     def modify_game(self, game: 'BlockusGame', inplace: bool = False) -> GameState:
         """ Place the piece on the board.
         We set 0 values to -1, and 1 values to the player id.
@@ -107,7 +106,8 @@ class BlockusAction(Action):
         return num_connected_pieces
     
     def check_action_is_legal(self, game: Game):
-        return True, ""
+        return self._check_action_is_legal(game)
+        #return True, ""
     
     def _check_action_is_legal(self, game: 'BlockusGame') -> Tuple[bool, str]:
         """ Check if the action is legal in the given game state.
@@ -166,6 +166,7 @@ class BlockusAction(Action):
                                                           piece_begin[0],
                                                           piece_begin[1])
         board_copy = np.array(game.board)
+        #print(f"Connected pieces: {connected_pieces}, piece size: {piece_size}")
         if connected_pieces != piece_size:
             return False, f"The selected piece is connected to another piece with a side."
 
