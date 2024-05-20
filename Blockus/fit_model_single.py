@@ -55,10 +55,20 @@ def get_model(input_shape):
         board = RandomRotateBoardLayer()(board)
         board = RandomFlipBoardLayer()(board)
         # Now we have the 20x20 board as a 3D tensor
+        # Convert the board to one-hot encoded
+        board = board + 1
+        board = tf.one_hot(tf.cast(board,tf.int32),5)
+        board = tf.reshape(board,(-1,20,20,5))
+
         # Lets apply convolutions
-        board = tf.keras.layers.Conv2D(32, (3,3), activation='relu')(board)
-        board = tf.keras.layers.Conv2D(64, (3,3), activation='relu')(board)
-        #board = tf.keras.layers.Conv2D(128, (3,3), activation='relu',kernel_regularizer=tf.keras.regularizers.l2(0.01))(board)
+        board = tf.keras.layers.Conv2D(32, (3,3), activation='linear')(board)
+        #board = tf.keras.layers.BatchNormalization()(board)
+        board = tf.keras.layers.ReLU()(board)
+        board = tf.keras.layers.Conv2D(64, (3,3), activation='linear')(board)
+        #board = tf.keras.layers.BatchNormalization()(board)
+        board = tf.keras.layers.ReLU()(board)
+        #board = tf.keras.layers.Conv2D(128, (3,3), activation='linear')(board)
+        #board = tf.keras.layers.PReLU(shared_axes=(1,2))(board)
         board = tf.keras.layers.Flatten()(board)
         
         # Concatenate the board and the meta
