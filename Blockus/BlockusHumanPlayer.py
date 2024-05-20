@@ -30,8 +30,8 @@ class BlockusHumanPlayer(BlockusPlayer):
             evaluation = model.predict(np.array([gs_vector], dtype=np.float32))
             evals.append(evaluation[0][0])
         return evals
-            
-    
+
+
     def choose_move(self, game: 'BlockusGame') -> 'BlockusAction':
         """ With Blokus, the human player chooses a move by clicking on tiles in the board, and pressing enter on the console.
         We then read which tiels were clicked, check if they are a valid selection, and return the action.

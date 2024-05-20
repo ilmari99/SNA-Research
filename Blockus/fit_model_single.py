@@ -74,7 +74,7 @@ def get_model(input_shape):
         # Concatenate the board and the meta
         x = tf.keras.layers.Concatenate()([meta, board])
         x = tf.keras.layers.Dense(64, activation='relu')(x)
-        x = tf.keras.layers.Dropout(0.3)(x)
+        x = tf.keras.layers.Dropout(0.2)(x)
         x = tf.keras.layers.Dense(64, activation='relu')(x)
         output = tf.keras.layers.Dense(1, activation='sigmoid')(x)
         

@@ -24,11 +24,20 @@ def game_constructor(i, model_paths = []):
         model_paths=model_paths,
         )
 
-def players_constructor(i, model_path = ""):
-    random_players = [BlockusPlayer(name=f"Player{j}_{i}",
-                                    logger_args=None,
-                                    )
-                for j in range(3)]
+def players_constructor(i, model_path = "", opponent_type = "random"):
+    assert opponent_type in ["random", "greedy"], f"Player type must be either 'random' or 'greedy', not {opponent_type}"
+    if opponent_type == "random":
+        opponent_players = [BlockusPlayer(name=f"RandomPlayer{j}_{i}",
+                                        logger_args=None,
+                                        )
+                    for j in range(3)]
+    elif opponent_type == "greedy":
+        opponent_players = [BlockusGreedyPlayer(name=f"GreedyPlayer{j}_{i}",
+                                        logger_args=None,
+                                        action_selection_strategy="epsilon_greedy",
+                                        action_selection_args=((), {"epsilon" : 0.1}),
+                                        )
+                    for j in range(3)]
     if not model_path:
         test_player = BlockusPlayer(name=f"TestPlayer_{i}",
                                     logger_args=None,
@@ -39,16 +48,16 @@ def players_constructor(i, model_path = ""):
                                     model_path=model_path,
                                     action_selection_strategy="greedy",
                                     )
-    players = random_players + [test_player]
+    players = opponent_players + [test_player]
     random.shuffle(players)
     return players
 
 def run_game(args):
-    i, model_path, seed = args
+    i, model_path, opponent_type, seed = args
     random.seed(seed)
     np.random.seed(seed)
     game = game_constructor(i, [model_path])
-    players = players_constructor(i, model_path)
+    players = players_constructor(i, model_path, opponent_type)
     res = game.play_game(players)
     return res
 
@@ -57,6 +66,7 @@ if __name__ == "__main__":
     parser.add_argument('--folder', type=str, required=True, help='The folder containing the models.')
     parser.add_argument('--num_games', type=int, required=True, help='The number of games to play for each model.')
     parser.add_argument('--num_cpus', type=int, help='The number of CPUs to use.', default=os.cpu_count()-1)
+    parser.add_argument("--opponent_type", type=str, help="The type of opponent to use. Must be either 'random' or 'greedy'.", default="random")
     args = parser.parse_args()
     print(args)
     
@@ -71,7 +81,7 @@ if __name__ == "__main__":
         model_path = os.path.join(folder, model_path)
         print(f"Testing model: {model_path}")
         with multiprocessing.Pool(num_cpus) as p:
-            results = p.map(run_game, [(i, model_path, random.randint(0, 2**32-1)) for i in range(num_games)])
+            results = p.map(run_game, [(i, model_path, args.opponent_type, random.randint(0, 2**32-1)) for i in range(num_games)])
 
         # Find how many times the test player won
         num_wins = 0
