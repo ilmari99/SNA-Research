@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=blokus_benchmark
 #SBATCH --account=project_2010270
-#SBATCH --time=04:00:00
+#SBATCH --time=01:30:00
 #SBATCH --partition=medium
 #SBATCH --output=benchmark_blokus_models_%j.out
 #SBATCH --error=benchmark_blokus_models_%j.err
@@ -14,7 +14,7 @@
 module purge
 module load tensorflow/2.15
 
-RLF_BLOCKUS_SCRATCH="/scratch/project_2010270/BlockusGreedy"
+RLF_BLOCKUS_SCRATCH="/scratch/project_2010270/BlokusGreedyNoDiscount1HotMiniUsePrevModels"
 
 PIP_EXE=./venv/bin/pip3
 PYTHON_EXE=./venv/bin/python3
@@ -29,6 +29,7 @@ fi
 
 source ./venv/bin/activate
 
+
 which python3
 which pip3
 nvidia-smi
@@ -42,7 +43,8 @@ $PYTHON_EXE --version
 
 
 $PYTHON_EXE ./Blockus/benchmark_all.py --folder=$RLF_BLOCKUS_SCRATCH/Models/ \
---num_games=800 \
---num_cpus=100
+--num_games=1200 \
+--num_cpus=100 \
+--opponent_type=greedy
 
 

@@ -53,7 +53,7 @@ def players_constructor(i, model_base_folder):
     #print(models_weighted_set)
     players = [BlockusNNPlayer(name=f"Player{j}_{i}",
                                     logger_args=None,
-                                    model_path=latest_model_path,
+                                    model_path=np.random.choice(list(models_weighted_set.keys()), p=list(models_weighted_set.values())),
                                     action_selection_strategy="weighted",
                                     action_selection_args=((),{"temperature":1.0})
                                     )
