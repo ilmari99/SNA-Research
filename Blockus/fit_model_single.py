@@ -114,18 +114,51 @@ def get_model(input_shape):
         board_rot_pairs = tf.concat([board, number_of_rotations], axis=1)
 
         board = RotLayer()(board_rot_pairs)
-
-        #board = tf.reshape(board, (-1, board_side_len, board_side_len))
+        board = tf.reshape(board, (-1, board_side_len, board_side_len))
+        board = tf.cast(board, tf.int32)
+        # We want to make the neural net invariant to whose turn it is.
+        # First, we get a matrix P by multiplying each perspective_id to a 20x20 board
+        perspective_pids = perspective_pids[:,0]
+        perspective_pids_repeated = tf.reshape(perspective_pids, (-1,1,1))
+        perspective_pids_repeated = tf.cast(perspective_pids_repeated, tf.float32)
+        perspective_pids_repeated = tf.tile(perspective_pids_repeated, [1,20,20])
+        perspective_pids_repeated = tf.cast(perspective_pids_repeated, tf.int32)
+        #print(f"Perspective pids repeated: {perspective_pids_repeated}")
         
-        # Convert to onehot
+        # Then, we need a mask, same shape as board, that is -1 where the board == -1
+        mask = tf.equal(board, -1)
+        mask = tf.cast(mask, tf.float32)
+        mask = -1 * mask
+        #print(f"Mask: {mask}")
+        
+        # Now, we can add the P matrix to the boards, and take mod 4
+        board = board + perspective_pids_repeated
+        board = tf.math.mod(board, 3)
         board = tf.cast(board, tf.float32)
         #print(f"Board: {board}")
+        
+        # Now, to maintain -1's, we'll set the -1's back to -1
+        # We want to do a similar operation as "board = where(mask == -1, -1, board)",
+        # but we can't use tf.where.
+        mask = tf.cast(mask, tf.float32)
+        inverse_mask = 1 - mask
+        
+        # Multiply board by inverse_mask to set all -1's to 0
+        board = keras.layers.Multiply()([board, inverse_mask])
+        # add mask to set all -1's back to -1
+        board = board + mask
+        
+        
+        #print(f"Board: {board}")
+        board = tf.reshape(board, (-1, board_side_len, board_side_len, 1))
         
         # Apply convolutions
         x = keras.layers.Conv2D(32, (3,3), activation='relu')(board)
         x = keras.layers.Conv2D(64, (3,3), activation='relu')(x)
         x = keras.layers.Flatten()(x)
         x = keras.layers.Dense(32, activation='relu')(x)
+        x = keras.layers.Dropout(0.3)(x)
+        x = keras.layers.Dense(16, activation='relu')(x)
         output = keras.layers.Dense(1, activation='sigmoid')(x)
         
         model = keras.Model(inputs=inputs, outputs=output)
