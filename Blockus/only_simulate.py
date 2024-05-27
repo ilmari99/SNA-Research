@@ -23,7 +23,6 @@ def game_constructor(i, model_base_folder):
         )
 
 def players_constructor(i, model_base_folder):
-    
     files_in_model_folder = os.listdir(model_base_folder)
     # Filter only the tflite files
     all_model_paths = [os.path.abspath(os.path.join(model_base_folder, model_file)) for model_file in files_in_model_folder if model_file.endswith(".tflite")]
@@ -79,16 +78,18 @@ if __name__ == "__main__":
     os.makedirs(args.folder, exist_ok=True)
     os.makedirs(args.model_base_folder, exist_ok=True)
     
+        
+    folder = os.path.abspath(args.folder)
+    model_base_folder = os.path.abspath(args.model_base_folder)
+    
     def _players_constructor(i):
-        return players_constructor(i, args.model_base_folder)
+        return players_constructor(i, model_base_folder)
     
     def _game_constructor(i):
-        return game_constructor(i, args.model_base_folder)
+        return game_constructor(i, model_base_folder)
 
     num_games = args.num_games
     num_cpus = args.num_cpus
-    folder = os.path.abspath(args.folder)
-    model_base_folder = os.path.abspath(args.model_base_folder)
     print(f"folder: {folder}")
     print(f"model_base_folder: {model_base_folder}")
     num_files = args.num_files

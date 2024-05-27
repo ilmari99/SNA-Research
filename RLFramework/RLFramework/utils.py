@@ -3,6 +3,7 @@ from typing import Any, Dict, List, Tuple
 import os
 import numpy as np
 import tensorflow as tf
+import keras
 
 class TFLiteModel:
     """ A class representing a tensorflow lite model.
@@ -46,8 +47,12 @@ def convert_model_to_tflite(file_path : str, output_file : str = None) -> None:
         
     print("Converting '{}' to '{}'".format(file_path, output_file))
 
-    model = tf.keras.models.load_model(file_path)
+    model = keras.models.load_model(file_path)
     converter = tf.lite.TFLiteConverter.from_keras_model(model)
+    converter.target_spec.supported_ops = [
+        tf.lite.OpsSet.TFLITE_BUILTINS, # enable TensorFlow Lite ops.
+        tf.lite.OpsSet.SELECT_TF_OPS # enable TensorFlow ops.
+    ]
     tflite_model = converter.convert()
 
     with open(output_file, "wb") as f:

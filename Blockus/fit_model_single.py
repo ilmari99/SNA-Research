@@ -1,9 +1,13 @@
 import os
+import sys
+import keras
 import tensorflow as tf
 import numpy as np
 from RLFramework.read_to_dataset import read_to_dataset
 from RLFramework.utils import convert_model_to_tflite
 import argparse
+#tf.compat.v1.disable_eager_execution()
+
 
 @tf.keras.saving.register_keras_serializable()
 class RandomRotateBoardLayer(tf.keras.layers.Layer):
@@ -27,7 +31,22 @@ class RandomFlipBoardLayer(tf.keras.layers.Layer):
             board = tf.image.random_flip_left_right(board)
             board = tf.image.random_flip_up_down(board)
         return board
-    
+
+@tf.keras.saving.register_keras_serializable()
+class RotLayer(tf.keras.layers.Layer):
+    def __init__(self, **kwargs):
+        super(RotLayer, self).__init__(**kwargs)
+        
+    def call(self, inputs, training=None):
+        board = tf.vectorized_map(rotate90, inputs)
+        return board
+
+@tf.keras.saving.register_keras_serializable()
+def rotate90(x):
+    boards = tf.reshape(x[:-1], (20, 20, 1))
+    rots = tf.cast(x[-1], tf.int32)
+    return tf.image.rot90(boards, k=rots)
+
 class SaveModelCallback(tf.keras.callbacks.Callback):
     def __init__(self, model_save_path):
         super(SaveModelCallback, self).__init__()
@@ -48,41 +67,73 @@ def get_model(input_shape):
         meta = inputs[:,:2]
         
         meta = tf.keras.layers.Flatten()(meta)
+        # This element tells whose perspective of the game we are evaluating.
+        perspective_pids = meta[:,0]
+        perspective_pids = tf.cast(perspective_pids, tf.int32)
         
         # Reshape the board
         board_side_len = int(np.sqrt(board.shape[1]))
-        board = tf.keras.layers.Reshape((board_side_len, board_side_len, 1))(board)
-        board = RandomRotateBoardLayer()(board)
-        board = RandomFlipBoardLayer()(board)
-        # Now we have the 20x20 board as a 3D tensor
-        # Convert the board to one-hot encoded
-        board = board + 1
-        board = tf.one_hot(tf.cast(board,tf.int32),5)
-        board = tf.reshape(board,(-1,20,20,5))
+        #board = tf.reshape(board, (-1, board_side_len, board_side_len,1))
+        board = keras.layers.Reshape((board_side_len, board_side_len))(board)
+        
+        # We rotate the boards, s.t. a grid with the correct perspective_pid is always at the top left
+        
+        # Get the corner values of each board
+        # Each tensor is B x 1
+        # Rotate 0, 1, 2, 3 times counter clockwise to get the corner with perspective_pid to the top left
+        top_left_pids = tf.reshape(board[:,0,0], (-1,1))
+        top_right_pids = tf.reshape(board[:,0,-1], (-1,1))
+        bottom_right_pids = tf.reshape(board[:,-1,-1], (-1,1))
+        bottom_left_pids = tf.reshape(board[:,-1,0], (-1,1))
+        
+        # Convert to a B x 4 matrix that describes the corner values
+        perspective_pid_curr_corner = tf.concat([top_left_pids, top_right_pids, bottom_right_pids, bottom_left_pids], axis=1)
+        #print(f"Perspective pid curr corner: {perspective_pid_curr_corner}")
+        perspective_pid_curr_corner = tf.cast(perspective_pid_curr_corner, tf.int32)
+        #print(f"Perspective pid curr corner: {perspective_pid_curr_corner}")
+        # Convert to a B x 4 matrix that describes which corner has the perspective_pid
+        # Concat 4 copies of perspective_pids along axis 1 to get shape B x 4
+        perspective_pids = tf.reshape(perspective_pids, (-1,1))
+        perspective_pids = tf.tile(perspective_pids, [1,4])
+        #print(f"Perspective pids: {perspective_pids}")
+        # Calculate a B x 4 mask, that is 1 where curr_corner[b,c] == perspective_pids[b,c]
+        mask = tf.equal(perspective_pid_curr_corner, perspective_pids)
+        mask = tf.cast(mask, tf.float32)
+        #perspective_pid_curr_corner = tf.cast(perspective_pid_curr_corner == perspective_pids[:,tf.newaxis], tf.float32)
+        #print(f"matches: {mask}")
+        # Take argmax to get the corner that has the perspective_pid: B x 1
+        # This tells us how many counter clockwise rotations to do for each board in the batch
+        number_of_rotations = tf.argmax(mask, axis=1)
+        #print(f"Number of rotations: {number_of_rotations}")
+        # float and expand for concat with board and image rot90
+        number_of_rotations = tf.cast(number_of_rotations, tf.float32)
+        number_of_rotations = tf.reshape(number_of_rotations, (-1,1))
+        
+        # Flatten the board to pass it to RotLayer along with number_of_rotations
+        board = tf.reshape(board, (-1, board_side_len*board_side_len))
+        board_rot_pairs = tf.concat([board, number_of_rotations], axis=1)
 
-        # Lets apply convolutions
-        board = tf.keras.layers.Conv2D(32, (3,3), activation='linear')(board)
-        #board = tf.keras.layers.BatchNormalization()(board)
-        board = tf.keras.layers.ReLU()(board)
-        board = tf.keras.layers.Conv2D(64, (3,3), activation='linear')(board)
-        #board = tf.keras.layers.BatchNormalization()(board)
-        board = tf.keras.layers.ReLU()(board)
-        #board = tf.keras.layers.Conv2D(128, (3,3), activation='linear')(board)
-        #board = tf.keras.layers.PReLU(shared_axes=(1,2))(board)
-        board = tf.keras.layers.Flatten()(board)
+        board = RotLayer()(board_rot_pairs)
+
+        #board = tf.reshape(board, (-1, board_side_len, board_side_len))
         
-        # Concatenate the board and the meta
-        x = tf.keras.layers.Concatenate()([meta, board])
-        x = tf.keras.layers.Dense(64, activation='relu')(x)
-        x = tf.keras.layers.Dropout(0.2)(x)
-        x = tf.keras.layers.Dense(64, activation='relu')(x)
-        output = tf.keras.layers.Dense(1, activation='sigmoid')(x)
+        # Convert to onehot
+        board = tf.cast(board, tf.float32)
+        #print(f"Board: {board}")
         
-        model = tf.keras.Model(inputs=inputs, outputs=output)
+        # Apply convolutions
+        x = keras.layers.Conv2D(32, (3,3), activation='relu')(board)
+        x = keras.layers.Conv2D(64, (3,3), activation='relu')(x)
+        x = keras.layers.Flatten()(x)
+        x = keras.layers.Dense(32, activation='relu')(x)
+        output = keras.layers.Dense(1, activation='sigmoid')(x)
+        
+        model = keras.Model(inputs=inputs, outputs=output)
 
         model.compile(optimizer="adam",
                 loss='binary_crossentropy',
-                metrics=['mae']
+                metrics=['mae'],
+                #run_eagerly=True
         )
         return model
     
@@ -97,6 +148,7 @@ def main(data_folder,
          ):
     # Find all folders inside the data_folder
     data_folders = [os.path.join(data_folder, f) for f in os.listdir(data_folder) if os.path.isdir(os.path.join(data_folder, f))]
+    data_folders += [data_folder]
     print(data_folders)
     
     if len(tf.config.experimental.list_physical_devices('GPU')) == 1:
@@ -111,13 +163,16 @@ def main(data_folder,
     
     with strategy.scope():
         
-        train_ds, val_ds, num_files, approx_num_samples = read_to_dataset(data_folders, frac_test_files=validation_split)
+        train_ds, val_ds, num_files, approx_num_samples = read_to_dataset(data_folders, frac_test_files=validation_split,filter_files_fn=lambda x: x.endswith(".csv"))
         
-        input_shape = train_ds.take(1).as_numpy_iterator().next()[0].shape
+        first_sample = train_ds.take(1).as_numpy_iterator().next()
+        input_shape = first_sample[0].shape
+        print(f"First sample: {first_sample}")
+        #input_shape = (20*20 +2,)
         print(f"Input shape: {input_shape}")
         print(f"Num samples: {approx_num_samples}")
         
-        train_ds = train_ds.shuffle(10000).batch(batch_size)
+        train_ds = train_ds.shuffle(1000).batch(batch_size)
         val_ds = val_ds.batch(batch_size)
         
         train_ds = train_ds.prefetch(tf.data.experimental.AUTOTUNE)
