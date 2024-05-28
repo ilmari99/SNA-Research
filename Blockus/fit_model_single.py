@@ -47,6 +47,74 @@ def rotate90(x):
     rots = tf.cast(x[-1], tf.int32)
     return tf.image.rot90(boards, k=rots)
 
+@tf.keras.saving.register_keras_serializable()
+def rotate_board_to_perspective_tf(board, perspective_pid):
+    
+    perspective_pid = tf.reshape(perspective_pid, (-1,1))
+    
+    top_left_pids = tf.reshape(board[:,0,0], (-1,1))
+    top_right_pids = tf.reshape(board[:,0,-1], (-1,1))
+    bottom_right_pids = tf.reshape(board[:,-1,-1], (-1,1))
+    bottom_left_pids = tf.reshape(board[:,-1,0], (-1,1))
+    
+    corner_pids = tf.concat([top_left_pids, top_right_pids, bottom_right_pids, bottom_left_pids], axis=1)
+    corner_pids = tf.reshape(corner_pids, (-1, 4))
+    corner_pids = tf.cast(corner_pids, tf.int32)
+    
+    corner_index = tf.argmax(tf.cast(tf.equal(corner_pids, perspective_pid), tf.float32), axis=1)
+    corner_index = tf.reshape(corner_index, (-1,1))
+    
+    board = tf.reshape(board, (-1, 20*20))
+    board = tf.cast(board, tf.float32)
+    corner_index = tf.cast(corner_index, tf.float32)
+    board_rot_pairs = tf.concat([board, corner_index], axis=1)
+    board_rot_pairs = tf.reshape(board_rot_pairs, (-1, 20*20+1))
+    #print(f"Board rot pairs: {board_rot_pairs}")
+    
+    board = RotLayer()(board_rot_pairs)
+    
+    board = tf.reshape(board, (-1, 20, 20))
+    
+    return board
+
+@tf.keras.saving.register_keras_serializable()
+def normalize_board_to_perspective_tf(board, perspective_pid):
+
+    # We want to make the neural net invariant to whose turn it is.
+    # First, we get a matrix P by multiplying each perspective_id to a 20x20 board
+    perspective_pid = tf.reshape(4 - perspective_pid, (-1,1))
+    perspective_full = tf.reshape(perspective_pid, (-1,1,1))
+    perspective_full = tf.cast(perspective_full, tf.float32)
+    perspective_full = tf.tile(perspective_full, [1,20,20])
+    
+    # Then, we need a mask, same shape as board, that is 1 where the board == -1
+    mask = tf.equal(board, -1)
+    
+    # Now, we can add the P matrix to the boards, and take mod 4
+    perspective_full = tf.cast(perspective_full, tf.float32)
+    board = tf.cast(board, tf.float32)
+    board = board + perspective_full
+    board = tf.cast(board, tf.int32)
+    board = tf.math.mod(board, 4)
+    
+    # Now, to maintain -1's, we'll set the -1's back to -1
+    board = tf.where(mask, -1, board)
+    board = tf.reshape(board, (-1, 20, 20))
+    
+    board = rotate_board_to_perspective_tf(board, 0)
+    
+    return board
+
+@tf.keras.saving.register_keras_serializable()
+class NormalizeBoardToPerspectiveLayer(tf.keras.layers.Layer):
+    def __init__(self, **kwargs):
+        super(NormalizeBoardToPerspectiveLayer, self).__init__(**kwargs)
+        
+    def call(self, inputs):
+        board = inputs[0]
+        perspective_pid = inputs[1]
+        return normalize_board_to_perspective_tf(board, perspective_pid)
+
 class SaveModelCallback(tf.keras.callbacks.Callback):
     def __init__(self, model_save_path):
         super(SaveModelCallback, self).__init__()
@@ -73,77 +141,10 @@ def get_model(input_shape):
         
         # Reshape the board
         board_side_len = int(np.sqrt(board.shape[1]))
-        #board = tf.reshape(board, (-1, board_side_len, board_side_len,1))
-        board = keras.layers.Reshape((board_side_len, board_side_len))(board)
-        
-        # We rotate the boards, s.t. a grid with the correct perspective_pid is always at the top left
-        
-        # Get the corner values of each board
-        # Each tensor is B x 1
-        # Rotate 0, 1, 2, 3 times counter clockwise to get the corner with perspective_pid to the top left
-        top_left_pids = tf.reshape(board[:,0,0], (-1,1))
-        top_right_pids = tf.reshape(board[:,0,-1], (-1,1))
-        bottom_right_pids = tf.reshape(board[:,-1,-1], (-1,1))
-        bottom_left_pids = tf.reshape(board[:,-1,0], (-1,1))
-        
-        # Convert to a B x 4 matrix that describes the corner values
-        perspective_pid_curr_corner = tf.concat([top_left_pids, top_right_pids, bottom_right_pids, bottom_left_pids], axis=1)
-        #print(f"Perspective pid curr corner: {perspective_pid_curr_corner}")
-        perspective_pid_curr_corner = tf.cast(perspective_pid_curr_corner, tf.int32)
-        # Convert to a B x 4 matrix that describes which corner has the perspective_pid
-        # Concat 4 copies of perspective_pids along axis 1 to get shape B x 4
-        perspective_pids = tf.reshape(perspective_pids, (-1,1))
-        perspective_pids = tf.tile(perspective_pids, [1,4])
-        # Calculate a B x 4 mask, that is 1 where curr_corner[b,c] == perspective_pids[b,c]
-        mask = tf.equal(perspective_pid_curr_corner, perspective_pids)
-        mask = tf.cast(mask, tf.float32)
-        # Take argmax to get the corner that has the perspective_pid: B x 1
-        # This tells us how many counter clockwise rotations to do for each board in the batch
-        number_of_rotations = tf.argmax(mask, axis=1)
-        #print(f"Number of rotations: {number_of_rotations}")
-        # float and expand for concat with board and image rot90
-        number_of_rotations = tf.cast(number_of_rotations, tf.float32)
-        number_of_rotations = tf.reshape(number_of_rotations, (-1,1))
-        
-        # Flatten the board to pass it to RotLayer along with number_of_rotations
-        board = tf.reshape(board, (-1, board_side_len*board_side_len))
-        board_rot_pairs = tf.concat([board, number_of_rotations], axis=1)
-
-        board = RotLayer()(board_rot_pairs)
         board = tf.reshape(board, (-1, board_side_len, board_side_len))
-        board = tf.cast(board, tf.int32)
         
-        # We want to make the neural net invariant to whose turn it is.
-        # First, we get a matrix P by multiplying each perspective_id to a 20x20 board
-        perspective_pids = perspective_pids[:,0]
-        perspective_pids_repeated = tf.reshape(perspective_pids, (-1,1,1))
-        perspective_pids_repeated = tf.cast(perspective_pids_repeated, tf.float32)
-        perspective_pids_repeated = tf.tile(perspective_pids_repeated, [1,20,20])
-        perspective_pids_repeated = tf.cast(perspective_pids_repeated, tf.int32)
-        #print(f"Perspective pids repeated: {perspective_pids_repeated}")
-        
-        # Then, we need a mask, same shape as board, that is -1 where the board == -1
-        mask = tf.equal(board, -1)
-        mask = tf.cast(mask, tf.float32)
-        mask = -1 * mask
-        #print(f"Mask: {mask}")
-        
-        # Now, we can add the P matrix to the boards, and take mod 4
-        board = board + perspective_pids_repeated
-        board = tf.math.mod(board, 3)
-        board = tf.cast(board, tf.float32)
-        #print(f"Board: {board}")
-        
-        # Now, to maintain -1's, we'll set the -1's back to -1
-        # We want to do a similar operation as "board = where(mask == -1, -1, board)",
-        # but we can't use tf.where.
-        mask = tf.cast(mask, tf.float32)
-        inverse_mask = 1 - mask
-        
-        # Multiply board by inverse_mask to set all -1's to 0
-        board = keras.layers.Multiply()([board, inverse_mask])
-        # add mask to set all -1's back to -1
-        board = board + mask
+        # Normalize the board to the perspective of the player
+        board = NormalizeBoardToPerspectiveLayer()([board, perspective_pids])
         
         
         #print(f"Board: {board}")
@@ -163,7 +164,7 @@ def get_model(input_shape):
         model.compile(optimizer="adam",
                 loss='binary_crossentropy',
                 metrics=['mae'],
-                #run_eagerly=True
+                run_eagerly=True
         )
         return model
     
