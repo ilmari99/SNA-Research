@@ -1,11 +1,11 @@
 #!/bin/bash
 
-#SBATCH --job-name=BlokusGreedyNoDiscount
+#SBATCH --job-name=BlokusGreedyNoDiscount1HotBigBatchBNUsePrevModels
 #SBATCH --account=project_2010270
 # Write the output files to the folder wth job-name
 #SBATCH --output=%x/fit_%j.out
 #SBATCH --error=%x/fit_%j.err
-#SBATCH --time=05:58:00
+#SBATCH --time=06:00:00
 #SBATCH --partition=gpusmall
 #SBATCH --mail-type=END
 
@@ -89,10 +89,10 @@ $PYTHON_EXE ./$SLURM_JOB_NAME/Blockus/fit_model_single.py \
 --load_model_path=$MODEL_FILE \
 --model_save_path=$MODEL_SAVE_PATH \
 --log_dir=$SLURM_JOB_NAME/tblog_$SLURM_JOB_ID \
---num_epochs=25 \
---patience=3 \
+--num_epochs=30 \
+--patience=4 \
 --validation_split=0.2 \
---batch_size=2056 \
+--batch_size=4096 \
 
 
 

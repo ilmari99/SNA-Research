@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --job-name=BlokusGreedyNoDiscount
+#SBATCH --job-name=BlokusGreedyNoDiscount1HotBigBatchBNUsePrevModels
 #SBATCH --account=project_2010270
 #SBATCH --time=03:00:00
 #SBATCH --partition=medium
@@ -75,7 +75,7 @@ for node in $(scontrol show hostname $SLURM_JOB_NODELIST); do
     srun --nodes=1 --ntasks=1 --cpus-per-task=128 -w $node $PYTHON_EXE ./$SLURM_JOB_NAME/Blockus/only_simulate.py \
     --folder=$new_data_folder \
     --model_base_folder=$MODEL_FOLDER \
-    --num_games=10000 \
+    --num_games=5000 \
     --num_cpus=120 \
     --num_files=-1 &
 done

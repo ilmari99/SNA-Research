@@ -37,8 +37,8 @@ class BlockusResult(Result):
         # The score can be [0,150], so we normalize it to [0,1]
         final_scores = [score / 139 for score in final_scores]
         return final_scores
-            
-
+    
+    
     def save_array_to_file(self, arr: np.ndarray, file_path: str) -> None:
         with open(file_path, "a") as f:
             # Save all values as int, except the last one, which is a float.
