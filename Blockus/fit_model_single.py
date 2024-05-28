@@ -90,17 +90,13 @@ def get_model(input_shape):
         perspective_pid_curr_corner = tf.concat([top_left_pids, top_right_pids, bottom_right_pids, bottom_left_pids], axis=1)
         #print(f"Perspective pid curr corner: {perspective_pid_curr_corner}")
         perspective_pid_curr_corner = tf.cast(perspective_pid_curr_corner, tf.int32)
-        #print(f"Perspective pid curr corner: {perspective_pid_curr_corner}")
         # Convert to a B x 4 matrix that describes which corner has the perspective_pid
         # Concat 4 copies of perspective_pids along axis 1 to get shape B x 4
         perspective_pids = tf.reshape(perspective_pids, (-1,1))
         perspective_pids = tf.tile(perspective_pids, [1,4])
-        #print(f"Perspective pids: {perspective_pids}")
         # Calculate a B x 4 mask, that is 1 where curr_corner[b,c] == perspective_pids[b,c]
         mask = tf.equal(perspective_pid_curr_corner, perspective_pids)
         mask = tf.cast(mask, tf.float32)
-        #perspective_pid_curr_corner = tf.cast(perspective_pid_curr_corner == perspective_pids[:,tf.newaxis], tf.float32)
-        #print(f"matches: {mask}")
         # Take argmax to get the corner that has the perspective_pid: B x 1
         # This tells us how many counter clockwise rotations to do for each board in the batch
         number_of_rotations = tf.argmax(mask, axis=1)
@@ -116,6 +112,7 @@ def get_model(input_shape):
         board = RotLayer()(board_rot_pairs)
         board = tf.reshape(board, (-1, board_side_len, board_side_len))
         board = tf.cast(board, tf.int32)
+        
         # We want to make the neural net invariant to whose turn it is.
         # First, we get a matrix P by multiplying each perspective_id to a 20x20 board
         perspective_pids = perspective_pids[:,0]
