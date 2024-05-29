@@ -223,7 +223,8 @@ class BlockusGame(Game):
         color_map = colors.ListedColormap(['black', 'white', 'blue', 'red', 'green'])
         color_map.set_bad(color='black')
         
-        board_normed = normalize_board_to_perspective_tf(np.array(self.board), self.current_pid)
+        #board_normed = normalize_board_to_perspective_tf(np.array(self.board), self.current_pid)
+        board_normed = np.array(self.board)
         #assert board_normed.shape == self.board_size
         #assert board_normed[0,0] == 0
         board_ax.matshow(board_normed, cmap=color_map, vmin=-1, vmax=3)
