@@ -4,12 +4,12 @@ from RLFramework.Game import Game
 from RLFramework.GameState import GameState
 import numpy as np
 
-from BlockusPieces import BLOCKUS_PIECE_MAP
+from BlokusPieces import BLOKUS_PIECE_MAP
 if TYPE_CHECKING:
-    from BlockusGame import BlockusGame
+    from BlokusGame import BlokusGame
 
-class BlockusAction(Action):
-    """ A class representing an action in the game Blockus.
+class BlokusAction(Action):
+    """ A class representing an action in the game Blokus.
     """
     def __init__(self, piece_id : int, x : int, y : int, rotation : int, flip : bool):
         self.piece_id = piece_id
@@ -18,17 +18,17 @@ class BlockusAction(Action):
         self.rotation = rotation
         self.flip = flip
     
-    def __eq__(self, other: 'BlockusAction') -> bool:
+    def __eq__(self, other: 'BlokusAction') -> bool:
         """ Two actions are equal, if they take the same coordinates
         """
-        if not isinstance(other, BlockusAction):
+        if not isinstance(other, BlokusAction):
             return False
         other_coords = other.get_piece_coordinates()
         self_coords = self.get_piece_coordinates()
         # Check that the coordinates are the same, regardless of order
         return set(other_coords) == set(self_coords)
     
-    def modify_game(self, game: 'BlockusGame', inplace: bool = False) -> GameState:
+    def modify_game(self, game: 'BlokusGame', inplace: bool = False) -> GameState:
         """ Place the piece on the board.
         We set 0 values to -1, and 1 values to the player id.
         We then flip and rotate the piece according to the action.
@@ -38,7 +38,7 @@ class BlockusAction(Action):
             game.current_pid = (game.current_pid + 1) % len(game.players)
             return game.game_state_class.from_game(game, copy = False)
         # Get the piece
-        piece = BLOCKUS_PIECE_MAP[self.piece_id]
+        piece = BLOKUS_PIECE_MAP[self.piece_id]
         piece = np.rot90(piece, k=self.rotation)
         if self.flip:
             piece = np.flip(piece, axis=0)
@@ -67,14 +67,14 @@ class BlockusAction(Action):
     
     def __repr__(self) -> str:
         if self.piece_id == -1:
-            return "BlockusAction(None)"
-        piece_mat = BLOCKUS_PIECE_MAP[self.piece_id]
-        return f"BlockusAction({piece_mat}, x: {self.x}, y: {self.y})"
+            return "BlokusAction(None)"
+        piece_mat = BLOKUS_PIECE_MAP[self.piece_id]
+        return f"BlokusAction({piece_mat}, x: {self.x}, y: {self.y})"
     
     def get_piece_coordinates(self):
         """ Return a list of coordinates of the piece.
         """
-        piece = BLOCKUS_PIECE_MAP[self.piece_id]
+        piece = BLOKUS_PIECE_MAP[self.piece_id]
         piece = np.rot90(piece, k=self.rotation)
         if self.flip:
             piece = np.flip(piece, axis=0)
@@ -109,7 +109,7 @@ class BlockusAction(Action):
         return self._check_action_is_legal(game)
         #return True, ""
     
-    def _check_action_is_legal(self, game: 'BlockusGame') -> Tuple[bool, str]:
+    def _check_action_is_legal(self, game: 'BlokusGame') -> Tuple[bool, str]:
         """ Check if the action is legal in the given game state.
         """
         if self.piece_id == -1:
@@ -118,7 +118,7 @@ class BlockusAction(Action):
         if self.piece_id not in game.player_remaining_pieces[game.current_pid]:
             return False, f"The piece with id {self.piece_id} is not in the player's remaining pieces."
         # Check if the piece is placed on the board
-        piece = BLOCKUS_PIECE_MAP[self.piece_id]
+        piece = BLOKUS_PIECE_MAP[self.piece_id]
         piece = np.rot90(piece, k=self.rotation)
         if self.flip:
             piece = np.flip(piece, axis=0)

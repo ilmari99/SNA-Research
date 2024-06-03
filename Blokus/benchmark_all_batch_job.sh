@@ -14,7 +14,7 @@
 module purge
 module load tensorflow/2.15
 
-RLF_BLOCKUS_SCRATCH="/scratch/project_2010270/BlokusGreedyNoDiscount1HotMiniUsePrevModels"
+RLF_BLOKUS_SCRATCH="/scratch/project_2010270/BlokusGreedyNoDiscount1HotMiniUsePrevModels"
 
 PIP_EXE=./venv/bin/pip3
 PYTHON_EXE=./venv/bin/python3
@@ -42,7 +42,7 @@ $PYTHON_EXE -c "import tensorflow as tf; print(tf.config.list_physical_devices('
 $PYTHON_EXE --version
 
 
-$PYTHON_EXE ./Blockus/benchmark_all.py --folder=$RLF_BLOCKUS_SCRATCH/Models/ \
+$PYTHON_EXE ./Blockus/benchmark_all.py --folder=$RLF_BLOKUS_SCRATCH/Models/ \
 --num_games=1200 \
 --num_cpus=100 \
 --opponent_type=greedy

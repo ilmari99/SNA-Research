@@ -3,22 +3,22 @@ from RLFramework.Action import Action
 from RLFramework.Game import Game
 from RLFramework.Player import Player
 import numpy as np
-from BlockusPieces import BLOCKUS_PIECE_MAP
+from BlokusPieces import BLOKUS_PIECE_MAP
 
 if TYPE_CHECKING:
-    from BlockusGame import BlockusGame
+    from BlokusGame import BlokusGame
 
-from BlockusAction import BlockusAction
-from BlockusPlayer import BlockusPlayer
+from BlokusAction import BlokusAction
+from BlokusPlayer import BlokusPlayer
 
 
 
-class BlockusHumanPlayer(BlockusPlayer):
-    def __init__(self, name : str = "BlockusHumanPlayer", logger_args : dict = None):
+class BlokusHumanPlayer(BlokusPlayer):
+    def __init__(self, name : str = "BlokusHumanPlayer", logger_args : dict = None):
         super().__init__(name, logger_args)
         return
     
-    def get_player_evals(self, game: 'BlockusGame') -> np.ndarray:
+    def get_player_evals(self, game: 'BlokusGame') -> np.ndarray:
         """ Get the player evaluations.
         """
         assert game.model_paths, "A The game must have model paths."
@@ -32,7 +32,7 @@ class BlockusHumanPlayer(BlockusPlayer):
         return evals
 
 
-    def choose_move(self, game: 'BlockusGame') -> 'BlockusAction':
+    def choose_move(self, game: 'BlokusGame') -> 'BlokusAction':
         """ With Blokus, the human player chooses a move by clicking on tiles in the board, and pressing enter on the console.
         We then read which tiels were clicked, check if they are a valid selection, and return the action.
         """
@@ -74,14 +74,14 @@ class BlockusHumanPlayer(BlockusPlayer):
                 # Now, find the piece that was clicked
                 piece_idx = row // 4 * 5 + col // 4
                 piece_id = game.player_remaining_pieces[game.current_pid][piece_idx]
-                piece_arr = BLOCKUS_PIECE_MAP[piece_id]
+                piece_arr = BLOKUS_PIECE_MAP[piece_id]
                 piece_arr = np.array(piece_arr)
                 # Rotate the piece 90 degrees clockwise
                 piece_arr = np.rot90(piece_arr)
                 # Convert to a list
                 #piece_arr = piece_arr.tolist()
                 #print(f"New piece array: {piece_arr}")
-                BLOCKUS_PIECE_MAP[piece_id] = piece_arr
+                BLOKUS_PIECE_MAP[piece_id] = piece_arr
                 game.render()
                 return
             clicked_tiles.append((row, col))

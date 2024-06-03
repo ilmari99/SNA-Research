@@ -4,12 +4,12 @@ import functools as ft
 import numpy as np
 from RLFramework.Game import Game
 from RLFramework.GameState import GameState
-from BlockusAction import BlockusAction
-from BlockusPieces import BLOCKUS_PIECE_MAP
-from BlockusPlayer import BlockusPlayer
-from BlockusGame import BlockusGame
+from BlokusAction import BlokusAction
+from BlokusPieces import BLOKUS_PIECE_MAP
+from BlokusPlayer import BlokusPlayer
+from BlokusGame import BlokusGame
 
-class BlockusGameState(GameState):
+class BlokusGameState(GameState):
     """ A class representing the state of the game TicTacToe.
     """
     def __init__(self, state_json):
@@ -19,9 +19,9 @@ class BlockusGameState(GameState):
         self.finished_players : List[int] = state_json["finished_players"]
         
     @property
-    def game(self) -> 'BlockusGame':
-        game = BlockusGame(board_size=(len(self.board), len(self.board[0])))
-        game.initialize_game_wrap([BlockusPlayer(name=f"Player{i}", logger_args=None) for i in range(4)])
+    def game(self) -> 'BlokusGame':
+        game = BlokusGame(board_size=(len(self.board), len(self.board[0])))
+        game.initialize_game_wrap([BlokusPlayer(name=f"Player{i}", logger_args=None) for i in range(4)])
         game.restore_game(self)
         return game
     
@@ -47,7 +47,7 @@ class BlockusGameState(GameState):
             score_boost += 15
         return score_boost
         
-    def _check_action_is_legal(self, action : 'BlockusAction') -> Tuple[bool, str]:
+    def _check_action_is_legal(self, action : 'BlokusAction') -> Tuple[bool, str]:
         """ Check if the action is legal in the given game state.
         """
         game = self.game
@@ -58,7 +58,7 @@ class BlockusGameState(GameState):
         if action.piece_id not in self.player_remaining_pieces[self.current_pid]:
             return False, f"The piece with id {action.piece_id} is not in the player's remaining pieces."
         # Check if the piece is placed on the board
-        piece = BLOCKUS_PIECE_MAP[action.piece_id]
+        piece = BLOKUS_PIECE_MAP[action.piece_id]
         piece = np.rot90(piece, k=action.rotation)
         if action.flip:
             piece = np.flip(piece, axis=0)
@@ -156,7 +156,7 @@ class BlockusGameState(GameState):
     def get_piece_transformations(self, piece_id : int) -> List[Tuple[int, bool]]:
         """ Return the transformed piece.
         """
-        piece = BLOCKUS_PIECE_MAP[piece_id]
+        piece = BLOKUS_PIECE_MAP[piece_id]
         piece_transformations = {}
         # Always the original
         piece_transformations[piece.tobytes()] = (0, False)
@@ -171,7 +171,7 @@ class BlockusGameState(GameState):
             
         return list(piece_transformations.values())
         
-    def get_all_possible_actions(self) -> List[BlockusAction]:
+    def get_all_possible_actions(self) -> List[BlokusAction]:
         """ Return all possible actions.
         """
         available_pieces = self.player_remaining_pieces[self.current_pid]
@@ -185,7 +185,7 @@ class BlockusGameState(GameState):
         # s.t. atleast of the piece's grids is in a 'grids_sharing_corner' grid.
         for valid_shared_corner in grids_sharing_corner:
             for piece_id in available_pieces:
-                piece = BLOCKUS_PIECE_MAP[piece_id]
+                piece = BLOKUS_PIECE_MAP[piece_id]
                 """
                 piece_grids = np.where(piece != 0)
                 max_block_size = self.find_num_connected_pieces(np.array(self.board),
@@ -214,7 +214,7 @@ class BlockusGameState(GameState):
                             #print(f"Piece {piece_id} not inside board")
                             continue
                         # Check that the move is valid through the Action
-                        action = BlockusAction(piece_id, lu_corner[0], lu_corner[1], rot, flip)
+                        action = BlokusAction(piece_id, lu_corner[0], lu_corner[1], rot, flip)
                         # Check if an equivalent action is already in the list
                         #if action in actions:
                         #    continue
@@ -224,7 +224,7 @@ class BlockusGameState(GameState):
         #print(f"Number of possible actions: {len(actions)}") 
         if len(actions) == 0:
             # Add null action
-            actions.append(BlockusAction(-1, -1, -1, -1, False))
+            actions.append(BlokusAction(-1, -1, -1, -1, False))
             self.finished_players.append(self.current_pid)
         return actions
         
@@ -334,7 +334,7 @@ class BlockusGameState(GameState):
         """
         return self.get_all_possible_actions()
     
-    def game_to_state_json(cls, game : 'BlockusGame', player):
+    def game_to_state_json(cls, game : 'BlokusGame', player):
         """ Convert a Game to a state_json.
         """
         state_json = {

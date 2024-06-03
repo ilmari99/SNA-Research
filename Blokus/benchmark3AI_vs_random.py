@@ -7,14 +7,14 @@ import random
 import numpy as np
 import argparse
 
-from BlockusGame import BlockusGame
-from BlockusPlayer import BlockusPlayer
-from BlockusNNPlayer import BlockusNNPlayer
-from BlockusGreedyPlayer import BlockusGreedyPlayer
+from BlokusGame import BlokusGame
+from BlokusPlayer import BlokusPlayer
+from BlokusNNPlayer import BlokusNNPlayer
+from BlokusGreedyPlayer import BlokusGreedyPlayer
 
 
 def game_constructor(i, model_paths = []):
-    return BlockusGame(
+    return BlokusGame(
         board_size=(20,20),
         timeout=45,
         logger_args = None,
@@ -24,13 +24,13 @@ def game_constructor(i, model_paths = []):
         )
 
 def players_constructor(i, model_path = ""):
-    random_players = [BlockusNNPlayer(name=f"NNPlayer{j}_{i}",
+    random_players = [BlokusNNPlayer(name=f"NNPlayer{j}_{i}",
                                     model_path=model_path,
                                     logger_args=None,
                                     move_selection_temp=0.0,
                                     )
                 for j in range(3)]
-    test_player = BlockusPlayer(name=f"RandomPlayer_{i}",
+    test_player = BlokusPlayer(name=f"RandomPlayer_{i}",
                                 logger_args=None,
                                 )
     players = random_players + [test_player]

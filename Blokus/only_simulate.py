@@ -3,17 +3,17 @@ import os
 import numpy as np
 
 from RLFramework.simulate import simulate_games
-from BlockusGame import BlockusGame
-from BlockusResult import BlockusResult
-from BlockusPlayer import BlockusPlayer
-from BlockusNNPlayer import BlockusNNPlayer
-from BlockusGreedyPlayer import BlockusGreedyPlayer
+from BlokusGame import BlokusGame
+from BlokusResult import BlokusResult
+from BlokusPlayer import BlokusPlayer
+from BlokusNNPlayer import BlokusNNPlayer
+from BlokusGreedyPlayer import BlokusGreedyPlayer
 
 
 def game_constructor(i, model_base_folder):
     model_paths = list(filter(lambda path: path.endswith(".tflite"), os.listdir(model_base_folder)))
     model_paths = [os.path.abspath(os.path.join(model_base_folder,model_path)) for model_path in model_paths]
-    return BlockusGame(
+    return BlokusGame(
         board_size=(20,20),
         timeout=80,
         logger_args = None,
@@ -28,7 +28,7 @@ def players_constructor(i, model_base_folder):
     all_model_paths = [os.path.abspath(os.path.join(model_base_folder, model_file)) for model_file in files_in_model_folder if model_file.endswith(".tflite")]
     if len(all_model_paths) == 0:
         print(f"No models found in {model_base_folder}")
-        return [BlockusGreedyPlayer(name=f"Player{j}_{i}",
+        return [BlokusGreedyPlayer(name=f"Player{j}_{i}",
                                     logger_args=None,
                                     action_selection_strategy="weighted",
                                     action_selection_args=((),{"temperature":1.0})) for j in range(4)]
@@ -51,7 +51,7 @@ def players_constructor(i, model_base_folder):
     latest_model_path = all_model_paths[np.argmax(epoch_nums)]
     models_weighted_set = {model_path_ : w for model_path_, w in zip(all_model_paths, model_weights)}
     #print(models_weighted_set)
-    players = [BlockusNNPlayer(name=f"Player{j}_{i}",
+    players = [BlokusNNPlayer(name=f"Player{j}_{i}",
                                     logger_args=None,
                                     model_path=np.random.choice(list(models_weighted_set.keys()), p=list(models_weighted_set.values())),
                                     action_selection_strategy="weighted",

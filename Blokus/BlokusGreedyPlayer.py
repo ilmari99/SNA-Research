@@ -1,10 +1,10 @@
 from typing import List
 import warnings
-from BlockusGameState import BlockusGameState
-from BlockusPlayer import BlockusPlayer
+from Blokus.BlokusGameState import BlokusGameState
+from BlokusPlayer import BlokusPlayer
 import numpy as np
 
-class BlockusGreedyPlayer(BlockusPlayer):
+class BlokusGreedyPlayer(BlokusPlayer):
     
     def __init__(self,name : str = "GreedyPlayer",
                  action_selection_strategy : str = "greedy",
@@ -26,12 +26,12 @@ class BlockusGreedyPlayer(BlockusPlayer):
         f = action_selection_map[action_selection_strategy]
         self.select_action_strategy = lambda evaluations : f(evaluations, *action_selection_args[0], **action_selection_args[1])
     
-    def _get_area(self,state : 'BlockusGameState'):
+    def _get_area(self,state : 'BlokusGameState'):
         """ Get the area covered by the player in the given state.
         """
         return np.sum(state.board == self.pid)
         
-    def evaluate_states(self, states : List[BlockusGameState]) -> List[float]:
+    def evaluate_states(self, states : List[BlokusGameState]) -> List[float]:
         """ Evaluate the given states, according to the amount of area they cover.
         """
         evaluations = [self._get_area(s) for s in states]

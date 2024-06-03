@@ -227,7 +227,7 @@ if __name__ == "__main__":
                         help='Folder containing the data.')
     parser.add_argument('--load_model_path', type=str, help='Path to load a model from.', default=None)
     parser.add_argument('--model_save_path', type=str, required=True, help='Path to save the trained model.')
-    parser.add_argument('--log_dir', type=str, required=False, help='Directory for TensorBoard logs.', default="./blockuslogs/")
+    parser.add_argument('--log_dir', type=str, required=False, help='Directory for TensorBoard logs.', default="./blokuslogs/")
     parser.add_argument('--num_epochs', type=int, help='Number of epochs to train.', default=25)
     parser.add_argument('--patience', type=int, help='Patience for early stopping.', default=5)
     parser.add_argument('--validation_split', type=float, help='Validation split.', default=0.2)

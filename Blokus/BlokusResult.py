@@ -3,7 +3,7 @@ from RLFramework import Result
 import numpy as np
 
 
-class BlockusResult(Result):
+class BlokusResult(Result):
     
     def save_game_states_to_file(self, file_path : str) -> None:
         """ Take all the game states as vectors (X), and label them with the final score of the player.

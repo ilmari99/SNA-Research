@@ -24,7 +24,7 @@ mkdir -p $SLURM_JOB_NAME
 
 echo "Job name: "$SLURM_JOB_NAME
 
-RLF_BLOCKUS_SCRATCH="/scratch/project_2010270/"$SLURM_JOB_NAME
+RLF_BLOKUS_SCRATCH="/scratch/project_2010270/"$SLURM_JOB_NAME
 
 PIP_EXE=./venv/bin/pip3
 PYTHON_EXE=./venv/bin/python3
@@ -50,17 +50,17 @@ $PYTHON_EXE -c "import tensorflow as tf; print(tf.__version__)"
 $PYTHON_EXE -c "import tensorflow as tf; print(tf.config.list_physical_devices('GPU'))"
 $PYTHON_EXE --version
 
-DATA_FOLDER=$RLF_BLOCKUS_SCRATCH/Data
-MODEL_FOLDER=$RLF_BLOCKUS_SCRATCH/Models
+DATA_FOLDER=$RLF_BLOKUS_SCRATCH/Data
+MODEL_FOLDER=$RLF_BLOKUS_SCRATCH/Models
 
 rm -r $DATA_FOLDER
 
 mkdir -p $DATA_FOLDER
 mkdir -p $MODEL_FOLDER
 
-if [ ! -e ./$SLURM_JOB_NAME/Blockus ]; then
-    echo Copying Blokus Python folder to ./$SLURM_JOB_NAME/Blockus
-    cp -r ./Blockus ./$SLURM_JOB_NAME/Blockus
+if [ ! -e ./$SLURM_JOB_NAME/Blokus ]; then
+    echo Copying Blokus Python folder to ./$SLURM_JOB_NAME/Blokus
+    cp -r ./Blokus ./$SLURM_JOB_NAME/Blokus
 fi
 
 for node in $(scontrol show hostname $SLURM_JOB_NODELIST); do
@@ -72,7 +72,7 @@ for node in $(scontrol show hostname $SLURM_JOB_NODELIST); do
         rm -r $new_data_folder
     fi
 
-    srun --nodes=1 --ntasks=1 --cpus-per-task=128 -w $node $PYTHON_EXE ./$SLURM_JOB_NAME/Blockus/only_simulate.py \
+    srun --nodes=1 --ntasks=1 --cpus-per-task=128 -w $node $PYTHON_EXE ./$SLURM_JOB_NAME/Blokus/only_simulate.py \
     --folder=$new_data_folder \
     --model_base_folder=$MODEL_FOLDER \
     --num_games=5000 \

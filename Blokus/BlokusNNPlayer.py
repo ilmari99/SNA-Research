@@ -1,10 +1,10 @@
 from typing import Dict, List, Tuple
 import warnings
-from BlockusGameState import BlockusGameState
-from BlockusPlayer import BlockusPlayer
+from Blokus.BlokusGameState import BlokusGameState
+from BlokusPlayer import BlokusPlayer
 import numpy as np
 
-class BlockusNNPlayer(BlockusPlayer):
+class BlokusNNPlayer(BlokusPlayer):
     
     def __init__(self,name : str = "NNPlayer",
                  model_path : str = "",
@@ -33,7 +33,7 @@ class BlockusNNPlayer(BlockusPlayer):
         
             
         
-    def evaluate_states(self, states : List[BlockusGameState]) -> List[float]:
+    def evaluate_states(self, states : List[BlokusGameState]) -> List[float]:
         """ Evaluate the given states using the neural network.
         """
         # Load the model

@@ -5,16 +5,16 @@ import argparse
 #os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
 import tensorflow as tf
-from BlockusGame import BlockusGame
-from BlockusResult import BlockusResult
-from BlockusPlayer import BlockusPlayer
-from BlockusNNPlayer import BlockusNNPlayer
+from BlokusGame import BlokusGame
+from BlokusResult import BlokusResult
+from BlokusPlayer import BlokusPlayer
+from BlokusNNPlayer import BlokusNNPlayer
 
 
 def game_constructor(i, model_base_folder):
     model_paths = list(filter(lambda path: path.endswith(".tflite"), os.listdir(model_base_folder)))
     model_paths = [os.path.abspath(os.path.join(model_base_folder,model_path)) for model_path in model_paths]
-    return BlockusGame(
+    return BlokusGame(
         board_size=(20,20),
         timeout=65,
         logger_args = None,
@@ -25,7 +25,7 @@ def game_constructor(i, model_base_folder):
 
 def players_constructor(i, model_path, model_base_folder):
     if not model_path:
-        return [BlockusPlayer(name=f"Player{j}_{i}", logger_args=None) for j in range(4)]
+        return [BlokusPlayer(name=f"Player{j}_{i}", logger_args=None) for j in range(4)]
     # Get the epoch number from the model path
     print(f"Model path: {model_path}")
     print(f"Model base folder: {model_base_folder}")
@@ -51,7 +51,7 @@ def players_constructor(i, model_path, model_base_folder):
     
     models_weighted_set = {model_path_ : w for model_path_, w in zip(all_model_paths, model_weights)}
     #print(models_weighted_set)
-    players = [BlockusNNPlayer(name=f"Player{j}_{i}",
+    players = [BlokusNNPlayer(name=f"Player{j}_{i}",
                                     logger_args=None,
                                     model_path=np.random.choice(list(models_weighted_set.keys()), p=list(models_weighted_set.values())),
                                     move_selection_temp=1.0,
@@ -175,9 +175,9 @@ def parse_arguments():
     # Path arguments
     parser.add_argument("--starting_epoch", type=int, default=0,
                         help="Epoch to start training from.")
-    parser.add_argument("--model_folder_base", type=str, default=os.path.abspath("./BlockusModels/"),
+    parser.add_argument("--model_folder_base", type=str, default=os.path.abspath("./BlokusModels/"),
                         help="Base path for model storage.")
-    parser.add_argument("--data_folder_base", type=str, default=os.path.abspath("./BlockusModelFit/"),
+    parser.add_argument("--data_folder_base", type=str, default=os.path.abspath("./BlokusModelFit/"),
                         help="Base path for training data.")
     parser.add_argument("--starting_model_path", type=str, default="",
                         help="Path to the starting model (optional).")

@@ -8,16 +8,16 @@ from RLFramework import Game
 from typing import Dict, List, Tuple, TYPE_CHECKING
 
 import tensorflow as tf
-from BlockusAction import BlockusAction
-from BlockusPlayer import BlockusPlayer
-from BlockusResult import BlockusResult
+from BlokusAction import BlokusAction
+from BlokusPlayer import BlokusPlayer
+from BlokusResult import BlokusResult
 import matplotlib.pyplot as plt
 from matplotlib import colors, cm
 from RLFramework.utils import TFLiteModel
-from BlockusPieces import BLOCKUS_PIECE_MAP
+from BlokusPieces import BLOKUS_PIECE_MAP
 
 if TYPE_CHECKING:
-    from BlockusGameState import BlockusGameState
+    from Blokus.BlokusGameState import BlokusGameState
 
 def rotate_board_to_perspective(board, perspective_pid):
     """ Rotate the board to the perspective of perspective_pid.
@@ -146,13 +146,13 @@ def normalize_board_to_perspective(board, perspective_pid):
     
     return board
 
-class BlockusGame(Game):
+class BlokusGame(Game):
     """ The game class handles the play loop.
     """
     def __init__(self, board_size : Tuple[int, int] = (20, 20), model_paths=[], **kwargs):
         # Hack
-        from BlockusGameState import BlockusGameState
-        super().__init__(BlockusGameState, custom_result_class=BlockusResult, **kwargs)
+        from BlokusGameState import BlokusGameState
+        super().__init__(BlokusGameState, custom_result_class=BlokusResult, **kwargs)
         self.board_size = board_size
         self.model_paths = []
         self.board = None
@@ -167,10 +167,10 @@ class BlockusGame(Game):
             self.set_models(list(model_paths))
         out = super().play_game(players)
         if self.render_mode == "human":
-            plt.savefig("blockus.png")
+            plt.savefig("blokus.png")
         return out
     
-    def get_current_state(self, player: Player = None) -> 'BlockusGameState':
+    def get_current_state(self, player: Player = None) -> 'BlokusGameState':
         return super().get_current_state(player)
     
     def __repr__(self) -> str:
@@ -194,7 +194,7 @@ class BlockusGame(Game):
         self.model_paths = model_paths
         self.models = {path: TFLiteModel(path) for path in model_paths}
     
-    def initialize_game(self, players: List[BlockusPlayer]) -> None:
+    def initialize_game(self, players: List[BlokusPlayer]) -> None:
         """ When the game is started, we need to set the board.
         """
         self.board = [[-1 for _ in range(self.board_size[1])] for _ in range(self.board_size[0])]
@@ -241,7 +241,7 @@ class BlockusGame(Game):
 
         # Add section to show remaining pieces for current player
         remaining_pieces = self.player_remaining_pieces[self.current_pid]
-        remaining_pieces = [BLOCKUS_PIECE_MAP[piece] for piece in remaining_pieces]
+        remaining_pieces = [BLOKUS_PIECE_MAP[piece] for piece in remaining_pieces]
         
         pieces_ax.clear()
         # Place all the pieces in the pieces_ax
@@ -273,7 +273,7 @@ class BlockusGame(Game):
 
         plt.pause(0.01)
 
-    def restore_game(self, game_state: 'BlockusGameState') -> None:
+    def restore_game(self, game_state: 'BlokusGameState') -> None:
         """ Restore the game to the state described by the game_state.
         We don't need to worry about the players states or their scores, as they are automatically restored.
         """
@@ -283,14 +283,14 @@ class BlockusGame(Game):
         self.previous_turns = game_state.previous_turns
         self.finished_players = game_state.finished_players
     
-    def calculate_reward(self, pid : int, game_state: 'BlockusGameState') -> float:
+    def calculate_reward(self, pid : int, game_state: 'BlokusGameState') -> float:
         """ Calculate the reward for the player.
         If the player wins, the reward is 1.0.
         If the game is a draw, the reward is 0.5
         """
         return self.get_current_state().calculate_reward(pid)
     
-    def environment_action(self, game_state : 'BlockusGameState') -> 'BlockusGameState':
+    def environment_action(self, game_state : 'BlokusGameState') -> 'BlokusGameState':
         self.update_finished_players_in_gamestate(game_state)
         self.update_player_scores_in_gamestate(game_state)
         self.update_player_attributes()
@@ -326,7 +326,7 @@ class BlockusGame(Game):
         return self.get_current_state().find_num_connected_pieces(board, pid, x, y)
         
     
-    def get_all_possible_actions(self) -> List[BlockusAction]:
+    def get_all_possible_actions(self) -> List[BlokusAction]:
         """ Return all possible actions.
         """
         return self.get_current_state().get_all_possible_actions()

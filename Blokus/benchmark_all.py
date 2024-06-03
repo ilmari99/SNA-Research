@@ -8,14 +8,14 @@ import random
 import numpy as np
 import argparse
 
-from BlockusGame import BlockusGame
-from BlockusPlayer import BlockusPlayer
-from BlockusNNPlayer import BlockusNNPlayer
-from BlockusGreedyPlayer import BlockusGreedyPlayer
+from BlokusGame import BlokusGame
+from BlokusPlayer import BlokusPlayer
+from BlokusNNPlayer import BlokusNNPlayer
+from BlokusGreedyPlayer import BlokusGreedyPlayer
 
 
 def game_constructor(i, model_paths = []):
-    return BlockusGame(
+    return BlokusGame(
         board_size=(20,20),
         timeout=45,
         logger_args = None,
@@ -27,23 +27,23 @@ def game_constructor(i, model_paths = []):
 def players_constructor(i, model_path = "", opponent_type = "random"):
     assert opponent_type in ["random", "greedy"], f"Player type must be either 'random' or 'greedy', not {opponent_type}"
     if opponent_type == "random":
-        opponent_players = [BlockusPlayer(name=f"RandomPlayer{j}_{i}",
+        opponent_players = [BlokusPlayer(name=f"RandomPlayer{j}_{i}",
                                         logger_args=None,
                                         )
                     for j in range(3)]
     elif opponent_type == "greedy":
-        opponent_players = [BlockusGreedyPlayer(name=f"GreedyPlayer{j}_{i}",
+        opponent_players = [BlokusGreedyPlayer(name=f"GreedyPlayer{j}_{i}",
                                         logger_args=None,
                                         action_selection_strategy="epsilon_greedy",
                                         action_selection_args=((), {"epsilon" : 0.1}),
                                         )
                     for j in range(3)]
     if not model_path:
-        test_player = BlockusPlayer(name=f"TestPlayer_{i}",
+        test_player = BlokusPlayer(name=f"TestPlayer_{i}",
                                     logger_args=None,
                                     )
     else:
-        test_player = BlockusNNPlayer(name=f"TestPlayer_{i}",
+        test_player = BlokusNNPlayer(name=f"TestPlayer_{i}",
                                     logger_args=None,
                                     model_path=model_path,
                                     action_selection_strategy="greedy",

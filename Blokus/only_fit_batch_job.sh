@@ -23,7 +23,7 @@ module load tensorflow/2.15
 # Create the folder
 mkdir -p $SLURM_JOB_NAME
 
-RLF_BLOCKUS_SCRATCH="/scratch/project_2010270/$SLURM_JOB_NAME"
+RLF_BLOKUS_SCRATCH="/scratch/project_2010270/$SLURM_JOB_NAME"
 
 PIP_EXE=./venv/bin/pip3
 PYTHON_EXE=./venv/bin/python3
@@ -49,8 +49,8 @@ $PYTHON_EXE -c "import tensorflow as tf; print(tf.__version__)"
 $PYTHON_EXE -c "import tensorflow as tf; print(tf.config.list_physical_devices('GPU'))"
 $PYTHON_EXE --version
 
-DATA_FOLDER=$RLF_BLOCKUS_SCRATCH/Data
-MODEL_FOLDER=$RLF_BLOCKUS_SCRATCH/Models
+DATA_FOLDER=$RLF_BLOKUS_SCRATCH/Data
+MODEL_FOLDER=$RLF_BLOKUS_SCRATCH/Models
 
 mkdir -p $DATA_FOLDER
 mkdir -p $MODEL_FOLDER
@@ -79,12 +79,12 @@ fi
 # We save the model to the model folder with the epoch number
 MODEL_SAVE_PATH=$MODEL_FOLDER/model_$EPOCH_NUM.keras
 
-if [ ! -e ./$SLURM_JOB_NAME/Blockus ]; then
-    echo Copying Blokus Python folder to ./$SLURM_JOB_NAME/Blockus
-    cp -r ./Blockus ./$SLURM_JOB_NAME/Blockus
+if [ ! -e ./$SLURM_JOB_NAME/Blokus ]; then
+    echo Copying Blokus Python folder to ./$SLURM_JOB_NAME/Blokus
+    cp -r ./Blokus ./$SLURM_JOB_NAME/Blokus
 fi
 
-$PYTHON_EXE ./$SLURM_JOB_NAME/Blockus/fit_model_single.py \
+$PYTHON_EXE ./$SLURM_JOB_NAME/Blokus/fit_model_single.py \
 --data_folder=$DATA_FOLDER \
 --load_model_path=$MODEL_FILE \
 --model_save_path=$MODEL_SAVE_PATH \

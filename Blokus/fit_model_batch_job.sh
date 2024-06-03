@@ -41,12 +41,12 @@ $PYTHON_EXE -c "import tensorflow as tf; print(tf.config.list_physical_devices('
 $PYTHON_EXE --version
 
 # Run
-MODEL_FOLDER_PATH=/projappl/project_2010270/RLFramework/BlockusModelsNoCumulate/
+MODEL_FOLDER_PATH=/projappl/project_2010270/RLFramework/BlokusModelsNoCumulate/
 
-$PYTHON_EXE ./Blockus/fit_model.py --model_folder_base=$MODEL_FOLDER_PATH \
+$PYTHON_EXE ./Blokus/fit_model.py --model_folder_base=$MODEL_FOLDER_PATH \
 --starting_epoch=6 \
 --num_epochs=12 \
---data_folder_base=$LOCAL_SCRATCH/BlockusDataNoCumulate/ \
+--data_folder_base=$LOCAL_SCRATCH/BlokusDataNoCumulate/ \
 --num_cpus=64 \
 --num_games=6400 \
 --num_files=512 \

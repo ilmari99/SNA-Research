@@ -3,11 +3,11 @@ import numpy as np
 from RLFramework.Game import Game
 from RLFramework.GameState import GameState
 from RLFramework.Player import Player
-from BlockusAction import BlockusAction
+from BlokusAction import BlokusAction
 if TYPE_CHECKING:
-    from BlockusGame import BlockusGame
+    from BlokusGame import BlokusGame
 
-class BlockusPlayer(Player):
+class BlokusPlayer(Player):
     """ A class representing a player of the game TicTacToe.
     """
     def __init__(self, name, logger_args = None):
@@ -22,7 +22,7 @@ class BlockusPlayer(Player):
     def initialize_player(self, game: Game) -> None:
         """ Called when a game begins.
         """
-        self.game : BlockusGame = game
+        self.game : BlokusGame = game
         self.is_finished = False
         return
     
@@ -37,5 +37,5 @@ class BlockusPlayer(Player):
         return self._select_weighted_action(evaluations, temperature=0.0)
     
     def __repr__(self):
-        return f"BlockusPlayer(name={self.name}, pid={self.pid}, score={self.score}, remaining_pieces={self.remaining_pieces})"
+        return f"BlokusPlayer(name={self.name}, pid={self.pid}, score={self.score}, remaining_pieces={self.remaining_pieces})"
         

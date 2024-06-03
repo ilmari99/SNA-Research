@@ -1,5 +1,5 @@
 import numpy as np
-BLOCKUS_PIECE_MAP = {
+BLOKUS_PIECE_MAP = {
     0: [[1,1,1,1,1]],
     1 : [[1,1],
          [1,0]],
@@ -47,9 +47,9 @@ BLOCKUS_PIECE_MAP = {
     20 : [[0,1,0],
           [1,1,1]],
 }
-BLOCKUS_PIECE_MAP = {k: np.array(v) for k, v in BLOCKUS_PIECE_MAP.items()}
+BLOKUS_PIECE_MAP = {k: np.array(v) for k, v in BLOKUS_PIECE_MAP.items()}
 # Pad all pieces according to their longest dimension
-for k, v in BLOCKUS_PIECE_MAP.items():
+for k, v in BLOKUS_PIECE_MAP.items():
     max_dim = max(v.shape)
     pad = (max_dim - v.shape[0], max_dim - v.shape[1])
-    BLOCKUS_PIECE_MAP[k] = np.pad(v, ((0, pad[0]), (0, pad[1])), mode='constant', constant_values=0)
+    BLOKUS_PIECE_MAP[k] = np.pad(v, ((0, pad[0]), (0, pad[1])), mode='constant', constant_values=0)

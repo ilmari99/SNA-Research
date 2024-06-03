@@ -1,7 +1,7 @@
 #!/bin/bash
 
-JOB1=./Blockus/only_simulate_batch_job.sh
-JOB2=./Blockus/only_fit_batch_job.sh
+JOB1=./Blokus/only_simulate_batch_job.sh
+JOB2=./Blokus/only_fit_batch_job.sh
 
 prev_jobid=""
 
