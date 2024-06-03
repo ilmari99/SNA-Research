@@ -117,8 +117,8 @@ def main(data_folder,
         
         tb_log = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
         early_stop = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=patience, restore_best_weights=True)
-        #save_model_cb = SaveModelCallback(model_save_path)
-        model.fit(train_ds, epochs=num_epochs, callbacks=[tb_log, early_stop], validation_data=val_ds)
+        save_model_cb = SaveModelCallback(model_save_path)
+        model.fit(train_ds, epochs=num_epochs, callbacks=[tb_log, early_stop, save_model_cb], validation_data=val_ds)
     model.save(model_save_path)
 
 if __name__ == "__main__":

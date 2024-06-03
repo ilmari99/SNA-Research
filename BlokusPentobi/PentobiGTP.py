@@ -105,8 +105,8 @@ class PentobiGTP:
         if quiet:
             command.append('--quiet')
         command.append(f'--threads {threads}')
-        #print(f"Starting pentobi-gtp with command: {command}")
         command = ' '.join(command)
+        #print(f"Starting pentobi-gtp with command: {command}")
         # Start the pentobi-gtp process in an invisible window
         self.process = subprocess.Popen(
             command,
@@ -158,6 +158,7 @@ class PentobiGTP:
         if not filename:
             raise ValueError("Filename is empty")
         states = np.array(self.game_states)
+        #print(f"States shape: {states.shape}", flush=True)
         # To every state, append the score that was obtained by pid state[0]
         scores = self.score
         scores = np.array(scores)
@@ -241,8 +242,10 @@ class PentobiGTP:
     def is_game_finished(self):
         for pid in range(1,5):
             out = self.send_command(f"all_legal {pid}")
+            #print(out,flush=True)
             moves = out.split("=")
             moves = list(filter(lambda x: x != "", moves))
+            #print(f"Moves: {moves}", flush=True)
             # If the response is empty, the player has no legal moves
             if len(moves) > 0:
                 return False

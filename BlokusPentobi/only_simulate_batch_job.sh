@@ -76,6 +76,6 @@ for node in $(scontrol show hostname $SLURM_JOB_NODELIST); do
     --data_folder=$new_data_folder \
     --model_folder=$MODEL_FOLDER \
     --num_games=5000 \
-    --num_cpus=80 &
+    --num_cpus=100 &
 done
 wait
