@@ -3,8 +3,8 @@ import sys
 import keras
 import tensorflow as tf
 import numpy as np
-from RLFramework.read_to_dataset import read_to_dataset
-from RLFramework.utils import convert_model_to_tflite
+from utils import read_to_dataset
+from utils import convert_model_to_tflite
 import argparse
 
 from board_norming import NormalizeBoardToPerspectiveLayer
@@ -132,7 +132,7 @@ if __name__ == "__main__":
     parser.add_argument('--patience', type=int, help='Patience for early stopping.', default=5)
     parser.add_argument('--validation_split', type=float, help='Validation split.', default=0.2)
     parser.add_argument('--batch_size', type=int, help='Batch size.', default=64)
-    parser.add_argument('--divide_y_by', type=int, required=False, help='Divide y by this number.', default=1)
+    parser.add_argument('--divide_y_by', type=int, required=False, help='Divide y by this number.', default=104)
     args = parser.parse_args()
     print(args)
     main(data_folder=args.data_folder,

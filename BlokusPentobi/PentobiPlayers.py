@@ -73,8 +73,19 @@ class PentobiNNPlayer:
         if move_selection_strategy == "best":
             best_move = np.argmax(predictions)
             selected_move = moves[best_move]
-        elif move_selection_strategy == "weighted_random":
+        elif move_selection_strategy == "weighted":
+            top_p = move_selection_kwargs.get("top_p", 1.0)
             psoftmax = np.exp(predictions) / np.sum(np.exp(predictions))
+            # Sort from best to worst
+            sort_idxs = np.argsort(psoftmax)[::-1]
+            psoftmax = psoftmax[sort_idxs]
+            moves = [moves[i] for i in sort_idxs]
+            # Take the top p moves
+            psoftmax = psoftmax[:int(len(psoftmax)*top_p)]
+            moves = moves[:int(len(moves)*top_p)]
+            # Renormalize
+            psoftmax = psoftmax / np.sum(psoftmax)
+            
             selected_move = np.random.choice(moves, p=psoftmax)
         self.pentobi_sess.play_move(self.pid, selected_move)
         return

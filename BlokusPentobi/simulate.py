@@ -59,7 +59,7 @@ def player_maker(proc, model_paths = [], shuffle_players = True):
     players = []
     for i in range(4):
         model = random.choice(models)
-        players.append(PentobiNNPlayer(i+1, proc, model))
+        players.append(PentobiNNPlayer(i+1, proc, model,move_selection_strategy="weighted", move_selection_kwargs={"temperature": 1.0}))
     if shuffle_players:
         players = shuffle_players_func(players)
     return players
@@ -73,6 +73,7 @@ if __name__=="__main__":
     if os.path.exists('env.json'):
         with open('env.json') as f:
             env_vars = json.load(f)
+            print(env_vars)
     else:
         env_vars = {}
 
@@ -90,6 +91,7 @@ if __name__=="__main__":
     #os.environ["PENTOBI_GTP"] = os.path.abspath(args.pentobi_gtp)
     data_folder = os.path.abspath(args.data_folder)
     model_folder = os.path.abspath(args.model_folder)
+    pentobi_gtp = os.path.abspath(args.pentobi_gtp)
     if not os.path.exists(data_folder):
         os.makedirs(data_folder, exist_ok=True)
     if not os.path.exists(model_folder):
@@ -102,6 +104,7 @@ if __name__=="__main__":
     
     def arg_generator(num_games):
         kwargs = {
+            "command": pentobi_gtp,
             "level": 1,
             "threads": 1,
             "showboard": False,

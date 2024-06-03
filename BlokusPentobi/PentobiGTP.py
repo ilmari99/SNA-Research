@@ -224,7 +224,10 @@ class PentobiGTP:
     def get_legal_moves(self, pid): 
         out = self.send_command(f"all_legal {pid}")
         moves = out.replace("=", "").split("\n")
-        moves = list(filter(lambda x: x != "", moves))
+        moves = list(map(lambda mv : mv.strip(),filter(lambda x: x != "", moves)))
+        if len(moves) == 0:
+            #print(f"Player {pid} has no legal moves")
+            moves = ["pass"]
         return moves
     
     def is_game_finished(self):
