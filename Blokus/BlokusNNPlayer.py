@@ -1,6 +1,6 @@
 from typing import Dict, List, Tuple
 import warnings
-from Blokus.BlokusGameState import BlokusGameState
+from BlokusGameState import BlokusGameState
 from BlokusPlayer import BlokusPlayer
 import numpy as np
 
