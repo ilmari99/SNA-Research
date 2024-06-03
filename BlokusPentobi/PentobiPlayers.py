@@ -67,7 +67,7 @@ class PentobiNNPlayer:
                 move_selection_strategy = "best"
                 move_selection_kwargs = {}
         moves, next_states = self.get_next_states()
-        if len(moves) == 0:
+        if len(moves) == 1 and moves[0] == "pass":
             return self.pentobi_sess.play_move(self.pid, "pass", mock_move=False)
         predictions = self.model.predict(next_states)
         if move_selection_strategy == "best":

@@ -59,7 +59,7 @@ def player_maker(proc, model_paths = [], shuffle_players = True):
     players = []
     for i in range(4):
         model = random.choice(models)
-        players.append(PentobiNNPlayer(i+1, proc, model,move_selection_strategy="weighted", move_selection_kwargs={"temperature": 1.0}))
+        players.append(PentobiNNPlayer(i+1, proc, model,move_selection_strategy="weighted", move_selection_kwargs={"top_p": 1.0}))
     if shuffle_players:
         players = shuffle_players_func(players)
     return players

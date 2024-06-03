@@ -1,8 +1,8 @@
 #!/bin/bash
 
-#SBATCH --job-name=PentobiBaseline50K
+#SBATCH --job-name=BlokusPentobiBaseline50K
 #SBATCH --account=project_2010270
-#SBATCH --time=03:00:00
+#SBATCH --time=01:00:00
 #SBATCH --partition=medium
 #SBATCH --output=%x/simulate_%j.out
 #SBATCH --error=%x/simulate_%j.err
@@ -73,10 +73,9 @@ for node in $(scontrol show hostname $SLURM_JOB_NODELIST); do
     fi
 
     srun --nodes=1 --ntasks=1 --cpus-per-task=128 -w $node $PYTHON_EXE ./$SLURM_JOB_NAME/BlokusPentobi/simulate.py \
-    --folder=$new_data_folder \
-    --model_base_folder=$MODEL_FOLDER \
+    --data_folder=$new_data_folder \
+    --model_folder=$MODEL_FOLDER \
     --num_games=5000 \
-    --num_cpus=120 \
-    --num_files=-1 &
+    --num_cpus=100 &
 done
 wait

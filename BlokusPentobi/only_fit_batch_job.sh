@@ -1,11 +1,11 @@
 #!/bin/bash
 
-#SBATCH --job-name=PentobiBaseline10K
+#SBATCH --job-name=BlokusPentobiBaseline50K
 #SBATCH --account=project_2010270
 # Write the output files to the folder wth job-name
 #SBATCH --output=%x/fit_%j.out
 #SBATCH --error=%x/fit_%j.err
-#SBATCH --time=03:00:00
+#SBATCH --time=01:00:00
 #SBATCH --partition=gpusmall
 #SBATCH --mail-type=END
 
@@ -92,7 +92,7 @@ $PYTHON_EXE ./$SLURM_JOB_NAME/BlokusPentobi/fit_model_single.py \
 --num_epochs=30 \
 --patience=4 \
 --validation_split=0.2 \
---batch_size=1024 \
+--batch_size=4096 \
 
 
 
