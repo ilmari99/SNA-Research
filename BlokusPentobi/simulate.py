@@ -1,4 +1,5 @@
 from collections import Counter
+import gc
 import json
 import multiprocessing
 import os
@@ -19,7 +20,7 @@ def play_pentobi(i, seed, player_maker, save_data_file = "", proc_args = {}):
         "config": None,
         "game": "classic",
         "level": 1,
-        "seed": None,
+        "seed": seed,
         "showboard": False,
         "nobook": False,
         "noresign": True,
@@ -40,8 +41,9 @@ def play_pentobi(i, seed, player_maker, save_data_file = "", proc_args = {}):
         player.play_move()
     if save_data_file:
         proc.write_states_to_file(save_data_file)
+    score = list(proc.score)
     proc.close()
-    return proc.score
+    return score
 
 def shuffle_players_func(players):
     random.shuffle(players)
@@ -80,7 +82,7 @@ if __name__=="__main__":
         env_vars = {}
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--num_games", type=int, default=10, help="Number of games")
+    parser.add_argument("--num_games", type=int, default=1000, help="Number of games")
     parser.add_argument("--num_cpus", type=int, default=10, help="Number of CPUs")
     parser.add_argument("--pentobi_gtp", type=str, default=env_vars.get('pentobi_gtp', None), help="Path to pentobi-gtp")
     parser.add_argument("--data_folder", type=str, default=env_vars.get('data_folder', "./Data"), help="Path to data folder")

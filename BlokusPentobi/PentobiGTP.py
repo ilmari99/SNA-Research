@@ -1,12 +1,13 @@
 from collections import Counter
 import os
 import random
+import signal
 import subprocess
 import threading
 import time
 from typing import List
 import multiprocessing
-
+import gc
 import numpy as np
 import tensorflow as tf
 
@@ -115,6 +116,7 @@ class PentobiGTP:
             text=True,
             bufsize=1,
             shell=True,
+            #preexec_fn=os.setsid,
         )
         self.game_states = []
         
@@ -151,12 +153,6 @@ class PentobiGTP:
         sc = sc.split(" ")
         sc = [int(x) for x in sc[1:]]
         return sc
-    
-        
-    def close(self):
-        self.send_command("quit")
-        self.process.terminate()
-        self.process.wait()
     
     def write_states_to_file(self, filename, overwrite=False):
         if not filename:
@@ -226,6 +222,12 @@ class PentobiGTP:
             board = self.board_np.flatten()
             self.game_states.append(np.concatenate([misc, board]))        
         return True
+    
+    def close(self):
+        self.send_command("quit")
+        self.process.communicate()
+        self.process.terminate()
+        self.process.wait()
     
     def get_legal_moves(self, pid): 
         out = self.send_command(f"all_legal {pid}")
