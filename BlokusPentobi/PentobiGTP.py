@@ -152,6 +152,12 @@ class PentobiGTP:
         sc = [int(x) for x in sc[1:]]
         return sc
     
+        
+    def close(self):
+        self.send_command("quit")
+        self.process.terminate()
+        self.process.wait()
+    
     def write_states_to_file(self, filename, overwrite=False):
         if not filename:
             raise ValueError("Filename is empty")

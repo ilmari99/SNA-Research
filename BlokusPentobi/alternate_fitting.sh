@@ -5,7 +5,7 @@ JOB2=./BlokusPentobi/only_fit_batch_job.sh
 
 prev_jobid=""
 
-for i in {1..10}; do
+for i in {1..2}; do
     if [ "$i" != 1 ]; then
         jobid=$(sbatch --dependency=afterok:$prev_jobid --parsable $JOB1)
     else

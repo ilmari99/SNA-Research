@@ -40,6 +40,7 @@ def play_pentobi(i, seed, player_maker, save_data_file = "", proc_args = {}):
         player.play_move()
     if save_data_file:
         proc.write_states_to_file(save_data_file)
+    proc.close()
     return proc.score
 
 def shuffle_players_func(players):
@@ -63,6 +64,7 @@ def player_maker(proc, model_paths = [], shuffle_players = True):
     if shuffle_players:
         players = shuffle_players_func(players)
     return players
+
 def play_pentobi_wrapper(args):
     return play_pentobi(*args)
 
@@ -124,7 +126,8 @@ if __name__=="__main__":
             try:
                 result = next(gen)
                 results.append(result)
-                print(f"Games played: {len(results)}", end="\r")
+                if len(results) % 100 == 0:
+                    print(f"Games played: {len(results)}", end="\r")
             except StopIteration:
                 break
     #print(results)
