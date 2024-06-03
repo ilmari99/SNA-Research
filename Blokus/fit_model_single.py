@@ -176,6 +176,7 @@ def main(data_folder,
          patience=5,
          validation_split=0.2,
          batch_size=64,
+         divide_y_by=1
          ):
     # Find all folders inside the data_folder
     data_folders = [os.path.join(data_folder, f) for f in os.listdir(data_folder) if os.path.isdir(os.path.join(data_folder, f))]
@@ -195,6 +196,10 @@ def main(data_folder,
     with strategy.scope():
         
         train_ds, val_ds, num_files, approx_num_samples = read_to_dataset(data_folders, frac_test_files=validation_split,filter_files_fn=lambda x: x.endswith(".csv"))
+        
+        if divide_y_by != 1:
+            train_ds = train_ds.map(lambda x, y: (x, y/divide_y_by), num_parallel_calls=tf.data.experimental.AUTOTUNE, deterministic=False)
+            val_ds = val_ds.map(lambda x, y: (x, y/divide_y_by), num_parallel_calls=tf.data.experimental.AUTOTUNE, deterministic=False)
         
         first_sample = train_ds.take(1).as_numpy_iterator().next()
         input_shape = first_sample[0].shape
@@ -232,6 +237,7 @@ if __name__ == "__main__":
     parser.add_argument('--patience', type=int, help='Patience for early stopping.', default=5)
     parser.add_argument('--validation_split', type=float, help='Validation split.', default=0.2)
     parser.add_argument('--batch_size', type=int, help='Batch size.', default=64)
+    parser.add_argument('--divide_y_by', type=int, required=False, help='Divide y by this number.', default=1)
     args = parser.parse_args()
     print(args)
     main(data_folder=args.data_folder,
@@ -241,7 +247,8 @@ if __name__ == "__main__":
             num_epochs=args.num_epochs,
             patience=args.patience,
             validation_split=args.validation_split,
-            batch_size=args.batch_size)
+            batch_size=args.batch_size,
+            divide_y_by=args.divide_y_by)
     exit(0)
     
     
