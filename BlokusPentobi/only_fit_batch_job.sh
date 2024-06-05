@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --job-name=BlokusPentobiBaseline50K
+#SBATCH --job-name=BlokusPentobiBaselineLarge50KBBSLR
 #SBATCH --account=project_2010270
 # Write the output files to the folder wth job-name
 #SBATCH --output=%x/fit_%j.out
@@ -90,7 +90,7 @@ $PYTHON_EXE ./$SLURM_JOB_NAME/BlokusPentobi/fit_model_single.py \
 --model_save_path=$MODEL_SAVE_PATH \
 --log_dir=$SLURM_JOB_NAME/tblog_$SLURM_JOB_ID \
 --num_epochs=30 \
---patience=4 \
+--patience=6 \
 --validation_split=0.2 \
 --batch_size=4096 \
 

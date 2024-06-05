@@ -45,6 +45,8 @@ class PentobiNNPlayer:
         all_moves = self.pentobi_sess.get_legal_moves(self.pid)
         next_states = []
         for move in all_moves:
+            if move == "pass":
+                continue
             self.pentobi_sess.play_move(self.pid, move, mock_move=True)
             board_np = self.pentobi_sess.board_np.flatten()
             misc = np.array([self.pid-1, self.pid-1])
@@ -70,22 +72,32 @@ class PentobiNNPlayer:
         if len(moves) == 1 and moves[0] == "pass":
             return self.pentobi_sess.play_move(self.pid, "pass", mock_move=False)
         predictions = self.model.predict(next_states)
+        #print(predictions,flush=True)
         if move_selection_strategy == "best":
             best_move = np.argmax(predictions)
             selected_move = moves[best_move]
         elif move_selection_strategy == "weighted":
             top_p = move_selection_kwargs.get("top_p", 1.0)
             psoftmax = np.exp(predictions) / np.sum(np.exp(predictions))
+            psoftmax = psoftmax.flatten()
+            #print(psoftmax,flush=True)
             # Sort from best to worst
             sort_idxs = np.argsort(psoftmax)[::-1]
+            #print(sort_idxs,flush=True)
             psoftmax = psoftmax[sort_idxs]
+            #print(moves,flush=True)
             moves = [moves[i] for i in sort_idxs]
             # Take the top p moves
-            psoftmax = psoftmax[:int(len(psoftmax)*top_p)]
-            moves = moves[:int(len(moves)*top_p)]
+            psoftmax_cumsum = np.cumsum(psoftmax)
+            cutoff = psoftmax_cumsum >= top_p - 10**-6
+            cutoff_idx = np.argmax(cutoff) + 1
+            #print(f"cutoff idx: {cutoff_idx}", flush=True)
+            psoftmax = psoftmax[:cutoff_idx]
+            moves = moves[:cutoff_idx]
             # Renormalize
             psoftmax = psoftmax / np.sum(psoftmax)
             
             selected_move = np.random.choice(moves, p=psoftmax)
+        #print(f"Selected move: {selected_move}")
         self.pentobi_sess.play_move(self.pid, selected_move)
         return

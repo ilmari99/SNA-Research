@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --job-name=BlokusPentobiBaseline50K
+#SBATCH --job-name=BlokusPentobiBaselineLarge50KBBSLR
 #SBATCH --account=project_2010270
 #SBATCH --time=01:00:00
 #SBATCH --partition=medium

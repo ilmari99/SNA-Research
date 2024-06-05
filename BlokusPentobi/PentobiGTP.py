@@ -207,18 +207,23 @@ class PentobiGTP:
             return False
         out = self.send_command(f"reg_genmove {pid}")
         # = a1,b1 ...
-        move = out.split("=")
-        move = move[1]
+        if "?" in out:
+            return "pass"
+        move = out.replace("= ", "")
         return move
     
     def play_move(self, pid, move, mock_move=False):
         """ Move is in the format a1,b1,a2, etc.
         """
         if not self._check_pid_has_turn(pid):
-            return False
-        out = self.send_command(f"play {pid} {move}")
+            raise ValueError(f"Player {pid} is not in turn!")
+        out = "="
+        if move != "pass":
+            out = self.send_command(f"play {pid} {move}")
+        if out.startswith("?"):
+            raise ValueError(f"Invalid move: {pid}, {move}. Valid moves: {self.get_legal_moves(pid)}")
         self.change_player(pid)
-        if not mock_move:
+        if not mock_move and move != "pass":
             misc = np.array([pid-1, self.current_player-1])
             board = self.board_np.flatten()
             self.game_states.append(np.concatenate([misc, board]))        
@@ -234,6 +239,7 @@ class PentobiGTP:
         out = self.send_command(f"all_legal {pid}")
         moves = out.replace("=", "").split("\n")
         moves = list(map(lambda mv : mv.strip(),filter(lambda x: x != "", moves)))
+        #print(f"Found moves: {moves}")
         if len(moves) == 0:
             #print(f"Player {pid} has no legal moves")
             moves = ["pass"]
@@ -241,14 +247,15 @@ class PentobiGTP:
     
     def is_game_finished(self):
         for pid in range(1,5):
-            out = self.send_command(f"all_legal {pid}")
-            #print(out,flush=True)
-            moves = out.split("=")
-            moves = list(filter(lambda x: x != "", moves))
+            moves = self.get_legal_moves(pid)
+            #print(f"Found {len(moves)} moves for pid {pid}: {moves}")
             #print(f"Moves: {moves}", flush=True)
             # If the response is empty, the player has no legal moves
-            if len(moves) > 0:
+            if len(moves) != 1 or moves[0] != "pass":
                 return False
+            else:
+                pass
+                #print(f"No moves left for player {pid}")
         return True
     
     def play_game(self, players):

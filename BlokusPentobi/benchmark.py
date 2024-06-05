@@ -45,8 +45,9 @@ def play_pentobi(i, seed, player_maker, save_data_file = "", proc_args = {}):
     if save_data_file:
         proc.write_states_to_file(save_data_file)
     score = list(proc.score)
+    player_classes = [type(pl).__name__ for pl in players]
     proc.close()
-    return score
+    return {plc : sc for plc,sc in zip(player_classes, score)}
 
 def shuffle_players_func(players):
     random.shuffle(players)
@@ -54,29 +55,6 @@ def shuffle_players_func(players):
         player.pid = i+1
     return players
 
-def player_maker_selfplay(proc, model_paths = [], shuffle_players = True):
-    if not model_paths:
-        # Make four players using the internal player
-        players = [PentobiInternalEpsilonGreedyPlayer(i+1, proc,epsilon=1.0) for i in range(4)]
-        return players
-    # Load all the models
-    models = [TFLiteModel(path) for path in model_paths]
-    model_nums = []
-    for model_path in model_paths:
-        s = model_path.split("_")
-        s = s[-1]
-        s.split(".")
-        num = int(s[0])
-        model_nums.append(num)
-    w = np.exp(model_nums) / np.sum(np.exp(model_nums))
-    # Make four players using a random model
-    players = []
-    for i in range(4):
-        model = np.random.choice(models,p=w)
-        players.append(PentobiNNPlayer(i+1, proc, model,move_selection_strategy="weighted", move_selection_kwargs={"top_p": 1.0}))
-    if shuffle_players:
-        players = shuffle_players_func(players)
-    return players
 
 def player_maker_benchmark(proc, model_path):
     model = TFLiteModel(model_path)
@@ -108,38 +86,27 @@ if __name__=="__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--num_games", type=int, default=1000, help="Number of games")
     parser.add_argument("--num_cpus", type=int, default=10, help="Number of CPUs")
-    parser.add_argument("--player_maker", type=str, default="selfplay", help="How to make players. Either 'Benchmark' or 'selfplay'")
+    parser.add_argument("--pentobi_level", type=int, default=1, help="Level of opponent Pentobi players")
     parser.add_argument("--pentobi_gtp", type=str, default=env_vars.get('pentobi_gtp', None), help="Path to pentobi-gtp")
-    parser.add_argument("--data_folder", type=str, default=env_vars.get('data_folder', "./Data"), help="Path to data folder")
-    parser.add_argument("--model_folder", type=str, default=env_vars.get('model_folder', "./Models"), help="Path to model folder")
+    parser.add_argument("--model_path", type=str, required=True)
     args = parser.parse_args()
     
     print(args)
     num_games = args.num_games
     num_cpus = args.num_cpus
-    #os.environ["PENTOBI_GTP"] = os.path.abspath(args.pentobi_gtp)
-    data_folder = os.path.abspath(args.data_folder)
-    model_folder = os.path.abspath(args.model_folder)
+    os.environ["PENTOBI_GTP"] = os.path.abspath(args.pentobi_gtp)
+    model_path = os.path.abspath(args.model_path)
     pentobi_gtp = os.path.abspath(args.pentobi_gtp)
-    if not os.path.exists(data_folder):
-        os.makedirs(data_folder, exist_ok=True)
-    if not os.path.exists(model_folder):
-        os.makedirs(model_folder, exist_ok=True)
-    
-    model_paths = [os.path.join(model_folder, f) for f in os.listdir(model_folder) if f.endswith(".tflite")]
-    models = [TFLiteModel(path) for path in model_paths]
-    
-    assert args.player_maker in ["benchmark", "selfplay"], "The player_maker argument must be either benchmark or selfplay"
-    if args.player_maker == "benchmark":
-        assert model_folder.endswith(".tflite"), "If the benchamrk player_maker is used, the model_folder must be a single file, not a folder."
+
+    model = TFLiteModel(model_path)
     
     def _player_maker(proc):
-        return player_maker_selfplay(proc, model_paths) if args.player_maker == "selfplay" else player_maker_benchmark(proc, model_paths)
+        return player_maker_benchmark(proc, model_path)
     
     def arg_generator(num_games):
         kwargs = {
             "command": pentobi_gtp,
-            "level": 1,
+            "level": args.pentobi_level,
             "threads": 1,
             "showboard": False,
             "nobook": False,
@@ -147,7 +114,7 @@ if __name__=="__main__":
         }
         for i in range(num_games):
             seed = np.random.randint(2**32)
-            file = f"{data_folder}/data_{i}.csv"
+            file = f""
             yield (i, seed, _player_maker, file, kwargs)
     
     # Play the games in parallel
@@ -163,13 +130,33 @@ if __name__=="__main__":
             except StopIteration:
                 break
     #print(results)
+
+    class_wins = {}
+    class_avg_score = {}
+    num_games = 0
+    for res in results:
+        scores = list(res.values())
+        players = list(res.keys())
+        max_sc = max(scores)
+        idx = scores.index(max_sc)
+        winner_class = players[idx]
+        if winner_class not in class_wins:
+            class_wins[winner_class] = 0
+        class_wins[winner_class] += 1
+        
+        for sc, pl in zip(scores,players):
+            if pl not in class_avg_score:
+                class_avg_score[pl] = 0
+            class_avg_score[pl] += sc
+        num_games += 1
+    class_avg_score = {k : v/num_games for k,v in class_avg_score.items()}
+    class_wins = {k : v/num_games for k,v in class_wins.items()}
+    print(f"Wins",class_wins)
+    print(f"Average score", class_avg_score)
     
-    # Calculate the average score
-    results = np.array(results)
-    mean_scores = np.mean(results, axis=0)
-    winners = np.argmax(results, axis=1) + 1
-    # Hm times each player won
-    num_wins = Counter(winners)
-    num_wins = [num_wins[i+1] for i in range(4)]
-    print(f"Mean scores: {mean_scores}")
-    print(f"Number of wins: {num_wins}")
+    print(f"Model {model_path} win percent: {class_wins['PentobiNNPlayer']}")
+    
+                
+            
+        
+        

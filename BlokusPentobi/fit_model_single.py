@@ -45,9 +45,17 @@ def get_model(input_shape):
         #print(f"Board: {board}")
         board = tf.reshape(board, (-1, board_side_len, board_side_len, 1))
         
+        # Convert the board to a tensor with 5 channels, i.e. one-hot encode the values -1...3
+        board = board + 1
+        board = tf.one_hot(tf.cast(board, tf.int32), 5)
+        board = tf.cast(board, tf.float32)
+        board = tf.reshape(board, (-1, board_side_len, board_side_len, 5))
+        
         # Apply convolutions
-        x = keras.layers.Conv2D(32, (3,3), activation='relu')(board)
+        x = keras.layers.Conv2D(16, (3,3), activation='relu')(board)
+        x = keras.layers.Conv2D(32, (3,3), activation='relu')(x)
         x = keras.layers.Conv2D(64, (3,3), activation='relu')(x)
+        x = keras.layers.Conv2D(128, (3,3), activation='relu')(x)
         x = keras.layers.Flatten()(x)
         x = keras.layers.Dense(32, activation='relu')(x)
         x = keras.layers.Dropout(0.3)(x)
@@ -56,7 +64,7 @@ def get_model(input_shape):
         
         model = keras.Model(inputs=inputs, outputs=output)
 
-        model.compile(optimizer="adam",
+        model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.0001),
                 loss='binary_crossentropy',
                 metrics=['mae'],
                 #run_eagerly=True
