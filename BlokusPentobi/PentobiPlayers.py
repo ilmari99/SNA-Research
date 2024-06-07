@@ -52,29 +52,30 @@ class PentobiNNPlayer:
             misc = np.array([self.pid-1, self.pid-1])
             next_states.append(np.concatenate([misc, board_np]))
             
-            self.pentobi_sess.send_command("undo")
+            resp = self.pentobi_sess.send_command("undo")
+            if "?" in resp:
+                raise Exception(f"'undo' command failed")
             self.pentobi_sess.current_player = self.pid
         return all_moves, np.array(next_states, dtype=np.float32)
         
     def make_action_with_nn(self, move_selection_strategy="best", move_selection_kwargs={}):
+        moves, next_states = self.get_next_states()
         if move_selection_strategy == "random":
-            moves = self.pentobi_sess.get_legal_moves(self.pid)
             selected_move = random.choice(moves)
         elif move_selection_strategy == "epsilon_greedy":
             epsilon = move_selection_kwargs.get("epsilon", 0.1)
             if np.random.rand() < epsilon:
-                moves = self.pentobi_sess.get_legal_moves(self.pid)
                 selected_move = random.choice(moves)
             else:
                 move_selection_strategy = "best"
                 move_selection_kwargs = {}
-        moves, next_states = self.get_next_states()
         if len(moves) == 1 and moves[0] == "pass":
             return self.pentobi_sess.play_move(self.pid, "pass", mock_move=False)
         predictions = self.model.predict(next_states)
         #print(predictions,flush=True)
         if move_selection_strategy == "best":
             best_move = np.argmax(predictions)
+            #print(f"Best move index: {best_move}")
             selected_move = moves[best_move]
         elif move_selection_strategy == "weighted":
             top_p = move_selection_kwargs.get("top_p", 1.0)

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --job-name=BlokusPentobiBaselineLarge50KBBSLR
+#SBATCH --job-name=BlokusPentobiLevel1Eps05-Eps05-W50-Emb-1Conv3-1MLP-B4096
 #SBATCH --account=project_2010270
 #SBATCH --time=01:00:00
 #SBATCH --partition=medium
@@ -76,6 +76,7 @@ for node in $(scontrol show hostname $SLURM_JOB_NODELIST); do
     --data_folder=$new_data_folder \
     --model_folder=$MODEL_FOLDER \
     --num_games=5000 \
-    --num_cpus=100 &
+    --num_cpus=100 \
+    --player_maker=use_internal &
 done
 wait

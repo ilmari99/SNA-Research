@@ -78,7 +78,9 @@ def player_maker_selfplay(proc, model_paths = [], shuffle_players = True):
         players = shuffle_players_func(players)
     return players
 
-def player_maker_benchmark(proc, model_path):
+def player_maker_benchmark(proc, model_paths):
+    assert len(model_paths) == 1, f"Only one model path is allowed when benchmarking"
+    model_path = model_paths[0]
     model = TFLiteModel(model_path)
     player_to_test = PentobiNNPlayer(1,proc,model,move_selection_strategy="best")
     
@@ -88,6 +90,42 @@ def player_maker_benchmark(proc, model_path):
     
     players = [player_to_test] + opponents
     players = shuffle_players_func(players)
+    return players
+
+def player_maker_with_randomly_internal_players(proc,
+                                                model_paths = [],
+                                                internal_player_epsilon=0.05,
+                                                internal_player_chance=0.25,
+                                                ):
+    if not model_paths:
+        # Make four players using the internal player
+        players = [PentobiInternalEpsilonGreedyPlayer(i+1, proc,epsilon=internal_player_epsilon) for i in range(4)]
+        return players
+    # Load all the models
+    models = [TFLiteModel(path) for path in model_paths]
+    model_nums = []
+    for model_path in model_paths:
+        s = model_path.split("_")
+        s = s[-1]
+        s.split(".")
+        num = int(s[0])
+        model_nums.append(num)
+    w = np.exp(model_nums) / np.sum(np.exp(model_nums))
+    # Make four players using a random model
+    players = []
+    for i in range(4):
+        model = np.random.choice(models,p=w)
+        players.append(PentobiNNPlayer(i+1, proc, model,move_selection_strategy="epsilon_greedy", move_selection_kwargs={"epsilon": internal_player_epsilon}))
+    if random.random() < internal_player_chance:
+        random_idx = random.randint(0,3)
+        players[random_idx] = PentobiInternalEpsilonGreedyPlayer(random_idx+1, proc,epsilon=internal_player_epsilon)
+    players = shuffle_players_func(players)
+    return players
+
+def player_maker_test_dataset(proc):
+    """ Internal players with a random epsilon between 0.01 and 0.1
+    """
+    players = [PentobiInternalEpsilonGreedyPlayer(i+1, proc,epsilon=np.random.uniform(0.01,0.1)) for i in range(4)]
     return players
 
 
@@ -129,12 +167,20 @@ if __name__=="__main__":
     model_paths = [os.path.join(model_folder, f) for f in os.listdir(model_folder) if f.endswith(".tflite")]
     models = [TFLiteModel(path) for path in model_paths]
     
-    assert args.player_maker in ["benchmark", "selfplay"], "The player_maker argument must be either benchmark or selfplay"
+    player_maker_map = {
+        "selfplay" : player_maker_selfplay,
+        "benchmark" : player_maker_benchmark,
+        "use_internal" : player_maker_with_randomly_internal_players
+    }
+    
+    assert args.player_maker in player_maker_map.keys(), f"The player_maker argument must be in {player_maker_map.keys()}"
+    
     if args.player_maker == "benchmark":
-        assert model_folder.endswith(".tflite"), "If the benchamrk player_maker is used, the model_folder must be a single file, not a folder."
+        assert model_folder.endswith(".tflite"), "If the 'benchmark' player_maker is used, the model_folder must be a single file, not a folder."
+        args.player_maker = [args.player_maker]
     
     def _player_maker(proc):
-        return player_maker_selfplay(proc, model_paths) if args.player_maker == "selfplay" else player_maker_benchmark(proc, model_paths)
+        return player_maker_map[args.player_maker](proc, model_paths)
     
     def arg_generator(num_games):
         kwargs = {

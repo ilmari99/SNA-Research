@@ -45,9 +45,10 @@ def play_pentobi(i, seed, player_maker, save_data_file = "", proc_args = {}):
     if save_data_file:
         proc.write_states_to_file(save_data_file)
     score = list(proc.score)
-    player_classes = [type(pl).__name__ for pl in players]
+    pl_names = [type(pl).__name__+f"_{i}" for i,pl in enumerate(players)]
     proc.close()
-    return {plc : sc for plc,sc in zip(player_classes, score)}
+    #print({pl : sc for pl,sc in zip(pl_names, score)})
+    return {pl : sc for pl,sc in zip(pl_names, score)}
 
 def shuffle_players_func(players):
     random.shuffle(players)
@@ -134,23 +135,33 @@ if __name__=="__main__":
     class_wins = {}
     class_avg_score = {}
     num_games = 0
+    games_per_class = {}
     for res in results:
         scores = list(res.values())
         players = list(res.keys())
         max_sc = max(scores)
         idx = scores.index(max_sc)
-        winner_class = players[idx]
+        winner_name = players[idx]
+        winner_name_splitted = winner_name.split("_")
+        winner_name = winner_name_splitted[0:-1]
+        winner_class = "".join(winner_name)
         if winner_class not in class_wins:
             class_wins[winner_class] = 0
         class_wins[winner_class] += 1
         
         for sc, pl in zip(scores,players):
-            if pl not in class_avg_score:
-                class_avg_score[pl] = 0
-            class_avg_score[pl] += sc
+            pl_splitted = pl.split("_")
+            pl = pl_splitted[0:-1]
+            class_ = "".join(pl)
+            if class_ not in games_per_class:
+                games_per_class[class_] = 0
+            games_per_class[class_] += 1
+            if class_ not in class_avg_score:
+                class_avg_score[class_] = 0
+            class_avg_score[class_] += sc
         num_games += 1
-    class_avg_score = {k : v/num_games for k,v in class_avg_score.items()}
-    class_wins = {k : v/num_games for k,v in class_wins.items()}
+    class_avg_score = {k : v/games_per_class[k] for k,v in class_avg_score.items()}
+    class_wins = {k : v/games_per_class[k] for k,v in class_wins.items()}
     print(f"Wins",class_wins)
     print(f"Average score", class_avg_score)
     

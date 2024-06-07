@@ -27,4 +27,4 @@ fi
 
 PYTHON_EXE=./venv/bin/python3
 
-$PYTHON_EXE ./BlokusPentobi/simulate.py --num_games=10 --num_cpus=10 --model_folder=/scratch/project_2010270/BlokusPentobiBaseline50K/Models
+$PYTHON_EXE ./BlokusPentobi/simulate.py --num_games=10 --num_cpus=10 --model_folder=/scratch/project_2010270/BlokusPentobiBaseline50K/Models --player_maker=use_internal

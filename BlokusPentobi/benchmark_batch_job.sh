@@ -1,8 +1,8 @@
 #!/bin/bash
 
-#SBATCH --job-name=BlokusPentobiLarge100K
+#SBATCH --job-name=BlokusPentobiLevel1Eps01-Emb-1Conv3-1MLP-B4096
 #SBATCH --account=project_2010270
-#SBATCH --time=01:00:00
+#SBATCH --time=00:50:00
 #SBATCH --partition=medium
 #SBATCH --output=%x/benchmark_%j.out
 #SBATCH --error=%x/benchmark_%j.err
@@ -16,7 +16,9 @@
 # Print all arguments
 echo "All arguments: $@"
 
-model_folder="/scratch/project_2010270/"$SLURM_JOB_NAME"/Models"
+model_folder=$SLURM_JOB_NAME
+model_folder=/scratch/project_2010270/$SLURM_JOB_NAME/Models
+#"/Models"
 
 module purge
 module load tensorflow/2.15
@@ -47,12 +49,13 @@ $PYTHON_EXE --version
 
 for file in "$model_folder"/*.tflite
 do
+    echo $file
     if [[ $file != *.tflite ]]
     then
         continue 1
     fi
 
-    $PYTHON_EXE ./BlokusPentobi/benchmark.py --model_path=$file --num_games=1000 --num_cpus=100 --pentobi_level=5
+    $PYTHON_EXE ./BlokusPentobi/benchmark.py --model_path=$file --num_games=800 --num_cpus=100 --pentobi_level=1
 done
 
 cat $SLURM_JOB_NAME/benchmark_$SLURM_JOB_ID.out | grep percent | sort -n -k 6 -r

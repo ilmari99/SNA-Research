@@ -1,11 +1,11 @@
 #!/bin/bash
 
-#SBATCH --job-name=BlokusPentobiBaselineLarge50KBBSLR
+#SBATCH --job-name=BlokusPentobiLevel1Eps05-Eps05-W50-Emb-1Conv3-1MLP-B4096
 #SBATCH --account=project_2010270
 # Write the output files to the folder wth job-name
 #SBATCH --output=%x/fit_%j.out
 #SBATCH --error=%x/fit_%j.err
-#SBATCH --time=01:00:00
+#SBATCH --time=01:30:00
 #SBATCH --partition=gpusmall
 #SBATCH --mail-type=END
 
@@ -90,7 +90,7 @@ $PYTHON_EXE ./$SLURM_JOB_NAME/BlokusPentobi/fit_model_single.py \
 --model_save_path=$MODEL_SAVE_PATH \
 --log_dir=$SLURM_JOB_NAME/tblog_$SLURM_JOB_ID \
 --num_epochs=30 \
---patience=6 \
+--patience=5 \
 --validation_split=0.2 \
 --batch_size=4096 \
 

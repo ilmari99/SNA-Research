@@ -152,6 +152,9 @@ class PentobiGTP:
         #= 85 81 77 65
         sc = sc.split(" ")
         sc = [int(x) for x in sc[1:]]
+        #if self.is_game_finished():
+        #    winner_idx = np.argmax(sc)
+        #    sc[winner_idx] += 50
         return sc
     
     def write_states_to_file(self, filename, overwrite=False):
@@ -162,6 +165,8 @@ class PentobiGTP:
         # To every state, append the score that was obtained by pid state[0]
         scores = self.score
         scores = np.array(scores)
+        winner_idx = np.argmax(scores)
+        scores[winner_idx] += 50
         # Get the score for the player whose perspective the state is from
         scores = scores[states[:,0].astype(int)]
         states = np.column_stack([states, scores])
@@ -172,13 +177,15 @@ class PentobiGTP:
             raise FileExistsError(f"File {filename} already exists")
         np.savetxt(filename, states, fmt="%d", delimiter=",")
 
-    def send_command(self, command):
+    def send_command(self, command, errors="raise"):
         with self.lock:
             # Send the command to the process
             self.process.stdin.write(command + '\n')
             self.process.stdin.flush()
             # Read the response from the process
             response = self._read_response()
+            if "?" in response and errors=="raise":
+                raise Exception(f"Command '{command}' failed: {response}")
         return response
 
     def _read_response(self):
@@ -205,7 +212,7 @@ class PentobiGTP:
     def bot_get_move(self, pid):
         if not self._check_pid_has_turn(pid):
             return False
-        out = self.send_command(f"reg_genmove {pid}")
+        out = self.send_command(f"reg_genmove {pid}",errors="ignore")
         # = a1,b1 ...
         if "?" in out:
             return "pass"
@@ -217,11 +224,8 @@ class PentobiGTP:
         """
         if not self._check_pid_has_turn(pid):
             raise ValueError(f"Player {pid} is not in turn!")
-        out = "="
         if move != "pass":
             out = self.send_command(f"play {pid} {move}")
-        if out.startswith("?"):
-            raise ValueError(f"Invalid move: {pid}, {move}. Valid moves: {self.get_legal_moves(pid)}")
         self.change_player(pid)
         if not mock_move and move != "pass":
             misc = np.array([pid-1, self.current_player-1])
