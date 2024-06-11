@@ -1,11 +1,11 @@
 #!/bin/bash
 
-#SBATCH --job-name=BlokusPentobiLevel1Eps05-Eps05-W50-Emb-1Conv3-1MLP-B4096
+#SBATCH --job-name=BlokusPentobi120KLevel1Eps01-Eps01-Emb-2Conv3-2MLP-B4096-SmallLR
 #SBATCH --account=project_2010270
 # Write the output files to the folder wth job-name
 #SBATCH --output=%x/fit_%j.out
 #SBATCH --error=%x/fit_%j.err
-#SBATCH --time=01:30:00
+#SBATCH --time=03:00:00
 #SBATCH --partition=gpusmall
 #SBATCH --mail-type=END
 

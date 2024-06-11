@@ -94,7 +94,7 @@ def player_maker_benchmark(proc, model_paths):
 
 def player_maker_with_randomly_internal_players(proc,
                                                 model_paths = [],
-                                                internal_player_epsilon=0.05,
+                                                internal_player_epsilon=0.1,
                                                 internal_player_chance=0.25,
                                                 ):
     if not model_paths:

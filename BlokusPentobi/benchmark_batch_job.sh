@@ -1,8 +1,8 @@
 #!/bin/bash
 
-#SBATCH --job-name=BlokusPentobiLevel1Eps01-Emb-1Conv3-1MLP-B4096
+#SBATCH --job-name=BlokusPentobi120KLevel1Eps01-Eps01-Emb-1Conv3-1MLP-B4096
 #SBATCH --account=project_2010270
-#SBATCH --time=00:50:00
+#SBATCH --time=00:15:00
 #SBATCH --partition=medium
 #SBATCH --output=%x/benchmark_%j.out
 #SBATCH --error=%x/benchmark_%j.err
@@ -55,7 +55,7 @@ do
         continue 1
     fi
 
-    $PYTHON_EXE ./BlokusPentobi/benchmark.py --model_path=$file --num_games=800 --num_cpus=100 --pentobi_level=1
+    $PYTHON_EXE ./BlokusPentobi/benchmark.py --model_path=$file --num_games=1000 --num_cpus=100 --pentobi_level=1
 done
 
 cat $SLURM_JOB_NAME/benchmark_$SLURM_JOB_ID.out | grep percent | sort -n -k 6 -r

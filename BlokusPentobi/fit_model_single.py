@@ -76,18 +76,19 @@ def get_model(input_shape):
     
     # Apply convolutions
     x = keras.layers.Conv2D(32, (3,3), activation='relu')(board)
-    #x = keras.layers.Conv2D(64, (5,5), activation='relu')(x)
+    x = keras.layers.Conv2D(64, (3,3), activation='relu')(x)
     #x = keras.layers.Conv2D(64, (3,3), activation='relu')(x)
     #x = keras.layers.Conv2D(128, (3,3), activation='relu')(x)
     x = keras.layers.Flatten()(x)
-    #x = keras.layers.Dense(32, activation='relu')(x)
-    #x = keras.layers.Dropout(0.3)(x)
+    x = keras.layers.Dropout(0.4)(x)
+    x = keras.layers.Dense(32, activation='relu')(x)
+    x = keras.layers.Dropout(0.4)(x)
     x = keras.layers.Dense(32, activation='relu')(x)
     output = keras.layers.Dense(1, activation='sigmoid')(x)
     
     model = keras.Model(inputs=inputs, outputs=output)
 
-    model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.001),
+    model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.0001),
             loss='binary_crossentropy',
             metrics=['mae'],
             #run_eagerly=True
