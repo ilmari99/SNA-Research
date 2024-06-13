@@ -82,3 +82,24 @@ class NormalizeBoardToPerspectiveLayer(tf.keras.layers.Layer):
         board = inputs[0]
         perspective_pid = inputs[1]
         return normalize_board_to_perspective_tf(board, perspective_pid)
+    
+@tf.keras.utils.register_keras_serializable()
+def separate_to_patches(board, patch_size):
+    """ Given a batch of images of size (B, N, M, C), separate it into patches of size (B, p, p, C)
+    """
+    # Get the dimensions of the board
+    board_shape = board.shape
+    B = -1
+    N = board_shape[1]
+    M = board_shape[2]
+    C = board_shape[3]
+    
+    # Get the number of patches in each dimension
+    n_patches_N = N // patch_size
+    n_patches_M = M // patch_size
+    
+    # Get the patches
+    #board = tf.reshape(board, (B, N, M, C))
+    patches = tf.image.extract_patches(board, sizes=[1, patch_size, patch_size, 1], strides=[1, patch_size, patch_size, 1], rates=[1, 1, 1, 1], padding='VALID')
+    patches = tf.reshape(patches, (B, n_patches_N*n_patches_M, patch_size, patch_size, C))
+    return patches

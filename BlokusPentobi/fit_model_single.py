@@ -18,27 +18,6 @@ class SaveModelCallback(tf.keras.callbacks.Callback):
     def on_epoch_end(self, epoch, logs=None):
         self.model.save(self.model_save_path)
         convert_model_to_tflite(self.model_save_path)
-        
-@keras.utils.register_keras_serializable()
-def separate_to_patches(board, patch_size):
-    """ Given a batch of images of size (B, N, M, C), separate it into patches of size (B, p, p, C)
-    """
-    # Get the dimensions of the board
-    board_shape = board.shape
-    B = -1
-    N = board_shape[1]
-    M = board_shape[2]
-    C = board_shape[3]
-    
-    # Get the number of patches in each dimension
-    n_patches_N = N // patch_size
-    n_patches_M = M // patch_size
-    
-    # Get the patches
-    #board = tf.reshape(board, (B, N, M, C))
-    patches = tf.image.extract_patches(board, sizes=[1, patch_size, patch_size, 1], strides=[1, patch_size, patch_size, 1], rates=[1, 1, 1, 1], padding='VALID')
-    patches = tf.reshape(patches, (B, n_patches_N*n_patches_M, patch_size, patch_size, C))
-    return patches
 
 def get_model(input_shape):
     inputs = tf.keras.Input(shape=input_shape)
@@ -66,10 +45,7 @@ def get_model(input_shape):
     
     # Convert the board to a tensor with 5 channels, i.e. one-hot encode the values -1...3
     board = board + 1
-    #board = tf.one_hot(tf.cast(board, tf.int32), 5)
-    #board = tf.cast(board, tf.float32)
-    #board = tf.reshape(board, (-1, board_side_len, board_side_len, 5))
-
+    
     # Embed each value (0 ... 4) to 16 dimensions
     board = tf.keras.layers.Embedding(5, 16)(board)
     board = tf.reshape(board, (-1, board_side_len, board_side_len, 16))
@@ -78,18 +54,18 @@ def get_model(input_shape):
     x = keras.layers.Conv2D(32, (3,3), activation='relu')(board)
     x = keras.layers.Conv2D(64, (3,3), activation='relu')(x)
     #x = keras.layers.Conv2D(64, (3,3), activation='relu')(x)
-    #x = keras.layers.Conv2D(128, (3,3), activation='relu')(x)
+    x = keras.layers.Conv2D(128, (3,3), activation='relu')(x)
     x = keras.layers.Flatten()(x)
-    x = keras.layers.Dropout(0.4)(x)
-    x = keras.layers.Dense(32, activation='relu')(x)
-    x = keras.layers.Dropout(0.4)(x)
+    x = keras.layers.Dropout(0.5)(x)
+    x = keras.layers.Dense(64, activation='relu')(x)
+    x = keras.layers.Dropout(0.5)(x)
     x = keras.layers.Dense(32, activation='relu')(x)
     output = keras.layers.Dense(1, activation='sigmoid')(x)
     
     model = keras.Model(inputs=inputs, outputs=output)
 
     model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.0001),
-            loss='binary_crossentropy',
+            loss='mse',
             metrics=['mae'],
             #run_eagerly=True
     )
@@ -152,6 +128,7 @@ def main(data_folder,
         save_model_cb = SaveModelCallback(model_save_path)
         model.fit(train_ds, epochs=num_epochs, callbacks=[tb_log, early_stop, save_model_cb], validation_data=val_ds)
     model.save(model_save_path)
+    convert_model_to_tflite(model_save_path)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Train a model with given data.')

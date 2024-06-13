@@ -1,27 +1,26 @@
 #!/bin/bash
 
-#SBATCH --job-name=BlokusPentobi120KLevel1Eps01-Eps01-Emb-2Conv3-2MLP-B512-SmallLR
+#SBATCH --job-name=BlokusPentobi120KLevel1Eps01-Eps01-Emb-2Conv3-2MLP-B4096-SmallLR
 #SBATCH --account=project_2010270
-#SBATCH --time=00:55:00
-#SBATCH --partition=medium
-#SBATCH --output=%x/benchmark_%j.out
-#SBATCH --error=%x/benchmark_%j.err
+# Write the output files to the folder wth job-name
+#SBATCH --output=%x/convert_models%j.out
+#SBATCH --error=%x/convert_models%j.err
+#SBATCH --time=00:20:00
+#SBATCH --partition=interactive
 #SBATCH --mail-type=END
 
 # Reserve compute
-#SBATCH --cpus-per-task=128
+#SBATCH --cpus-per-task=5
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-##SBATCH --mem-per-cpu=4G
 # Print all arguments
 echo "All arguments: $@"
 
-model_folder=$SLURM_JOB_NAME
-model_folder=/scratch/project_2010270/$SLURM_JOB_NAME/Models
-#"/Models"
-
 module purge
 module load tensorflow/2.15
+
+MODEL_FOLDER=/scratch/project_2010270/$SLURM_JOB_NAME
+MODEL_FOLDER=$MODEL_FOLDER/Models
 
 PIP_EXE=./venv/bin/pip3
 PYTHON_EXE=./venv/bin/python3
@@ -47,17 +46,4 @@ $PYTHON_EXE -c "import tensorflow as tf; print(tf.__version__)"
 $PYTHON_EXE -c "import tensorflow as tf; print(tf.config.list_physical_devices('GPU'))"
 $PYTHON_EXE --version
 
-for file in "$model_folder"/*.tflite
-do
-    echo $file
-    if [[ $file != *.tflite ]]
-    then
-        continue 1
-    fi
-
-    $PYTHON_EXE ./BlokusPentobi/benchmark.py --model_path=$file --num_games=1000 --num_cpus=100 --pentobi_level=1
-done
-
-cat $SLURM_JOB_NAME/benchmark_$SLURM_JOB_ID.out | grep percent | sort -n -k 6 -r
-
-wait
+$PYTHON_EXE ./BlokusPentobi/convert_keras_models_to_tflite.py $MODEL_FOLDER
