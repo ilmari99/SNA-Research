@@ -129,6 +129,11 @@ def main(data_folder,
         model.fit(train_ds, epochs=num_epochs, callbacks=[tb_log, early_stop, save_model_cb], validation_data=val_ds)
     model.save(model_save_path)
     convert_model_to_tflite(model_save_path)
+    
+    # Run benchmark.py to test the model
+    model_tflite_path = model_save_path.replace(".keras", ".tflite")
+    os.system(f"python3 BlokusPentobi/benchmark.py --model_path={model_tflite_path} --num_games=800 --num_cpus=30")
+    
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Train a model with given data.')
