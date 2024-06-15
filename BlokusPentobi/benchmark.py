@@ -1,5 +1,3 @@
-from collections import Counter
-import gc
 import json
 import multiprocessing
 import os
@@ -165,7 +163,26 @@ if __name__=="__main__":
     print(f"Wins",class_wins)
     print(f"Average score", class_avg_score)
     
-    print(f"Model {model_path} win percent: {class_wins['PentobiNNPlayer']}")
+    print(f"Model {model_path} win percent: {class_wins.get('PentobiNNPlayer',0)}")
+    
+    # Write the loss percent to a win_rates.json file at the correct index
+    model_number = int(model_path.split("/")[-1].split(".")[0].split("_")[-1])
+    model_folder = "/".join(model_path.split("/")[:-1])
+    win_rate_file = os.path.join(model_folder, "win_rates.json")
+    if args.pentobi_level != 1:
+        print(f"Not writing win rates, since the level is not 1")
+        exit()
+    if not os.path.exists(win_rate_file):
+        assert model_number == 0, "The first model must be model_0"
+        with open(win_rate_file, "w") as f:
+            json.dump([class_wins.get('PentobiNNPlayer',0)], f)
+    else:
+        with open(win_rate_file) as f:
+            win_rates = json.load(f)
+        assert len(win_rates) == model_number, "The number of models and the number of win rates must be the same"
+        win_rates.append(class_wins.get('PentobiNNPlayer',0))
+        with open(win_rate_file, "w") as f:
+            json.dump(win_rates, f)
     
                 
             

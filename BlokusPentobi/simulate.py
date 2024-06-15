@@ -94,6 +94,7 @@ def player_maker_benchmark(proc, model_paths):
 
 def player_maker_with_randomly_internal_players(proc,
                                                 model_paths = [],
+                                                model_weights = [],
                                                 internal_player_epsilon=0.1,
                                                 internal_player_chance=0.25,
                                                 ):
@@ -103,6 +104,31 @@ def player_maker_with_randomly_internal_players(proc,
         return players
     # Load all the models
     models = [TFLiteModel(path) for path in model_paths]
+    if not model_weights:
+        model_weights = model_weights_from_iteration_number(model_paths)
+        # In this case we cant add an internal player, since the weights are fuged up
+    else:
+        # If the model weights come from a file we can't add an internal player
+        # we'll add a random internal player "model", that has a of 0.25 (win rate against itself)
+        models.append("internal")
+        model_weights = np.append(model_weights, 0.25)
+    
+    # Normalize the model weights
+    model_weights = np.exp(model_weights) / np.sum(np.exp(model_weights))
+    # Make four players using a random model
+    players = []
+    for i in range(4):
+        model = np.random.choice(models,p=model_weights)
+        if model == "internal":
+            player = PentobiInternalEpsilonGreedyPlayer(i+1, proc,epsilon=internal_player_epsilon)
+        else:
+            player = PentobiNNPlayer(i+1, proc, model,move_selection_strategy="epsilon_greedy", move_selection_kwargs={"epsilon": internal_player_epsilon})
+        players.append(player)
+        
+    players = shuffle_players_func(players)
+    return players
+
+def model_weights_from_iteration_number(model_paths):
     model_nums = []
     for model_path in model_paths:
         s = model_path.split("_")
@@ -110,17 +136,7 @@ def player_maker_with_randomly_internal_players(proc,
         s.split(".")
         num = int(s[0])
         model_nums.append(num)
-    w = np.exp(model_nums) / np.sum(np.exp(model_nums))
-    # Make four players using a random model
-    players = []
-    for i in range(4):
-        model = np.random.choice(models,p=w)
-        players.append(PentobiNNPlayer(i+1, proc, model,move_selection_strategy="epsilon_greedy", move_selection_kwargs={"epsilon": internal_player_epsilon}))
-    if random.random() < internal_player_chance:
-        random_idx = random.randint(0,3)
-        players[random_idx] = PentobiInternalEpsilonGreedyPlayer(random_idx+1, proc,epsilon=internal_player_epsilon)
-    players = shuffle_players_func(players)
-    return players
+    return model_nums
 
 def player_maker_test_dataset(proc):
     """ Internal players with a random epsilon between 0.01 and 0.1
@@ -181,7 +197,16 @@ if __name__=="__main__":
         args.player_maker = [args.player_maker]
     
     def _player_maker(proc):
-        return player_maker_map[args.player_maker](proc, model_paths)
+        
+        if args.player_maker == "use_internal":
+            # We need to read the win rates from the model folder, in win_rates.json
+            with open(os.path.join(model_folder, "win_rates.json")) as f:
+                # Win rates are stored as a list of floats
+                win_rates = json.load(f)
+            assert len(win_rates) == len(model_paths), "The number of models and the number of win rates must be the same"
+            return player_maker_map[args.player_maker](proc, model_paths=model_paths, model_weights=win_rates)
+        
+        return player_maker_map[args.player_maker](proc, model_paths=model_paths)
     
     def arg_generator(num_games):
         kwargs = {
