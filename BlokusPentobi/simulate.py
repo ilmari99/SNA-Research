@@ -150,6 +150,7 @@ if __name__=="__main__":
     parser.add_argument("--pentobi_gtp", type=str, default=env_vars.get('pentobi_gtp', None), help="Path to pentobi-gtp")
     parser.add_argument("--data_folder", type=str, default=env_vars.get('data_folder', "./Data"), help="Path to data folder")
     parser.add_argument("--model_folder", type=str, default=env_vars.get('model_folder', "./Models"), help="Path to model folder")
+    parser.add_argument("--level", required=False, default=1,type=int)
     args = parser.parse_args()
     
     print(args)
@@ -185,7 +186,7 @@ if __name__=="__main__":
     def arg_generator(num_games):
         kwargs = {
             "command": pentobi_gtp,
-            "level": 1,
+            "level": args.level,
             "threads": 1,
             "showboard": False,
             "nobook": False,
