@@ -198,7 +198,7 @@ if __name__=="__main__":
     
     def _player_maker(proc):
         
-        if args.player_maker == "use_internal":
+        if args.player_maker == "use_internal" and os.path.exists(os.path.join(model_folder, "win_rates.json")):
             # We need to read the win rates from the model folder, in win_rates.json
             with open(os.path.join(model_folder, "win_rates.json")) as f:
                 # Win rates are stored as a list of floats
