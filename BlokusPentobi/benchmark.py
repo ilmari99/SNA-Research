@@ -175,16 +175,15 @@ if __name__=="__main__":
             print(f"Not writing win rates, since the level is not 1")
             exit()
         if not os.path.exists(win_rate_file):
-            assert model_number == 0, "The first model must be model_0"
-            with open(win_rate_file, "w") as f:
-                json.dump([class_wins.get('PentobiNNPlayer',0)], f)
+            win_rates = {}
+            #with open(win_rate_file, "w") as f:
+            #    json.dump({model_path : class_wins.get('PentobiNNPlayer',0)}, f)
         else:
             with open(win_rate_file) as f:
                 win_rates = json.load(f)
-            assert len(win_rates) == model_number, "The number of models and the number of win rates must be the same"
-            win_rates.append(class_wins.get('PentobiNNPlayer',0))
-            with open(win_rate_file, "w") as f:
-                json.dump(win_rates, f)
+        win_rates[model_path] = class_wins.get('PentobiNNPlayer',0)
+        with open(win_rate_file, "w") as f:
+            json.dump(win_rates, f)
     
                 
             

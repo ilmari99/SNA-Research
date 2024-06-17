@@ -201,9 +201,10 @@ if __name__=="__main__":
         if args.player_maker == "use_internal" and os.path.exists(os.path.join(model_folder, "win_rates.json")):
             # We need to read the win rates from the model folder, in win_rates.json
             with open(os.path.join(model_folder, "win_rates.json")) as f:
-                # Win rates are stored as a list of floats
+                # Win rates are stored as a dictionary with the model name as the key
                 win_rates = json.load(f)
-            assert len(win_rates) == len(model_paths), "The number of models and the number of win rates must be the same"
+                win_rates = [win_rates[model_path] for model_path in model_paths]
+            #assert len(win_rates) == len(model_paths), "The number of models and the number of win rates must be the same"
             return player_maker_map[args.player_maker](proc, model_paths=model_paths, model_weights=win_rates)
         
         return player_maker_map[args.player_maker](proc, model_paths=model_paths)
