@@ -68,6 +68,8 @@ do
     $PYTHON_EXE ./BlokusPentobi/benchmark.py --dont_update_win_rate --model_path=$file --num_games=1200 --num_cpus=100 --pentobi_level=1
 done
 
-cat $SLURM_JOB_NAME/benchmark_$SLURM_JOB_ID.out | grep percent | sort -n -k 6 -r
+# Print the Models and their win rates in descending order
+# "Model .../model_0.tflite win percent: 0.335"
+cat $SLURM_JOB_NAME/benchmark_$SLURM_JOB_ID.out | grep "percent" | awk '{print $NF, $0}' | sort -k1,1n -r | cut -d' ' -f2-
 
 wait
