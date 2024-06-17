@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --job-name=BlokusPentobi120KLevel5-IPCh025-Eps01-Emb-2Conv3-2MLP-B512-SmallLR
+#SBATCH --job-name=BlokusPentobi120KLevel1-WeightUsingBenchamark-Emb-2Conv3-2MLP-B512-SmallLR
 #SBATCH --account=project_2010270
 #SBATCH --time=01:00:00
 #SBATCH --partition=medium
@@ -78,6 +78,6 @@ for node in $(scontrol show hostname $SLURM_JOB_NODELIST); do
     --num_games=12000 \
     --num_cpus=100 \
     --player_maker=use_internal \
-    --level=5 &
+    --level=1 &
 done
 wait

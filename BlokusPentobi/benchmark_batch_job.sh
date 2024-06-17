@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --job-name=BlokusPentobi120KLevel5-IPCh025-Eps01-Emb-2Conv3-2MLP-B512-SmallLR
+#SBATCH --job-name=BlokusPentobi120KLevel1-WeightUsingBenchamark-Emb-2Conv3-2MLP-B512-SmallLR
 #SBATCH --account=project_2010270
 #SBATCH --time=00:55:00
 #SBATCH --partition=medium
@@ -65,7 +65,7 @@ do
         fi
     fi
 
-    $PYTHON_EXE ./BlokusPentobi/benchmark.py --model_path=$file --num_games=1000 --num_cpus=100 --pentobi_level=5
+    $PYTHON_EXE ./BlokusPentobi/benchmark.py --dont_update_win_rate --model_path=$file --num_games=1200 --num_cpus=100 --pentobi_level=1
 done
 
 cat $SLURM_JOB_NAME/benchmark_$SLURM_JOB_ID.out | grep percent | sort -n -k 6 -r
