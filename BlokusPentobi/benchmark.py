@@ -181,6 +181,14 @@ if __name__=="__main__":
         else:
             with open(win_rate_file) as f:
                 win_rates = json.load(f)
+                # If win_rates is a list, convert it to a dictionary
+                if isinstance(win_rates, list):
+                    win_rates_dict = {}
+                    for i,wr in enumerate(win_rates):
+                        i_model_path = os.path.join(model_folder, f"model_{i}.tflite")
+                        win_rates_dict[i_model_path] = wr
+                    print(f"Converted win rates {win_rates} to {win_rates_dict}")
+                    win_rates = win_rates_dict
         win_rates[model_path] = class_wins.get('PentobiNNPlayer',0)
         with open(win_rate_file, "w") as f:
             json.dump(win_rates, f)
