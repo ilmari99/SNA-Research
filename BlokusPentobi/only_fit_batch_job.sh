@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --job-name=BlokusPentobi120KLevel1-WeightUsingBenchamark-Emb-2Conv3-2MLP-B512-SmallLR
+#SBATCH --job-name=BlokusPentobi200KLevel1-Eps005-WeightUsingBenchmark-Emb-2Conv3-2MLP-B512-SmallLR
 #SBATCH --account=project_2010270
 # Write the output files to the folder wth job-name
 #SBATCH --output=%x/fit_%j.out
@@ -54,7 +54,6 @@ MODEL_FOLDER=$RLF_BLOKUS_SCRATCH/Models
 
 mkdir -p $DATA_FOLDER
 mkdir -p $MODEL_FOLDER
-
 
 # If there are files in the MODEL_FOLDER,
 # We will take the model last modified

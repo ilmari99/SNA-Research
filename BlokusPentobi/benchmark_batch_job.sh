@@ -1,8 +1,8 @@
 #!/bin/bash
 
-#SBATCH --job-name=BlokusPentobi120KLevel1-WeightUsingBenchamark-Emb-2Conv3-2MLP-B512-SmallLR
+#SBATCH --job-name=BlokusPentobi200KLevel1-WeightUsingBenchmark-Emb-3Conv3-2MLP-B512-SmallLR
 #SBATCH --account=project_2010270
-#SBATCH --time=00:55:00
+#SBATCH --time=01:00:00
 #SBATCH --partition=medium
 #SBATCH --output=%x/benchmark_%j.out
 #SBATCH --error=%x/benchmark_%j.err
@@ -65,7 +65,7 @@ do
         fi
     fi
 
-    $PYTHON_EXE ./BlokusPentobi/benchmark.py --dont_update_win_rate --model_path=$file --num_games=1200 --num_cpus=100 --pentobi_level=1
+    $PYTHON_EXE ./BlokusPentobi/benchmark.py --num_internal=3 --model_path=$file --num_games=1200 --num_cpus=100 --pentobi_level=1
 done
 
 # Print the Models and their win rates in descending order
