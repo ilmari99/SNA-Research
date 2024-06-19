@@ -8,7 +8,7 @@ import argparse
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 import numpy as np
 from PentobiGTP import PentobiGTP
-from PentobiPlayers import PentobiInternalPlayer, PentobiNNPlayer, PentobiInternalEpsilonGreedyPlayer
+from PentobiPlayers import PentobiInternalPlayer, PentobiNNPlayer#, PentobiInternalEpsilonGreedyPlayer
 from utils import TFLiteModel
 import argparse
 
@@ -57,7 +57,7 @@ def shuffle_players_func(players):
 def player_maker_selfplay(proc, model_paths = [], shuffle_players = True):
     if not model_paths:
         # Make four players using the internal player
-        players = [PentobiInternalEpsilonGreedyPlayer(i+1, proc,epsilon=1.0) for i in range(4)]
+        players = [PentobiInternalPlayer(i+1, proc,move_selection_strategy="epsilon_greedy", move_selection_kwargs={"epsilon":1.0}) for i in range(4)]
         return players
     # Load all the models
     models = [TFLiteModel(path) for path in model_paths]
