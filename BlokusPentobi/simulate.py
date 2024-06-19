@@ -86,7 +86,7 @@ def player_maker_benchmark(proc, model_paths):
     
     opponents = []
     for pid in range(2,5):
-        opponents.append(PentobiInternalEpsilonGreedyPlayer(pid,proc,epsilon=0.03))
+        opponents.append(PentobiInternalPlayer(pid, proc,move_selection_strategy="epsilon_greedy", move_selection_kwargs={"epsilon":0.03}))
     
     players = [player_to_test] + opponents
     players = shuffle_players_func(players)
@@ -95,12 +95,12 @@ def player_maker_benchmark(proc, model_paths):
 def player_maker_with_randomly_internal_players(proc,
                                                 model_paths = [],
                                                 model_weights = [],
-                                                internal_player_epsilon=0.05,
-                                                internal_player_chance=0.25,
+                                                internal_player_epsilon=0.05
                                                 ):
     if not model_paths:
         # Make four players using the internal player
-        players = [PentobiInternalEpsilonGreedyPlayer(i+1, proc,epsilon=internal_player_epsilon) for i in range(4)]
+        players = [PentobiInternalPlayer(i+1, proc,move_selection_strategy="epsilon_greedy",
+                                         move_selection_kwargs={"epsilon":internal_player_epsilon}) for i in range(4)]
         return players
     # Load all the models
     models = [TFLiteModel(path) for path in model_paths]
@@ -120,9 +120,11 @@ def player_maker_with_randomly_internal_players(proc,
     for i in range(4):
         model = np.random.choice(models,p=model_weights)
         if model == "internal":
-            player = PentobiInternalEpsilonGreedyPlayer(i+1, proc,epsilon=internal_player_epsilon)
+            player = PentobiInternalPlayer(i+1, proc,move_selection_strategy="epsilon_greedy",
+                                           move_selection_kwargs={"epsilon":internal_player_epsilon})
         else:
-            player = PentobiNNPlayer(i+1, proc, model,move_selection_strategy="epsilon_greedy", move_selection_kwargs={"epsilon":internal_player_epsilon})
+            player = PentobiNNPlayer(i+1, proc, model,move_selection_strategy="epsilon_greedy",
+                                     move_selection_kwargs={"epsilon":internal_player_epsilon})
         players.append(player)
         
     players = shuffle_players_func(players)
@@ -141,7 +143,8 @@ def model_weights_from_iteration_number(model_paths):
 def player_maker_test_dataset(proc):
     """ Internal players with a random epsilon between 0.01 and 0.1
     """
-    players = [PentobiInternalEpsilonGreedyPlayer(i+1, proc,epsilon=np.random.uniform(0.01,0.1)) for i in range(4)]
+    players = [PentobiInternalPlayer(pid, proc,move_selection_strategy="epsilon_greedy",
+                                     move_selection_kwargs={"epsilon":np.random.uniform(0.01,0.1)}) for pid in range(1,5)]
     return players
 
 
@@ -162,7 +165,7 @@ if __name__=="__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--num_games", type=int, default=1000, help="Number of games")
     parser.add_argument("--num_cpus", type=int, default=10, help="Number of CPUs")
-    parser.add_argument("--player_maker", type=str, default="selfplay", help="How to make players. Either 'Benchmark' or 'selfplay'")
+    parser.add_argument("--player_maker", type=str, default="use_internal", help="How to make players.")
     parser.add_argument("--pentobi_gtp", type=str, default=env_vars.get('pentobi_gtp', None), help="Path to pentobi-gtp")
     parser.add_argument("--data_folder", type=str, default=env_vars.get('data_folder', "./Data"), help="Path to data folder")
     parser.add_argument("--model_folder", type=str, default=env_vars.get('model_folder', "./Models"), help="Path to model folder")
