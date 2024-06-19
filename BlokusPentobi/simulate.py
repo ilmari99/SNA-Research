@@ -5,6 +5,7 @@ import multiprocessing
 import os
 import random
 import argparse
+from typing import Dict
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 import numpy as np
 from PentobiGTP import PentobiGTP
@@ -45,8 +46,9 @@ def play_pentobi(i, seed, player_maker, save_data_file = "", proc_args = {}):
     if save_data_file:
         proc.write_states_to_file(save_data_file)
     score = list(proc.score)
+    pl_names = [pl.name for pl in players]
     proc.close()
-    return score
+    return {pl : sc for pl,sc in zip(pl_names, score)}
 
 def shuffle_players_func(players):
     random.shuffle(players)
@@ -147,6 +149,25 @@ def player_maker_test_dataset(proc):
                                      move_selection_kwargs={"epsilon":np.random.uniform(0.01,0.1)}) for pid in range(1,5)]
     return players
 
+def _make_gtp_base_sessions(levels, pentobi_gtp_path=None):
+    gtp_base_sessions = []
+    for level in levels:
+        gtp_base_sessions.append(PentobiGTP(command=pentobi_gtp_path, level=level, threads=1, showboard=False, nobook=False, quiet=True))
+    return gtp_base_sessions
+
+def player_maker_internal_vs_internal(proc, gtp_base_sessions : Dict[int,PentobiGTP], levels = None):
+    if levels is None:
+        levels = list(gtp_base_sessions.keys())
+    players = []
+    for i in range(4):
+        chosen_lvl = random.choice(levels)
+        gtp_base_sess = gtp_base_sessions[chosen_lvl]
+        player = PentobiInternalPlayer(i+1, proc, move_selection_strategy="epsilon_greedy",
+                                       move_selection_kwargs={"epsilon":0.03},
+                                       get_move_pentobi_sess=gtp_base_sess,
+                                       name=f"PentobiInternalPlayer_{chosen_lvl}")
+        players.append(player)
+    return players
 
 def play_pentobi_wrapper(args):
     return play_pentobi(*args)
@@ -190,7 +211,8 @@ if __name__=="__main__":
     player_maker_map = {
         "selfplay" : player_maker_selfplay,
         "benchmark" : player_maker_benchmark,
-        "use_internal" : player_maker_with_randomly_internal_players
+        "use_internal" : player_maker_with_randomly_internal_players,
+        "internal_vs_internal" : player_maker_internal_vs_internal,
     }
     
     assert args.player_maker in player_maker_map.keys(), f"The player_maker argument must be in {player_maker_map.keys()}"
@@ -198,6 +220,10 @@ if __name__=="__main__":
     if args.player_maker == "benchmark":
         assert model_folder.endswith(".tflite"), "If the 'benchmark' player_maker is used, the model_folder must be a single file, not a folder."
         args.player_maker = [args.player_maker]
+
+    if args.player_maker == "internal_vs_internal":
+        levels = [1,2,3,4,5]
+        gtp_base_sessions = _make_gtp_base_sessions(levels, pentobi_gtp)
     
     def _player_maker(proc):
         
@@ -212,6 +238,9 @@ if __name__=="__main__":
                 else:
                     assert len(win_rates) == len(model_paths), "The number of models and the number of win rates must be the same"
             return player_maker_map[args.player_maker](proc, model_paths=model_paths, model_weights=win_rates)
+        
+        if args.player_maker == "internal_vs_internal":
+            return player_maker_internal_vs_internal(proc, gtp_base_sessions, levels)
         
         return player_maker_map[args.player_maker](proc, model_paths=model_paths)
     

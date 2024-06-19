@@ -7,11 +7,12 @@ from PentobiGTP import PentobiGTP
 
     
 class PentobiInternalPlayer:
-    def __init__(self, pid, pentobi_sess, get_move_pentobi_sess = None,move_selection_strategy="best", move_selection_kwargs={}):
+    def __init__(self, pid, pentobi_sess, get_move_pentobi_sess = None,move_selection_strategy="best", move_selection_kwargs={}, name="PentobiInternalPlayer"):
         self.pid = pid
         self.pentobi_sess : PentobiGTP = pentobi_sess
         # We can provide a separate PentobiGTP session to get moves from a session with different (level) settings
         self.has_separate_pentobi_sess = get_move_pentobi_sess is not None
+        self.name = name
         if get_move_pentobi_sess is None:
             self.get_move_pentobi_sess : PentobiGTP = pentobi_sess
             
@@ -54,10 +55,11 @@ class PentobiInternalPlayer:
         return
     
 class PentobiNNPlayer:
-    def __init__(self, pid, pentobi_sess, model, move_selection_strategy="best", move_selection_kwargs={}):
+    def __init__(self, pid, pentobi_sess, model, move_selection_strategy="best", move_selection_kwargs={}, name="PentobiNNPlayer"):
         self.pid = pid
         self.pentobi_sess : PentobiGTP = pentobi_sess
         self.model = model
+        self.name = name
         self.move_selection_strategy = move_selection_strategy
         self.move_selection_kwargs = move_selection_kwargs
         
