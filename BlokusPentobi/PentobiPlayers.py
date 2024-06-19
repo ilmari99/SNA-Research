@@ -1,32 +1,56 @@
+import os
 import random
+import warnings
 import numpy as np
 
 from PentobiGTP import PentobiGTP
 
-
-class PentobiInternalPlayer:
-    def __init__(self, pid, pentobi_sess):
-        self.pid = pid
-        self.pentobi_sess : PentobiGTP = pentobi_sess
-        
-    def play_move(self):
-        mv = self.pentobi_sess.bot_get_move(self.pid)
-        self.pentobi_sess.play_move(self.pid, mv, mock_move=False)
     
-class PentobiInternalEpsilonGreedyPlayer:
-    def __init__(self, pid, pentobi_sess, epsilon=0.1):
+class PentobiInternalPlayer:
+    def __init__(self, pid, pentobi_sess, get_move_pentobi_sess = None,move_selection_strategy="best", move_selection_kwargs={}):
         self.pid = pid
         self.pentobi_sess : PentobiGTP = pentobi_sess
-        self.epsilon = epsilon
-        
+        # We can provide a separate PentobiGTP session to get moves from a session with different (level) settings
+        self.has_separate_pentobi_sess = get_move_pentobi_sess is not None
+        if get_move_pentobi_sess is None:
+            self.get_move_pentobi_sess : PentobiGTP = pentobi_sess
+            
+        self.move_selection_strategy = move_selection_strategy
+        self.move_selection_kwargs = move_selection_kwargs
+        assert move_selection_strategy in ["best", "random", "epsilon_greedy"], f"Invalid move selection strategy: {move_selection_strategy}"
+        if move_selection_strategy != "epsilon_greedy":
+            assert not move_selection_kwargs, f"move_selection_kwargs should be empty for move_selection_strategy: {move_selection_strategy}"
+        if move_selection_strategy == "epsilon_greedy" and "epsilon" not in move_selection_kwargs:
+            warnings.warn("No epsilon provided for epsilon_greedy move selection strategy. Defaulting to epsilon=0.1")
+            self.move_selection_kwargs["epsilon"] = 0.1
+            
+    def set_move_session_state(self):
+        if not self.has_separate_pentobi_sess:
+            return
+        # We save the state of penobi_sess to a unique temporary file
+        hash_str = str(hash(self.pentobi_sess.board)) + str(random.randint(0, 10**6))
+        self.pentobi_sess.send_command(f"savesgf {hash_str}.blksgf")
+        # We load the state of pentobi_sess to the get_move_pentobi_sess
+        self.get_move_pentobi_sess.send_command(f"loadsgf {hash_str}.blksgf")
+        # Remove the temporary file
+        os.remove(f"{hash_str}.blksgf")
+        return
+            
     def play_move(self):
-        if np.random.rand() < self.epsilon:
+        if self.move_selection_strategy == "random":
             all_moves = self.pentobi_sess.get_legal_moves(self.pid)
             selected_move = random.choice(all_moves)
-            self.pentobi_sess.play_move(self.pid, selected_move, mock_move=False)
-        else:
-            mv = self.pentobi_sess.bot_get_move(self.pid)
-            self.pentobi_sess.play_move(self.pid, mv, mock_move=False)
+        elif self.move_selection_strategy == "epsilon_greedy":
+            if np.random.rand() < self.move_selection_kwargs["epsilon"]:
+                all_moves = self.pentobi_sess.get_legal_moves(self.pid)
+                selected_move = random.choice(all_moves)
+            else:
+                self.set_move_session_state()
+                selected_move = self.get_move_pentobi_sess.bot_get_move(self.pid)
+        elif self.move_selection_strategy == "best":
+            self.set_move_session_state()
+            selected_move = self.get_move_pentobi_sess.bot_get_move(self.pid)
+        self.pentobi_sess.play_move(self.pid, selected_move, mock_move=False)
         return
     
 class PentobiNNPlayer:
