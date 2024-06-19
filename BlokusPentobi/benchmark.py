@@ -55,15 +55,19 @@ def shuffle_players_func(players):
     return players
 
 
-def player_maker_benchmark(proc, model_path):
-    model = TFLiteModel(model_path)
-    player_to_test = PentobiNNPlayer(1,proc,model,move_selection_strategy="best")
-    
+def player_maker_benchmark(proc, model_path, num_internal = 3):
+   
     opponents = []
-    for pid in range(2,5):
-        opponents.append(PentobiInternalEpsilonGreedyPlayer(pid,proc,epsilon=0.03))
+    for pid in range(1,num_internal+1):
+        opponents.append(PentobiInternalEpsilonGreedyPlayer(pid,proc,epsilon=0.01))
+        
+    model = TFLiteModel(model_path)
+    nn_players = []
+    for pid in range(len(opponents) + 1, 5):
+        player_to_test = PentobiNNPlayer(pid,proc,model,move_selection_strategy="epsilon_greedy", move_selection_kwargs={"epsilon" : 0.01})
+        nn_players.append(player_to_test)
     
-    players = [player_to_test] + opponents
+    players = nn_players + opponents
     players = shuffle_players_func(players)
     return players
 
@@ -89,6 +93,7 @@ if __name__=="__main__":
     parser.add_argument("--pentobi_gtp", type=str, default=env_vars.get('pentobi_gtp', None), help="Path to pentobi-gtp")
     parser.add_argument("--model_path", type=str, required=True)
     parser.add_argument("--dont_update_win_rate", default=False, action="store_true")
+    parser.add_argument("--num_internal", type=int,required=False,default=3)
     args = parser.parse_args()
     
     print(args)
@@ -97,11 +102,12 @@ if __name__=="__main__":
     os.environ["PENTOBI_GTP"] = os.path.abspath(args.pentobi_gtp)
     model_path = os.path.abspath(args.model_path)
     pentobi_gtp = os.path.abspath(args.pentobi_gtp)
+    assert args.num_internal < 4 and args.num_internal > 0, "Number of internal players error."
 
     model = TFLiteModel(model_path)
     
     def _player_maker(proc):
-        return player_maker_benchmark(proc, model_path)
+        return player_maker_benchmark(proc, model_path,args.num_internal)
     
     def arg_generator(num_games):
         kwargs = {

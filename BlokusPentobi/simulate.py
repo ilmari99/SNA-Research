@@ -95,7 +95,7 @@ def player_maker_benchmark(proc, model_paths):
 def player_maker_with_randomly_internal_players(proc,
                                                 model_paths = [],
                                                 model_weights = [],
-                                                internal_player_epsilon=0.1,
+                                                internal_player_epsilon=0.05,
                                                 internal_player_chance=0.25,
                                                 ):
     if not model_paths:
@@ -122,7 +122,7 @@ def player_maker_with_randomly_internal_players(proc,
         if model == "internal":
             player = PentobiInternalEpsilonGreedyPlayer(i+1, proc,epsilon=internal_player_epsilon)
         else:
-            player = PentobiNNPlayer(i+1, proc, model,move_selection_strategy="epsilon_greedy", move_selection_kwargs={"epsilon": internal_player_epsilon})
+            player = PentobiNNPlayer(i+1, proc, model,move_selection_strategy="epsilon_greedy", move_selection_kwargs={"epsilon":internal_player_epsilon})
         players.append(player)
         
     players = shuffle_players_func(players)
