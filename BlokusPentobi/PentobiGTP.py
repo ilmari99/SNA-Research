@@ -64,7 +64,6 @@ def parse_gtp_board_to_matrix(board):
     for line in board_in_lines_splitted:
         board_matrix.append([conversion_map[x] for x in line])
     return np.array(board_matrix)
-    
 
 class PentobiGTP:
     def __init__(self, command=None,
@@ -177,8 +176,13 @@ class PentobiGTP:
             raise FileExistsError(f"File {filename} already exists")
         np.savetxt(filename, states, fmt="%d", delimiter=",")
 
-    def send_command(self, command, errors="raise"):
-        with self.lock:
+    def send_command(self, command, errors="raise", lock = True):
+        print(f"Sending command '{command}'.")
+        if lock:
+            lock = self.lock
+        else:
+            lock = threading.Lock()
+        with lock:
             # Send the command to the process
             self.process.stdin.write(command + '\n')
             self.process.stdin.flush()
@@ -209,10 +213,10 @@ class PentobiGTP:
     def final_score(self):
         return self.send_command("final_score")
     
-    def bot_get_move(self, pid):
+    def bot_get_move(self, pid, lock=True):
         if not self._check_pid_has_turn(pid):
             return False
-        out = self.send_command(f"reg_genmove {pid}",errors="ignore")
+        out = self.send_command(f"reg_genmove {pid}",errors="ignore",lock=lock)
         # = a1,b1 ...
         if "?" in out:
             return "pass"

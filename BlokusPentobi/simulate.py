@@ -97,7 +97,7 @@ def player_maker_benchmark(proc, model_paths):
 def player_maker_with_randomly_internal_players(proc,
                                                 model_paths = [],
                                                 model_weights = [],
-                                                internal_player_epsilon=0.05
+                                                internal_player_epsilon=0.1
                                                 ):
     if not model_paths:
         # Make four players using the internal player
@@ -161,7 +161,7 @@ def player_maker_internal_vs_internal(proc, gtp_base_sessions : Dict[int,Pentobi
     players = []
     for i in range(4):
         chosen_lvl = random.choice(levels)
-        gtp_base_sess = gtp_base_sessions[chosen_lvl]
+        gtp_base_sess = gtp_base_sessions[chosen_lvl-1]
         player = PentobiInternalPlayer(i+1, proc, move_selection_strategy="epsilon_greedy",
                                        move_selection_kwargs={"epsilon":0.03},
                                        get_move_pentobi_sess=gtp_base_sess,

@@ -11,8 +11,9 @@ class PentobiInternalPlayer:
         self.pid = pid
         self.pentobi_sess : PentobiGTP = pentobi_sess
         # We can provide a separate PentobiGTP session to get moves from a session with different (level) settings
-        self.has_separate_pentobi_sess = get_move_pentobi_sess is not None
+        self.has_separate_pentobi_sess = True if get_move_pentobi_sess is not None else False
         self.name = name
+        self.get_move_pentobi_sess = get_move_pentobi_sess
         if get_move_pentobi_sess is None:
             self.get_move_pentobi_sess : PentobiGTP = pentobi_sess
             
@@ -29,14 +30,21 @@ class PentobiInternalPlayer:
         if not self.has_separate_pentobi_sess:
             return
         # We save the state of penobi_sess to a unique temporary file
-        hash_str = str(hash(self.pentobi_sess.board)) + str(random.randint(0, 10**6))
+        hash_str = str(hash(self.pentobi_sess.board)) + str(random.randint(0, 2**32-1))
         self.pentobi_sess.send_command(f"savesgf {hash_str}.blksgf")
         # We load the state of pentobi_sess to the get_move_pentobi_sess
-        self.get_move_pentobi_sess.send_command(f"loadsgf {hash_str}.blksgf")
+        self.get_move_pentobi_sess.send_command(f"loadsgf {hash_str}.blksgf", lock=False)
+        self.get_move_pentobi_sess.current_player = self.pid
         # Remove the temporary file
         os.remove(f"{hash_str}.blksgf")
         return
-            
+    
+    def _make_move_with_proc(self):
+        with self.get_move_pentobi_sess.lock:
+            self.set_move_session_state()
+            mv = self.get_move_pentobi_sess.bot_get_move(self.pid,lock=False)
+        return mv
+    
     def play_move(self):
         if self.move_selection_strategy == "random":
             all_moves = self.pentobi_sess.get_legal_moves(self.pid)
@@ -46,11 +54,12 @@ class PentobiInternalPlayer:
                 all_moves = self.pentobi_sess.get_legal_moves(self.pid)
                 selected_move = random.choice(all_moves)
             else:
-                self.set_move_session_state()
-                selected_move = self.get_move_pentobi_sess.bot_get_move(self.pid)
+                selected_move = self._make_move_with_proc()
         elif self.move_selection_strategy == "best":
-            self.set_move_session_state()
-            selected_move = self.get_move_pentobi_sess.bot_get_move(self.pid)
+            selected_move = self._make_move_with_proc()
+        print(f"Player {self.pid} chose move: {selected_move}", flush=True)
+        if selected_move == "=":
+            selected_move = "pass"
         self.pentobi_sess.play_move(self.pid, selected_move, mock_move=False)
         return
     
