@@ -88,7 +88,7 @@ def player_maker_benchmark(proc, model_paths):
     
     opponents = []
     for pid in range(2,5):
-        opponents.append(PentobiInternalPlayer(pid, proc,move_selection_strategy="epsilon_greedy", move_selection_kwargs={"epsilon":0.03}))
+        opponents.append(PentobiInternalPlayer(pid, proc,move_selection_strategy="epsilon_greedy", move_selection_kwargs={"epsilon":0.01}))
     
     players = [player_to_test] + opponents
     players = shuffle_players_func(players)
@@ -161,12 +161,23 @@ def player_maker_internal_vs_internal(proc, gtp_base_sessions : Dict[int,Pentobi
     players = []
     for i in range(4):
         chosen_lvl = random.choice(levels)
-        gtp_base_sess = gtp_base_sessions[chosen_lvl-1]
+        gtp_base_sess = gtp_base_sessions[chosen_lvl]
         player = PentobiInternalPlayer(i+1, proc, move_selection_strategy="epsilon_greedy",
                                        move_selection_kwargs={"epsilon":0.03},
                                        get_move_pentobi_sess=gtp_base_sess,
                                        name=f"PentobiInternalPlayer_{chosen_lvl}")
         players.append(player)
+    return players
+
+def player_maker_benchmark_internal(proc,gtp_base_sess):
+    player_to_test = PentobiInternalPlayer(1,proc,move_selection_strategy="best",get_move_pentobi_sess=gtp_base_sess,name=f"PentobiInternalPlayer_benchmark")
+    opponents = []
+    for pid in range(2,5):
+        opponents.append(PentobiInternalPlayer(pid,proc,move_selection_strategy="epsilon_greedy",
+                                               move_selection_kwargs={"epsilon":0.01}
+                                               ))
+    players = [player_to_test] + opponents
+    players = shuffle_players_func(players)
     return players
 
 def play_pentobi_wrapper(args):
@@ -213,6 +224,7 @@ if __name__=="__main__":
         "benchmark" : player_maker_benchmark,
         "use_internal" : player_maker_with_randomly_internal_players,
         "internal_vs_internal" : player_maker_internal_vs_internal,
+        "benchmark_internal" : player_maker_benchmark_internal,
     }
     
     assert args.player_maker in player_maker_map.keys(), f"The player_maker argument must be in {player_maker_map.keys()}"
@@ -222,9 +234,13 @@ if __name__=="__main__":
         args.player_maker = [args.player_maker]
 
     if args.player_maker == "internal_vs_internal":
-        levels = [1,2,3,4,5]
+        levels = [1,4]
         gtp_base_sessions = _make_gtp_base_sessions(levels, pentobi_gtp)
+        gtp_base_sessions = {lvl : sess for lvl, sess in zip(levels, gtp_base_sessions)}
     
+    if args.player_maker == "benchmark_internal":
+        gtp_base_sess = _make_gtp_base_sessions([3], pentobi_gtp)[0]
+
     def _player_maker(proc):
         
         if args.player_maker == "use_internal" and os.path.exists(os.path.join(model_folder, "win_rates.json")):
@@ -238,6 +254,9 @@ if __name__=="__main__":
                 else:
                     assert len(win_rates) == len(model_paths), "The number of models and the number of win rates must be the same"
             return player_maker_map[args.player_maker](proc, model_paths=model_paths, model_weights=win_rates)
+        
+        if args.player_maker == "benchmark_internal":
+            return player_maker_benchmark_internal(proc,gtp_base_sess)
         
         if args.player_maker == "internal_vs_internal":
             return player_maker_internal_vs_internal(proc, gtp_base_sessions, levels)
@@ -270,14 +289,30 @@ if __name__=="__main__":
                     print(f"Games played: {len(results)}", end="\r")
             except StopIteration:
                 break
-    #print(results)
     
-    # Calculate the average score
-    results = np.array(results)
-    mean_scores = np.mean(results, axis=0)
-    winners = np.argmax(results, axis=1) + 1
-    # Hm times each player won
-    num_wins = Counter(winners)
-    num_wins = [num_wins[i+1] for i in range(4)]
-    print(f"Mean scores: {mean_scores}")
-    print(f"Number of wins: {num_wins}")
+    # Analyze results: a list of {pl : sc for pl,sc in zip(pl_names, score)}
+    # Count the number of wins, the win rate, and the average score for each unique player name
+    num_games = Counter()
+    win_counts = Counter()
+    total_scores = Counter()
+    for result in results:
+        # {pl : sc for pl,sc in zip(pl_names, score)}
+        for pl, sc in result.items():
+            # pl = play_name, sc = score
+            # Highest score wins
+            num_games[pl] += 1
+            total_scores[pl] += sc
+            if sc == max(result.values()):
+                win_counts[pl] += 1
+        
+    win_rates = {pl : win_counts[pl] / num_games[pl] for pl in num_games.keys()}
+    avg_scores = {pl : total_scores[pl] / num_games[pl] for pl in num_games.keys()}
+    
+    print("Win rates:", win_rates)
+    print("Average scores:", avg_scores)
+            
+            
+    
+    
+            
+    
