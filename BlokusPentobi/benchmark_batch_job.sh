@@ -59,7 +59,7 @@ do
     if [[ $file =~ model_([0-9]+).tflite ]]; then
         number=${BASH_REMATCH[1]}
         # Skip the file if N is less than 10
-        if ((number < -1)); then
+        if ((number < 10)); then
             echo "Skipping "$file
             continue 1
         fi

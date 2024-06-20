@@ -6,7 +6,7 @@ import argparse
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 import numpy as np
 from PentobiGTP import PentobiGTP
-from PentobiPlayers import PentobiInternalPlayer, PentobiNNPlayer, PentobiInternalEpsilonGreedyPlayer
+from PentobiPlayers import PentobiInternalPlayer, PentobiNNPlayer
 from utils import TFLiteModel
 import argparse
 
@@ -59,7 +59,7 @@ def player_maker_benchmark(proc, model_path, num_internal = 3):
    
     opponents = []
     for pid in range(1,num_internal+1):
-        opponents.append(PentobiInternalEpsilonGreedyPlayer(pid,proc,epsilon=0.01))
+        opponents.append(PentobiInternalPlayer(pid,proc,move_selection_strategy="epsilon_greedy", move_selection_kwargs={"epsilon" : 0.01}))
         
     model = TFLiteModel(model_path)
     nn_players = []

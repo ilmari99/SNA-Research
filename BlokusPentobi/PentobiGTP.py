@@ -177,7 +177,7 @@ class PentobiGTP:
         np.savetxt(filename, states, fmt="%d", delimiter=",")
 
     def send_command(self, command, errors="raise", lock = True):
-        print(f"Sending command '{command}'.")
+        #print(f"Sending command '{command}'.")
         if lock:
             lock = self.lock
         else:

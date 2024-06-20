@@ -57,7 +57,7 @@ class PentobiInternalPlayer:
                 selected_move = self._make_move_with_proc()
         elif self.move_selection_strategy == "best":
             selected_move = self._make_move_with_proc()
-        print(f"Player {self.pid} chose move: {selected_move}", flush=True)
+        #print(f"Player {self.pid} chose move: {selected_move}", flush=True)
         if selected_move == "=":
             selected_move = "pass"
         self.pentobi_sess.play_move(self.pid, selected_move, mock_move=False)
