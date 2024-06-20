@@ -39,9 +39,10 @@ class PentobiInternalPlayer:
         os.remove(f"{hash_str}.blksgf")
         return
     
-    def _make_move_with_proc(self):
+    def _make_move_with_pentobi_sess(self):
         with self.get_move_pentobi_sess.lock:
             self.set_move_session_state()
+            #assert np.array_equal(self.pentobi_sess.board_np, self.get_move_pentobi_sess.board_np), "Boards are not equal"
             mv = self.get_move_pentobi_sess.bot_get_move(self.pid,lock=False)
         return mv
     
@@ -54,10 +55,10 @@ class PentobiInternalPlayer:
                 all_moves = self.pentobi_sess.get_legal_moves(self.pid)
                 selected_move = random.choice(all_moves)
             else:
-                selected_move = self._make_move_with_proc()
+                selected_move = self._make_move_with_pentobi_sess()
         elif self.move_selection_strategy == "best":
-            selected_move = self._make_move_with_proc()
-        print(f"Player {self.pid} chose move: {selected_move}", flush=True)
+            selected_move = self._make_move_with_pentobi_sess()
+        #print(f"Player {self.pid} chose move: {selected_move}", flush=True)
         if selected_move == "=":
             selected_move = "pass"
         self.pentobi_sess.play_move(self.pid, selected_move, mock_move=False)

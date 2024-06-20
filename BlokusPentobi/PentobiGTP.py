@@ -105,6 +105,7 @@ class PentobiGTP:
             command.append('--quiet')
         command.append(f'--threads {threads}')
         command = ' '.join(command)
+        self.command = command
         #print(f"Starting pentobi-gtp with command: {command}")
         # Start the pentobi-gtp process in an invisible window
         self.process = subprocess.Popen(
@@ -121,7 +122,7 @@ class PentobiGTP:
         
         self.current_player = 1
         # Lock to ensure thread-safe access to the process
-        self.lock = threading.Lock()
+        self.lock = multiprocessing.Lock()
         
     def _find_pentobi_gtp_binary(self):
         # From the currect directory, search for the pentobi-gtp binary
@@ -177,12 +178,17 @@ class PentobiGTP:
         np.savetxt(filename, states, fmt="%d", delimiter=",")
 
     def send_command(self, command, errors="raise", lock = True):
-        print(f"Sending command '{command}'.")
+        #print(f"Sending command '{command}' to pentobi: {self.command}")
         if lock:
-            lock = self.lock
+            with self.lock:
+                # Send the command to the process
+                self.process.stdin.write(command + '\n')
+                self.process.stdin.flush()
+                # Read the response from the process
+                response = self._read_response()
+                if "?" in response and errors=="raise":
+                    raise Exception(f"Command '{command}' failed: {response}")
         else:
-            lock = threading.Lock()
-        with lock:
             # Send the command to the process
             self.process.stdin.write(command + '\n')
             self.process.stdin.flush()
