@@ -65,8 +65,8 @@ def convert_model_to_tflite(file_path : str, output_file : str = None) -> None:
         tf.lite.OpsSet.SELECT_TF_OPS, # enable TensorFlow ops.
         
     ]
-    converter.optimizations = [tf.lite.Optimize.DEFAULT]
-    converter.target_spec.supported_types = [tf.float16]
+    #converter.optimizations = [tf.lite.Optimize.DEFAULT]
+    #converter.target_spec.supported_types = [tf.float16]
 
     tflite_model = converter.convert()
     
@@ -75,10 +75,39 @@ def convert_model_to_tflite(file_path : str, output_file : str = None) -> None:
         f.write(tflite_model)
     return output_file
 
+def test_model(model_path : str, data_folder : str):
+    """ Test the model.
+    """
+    # Convert the model to a tflite model
+    tflite_path = model_path.replace(".keras", ".tflite")
+    convert_model_to_tflite(model_path, tflite_path)
+    
+    tflite_model = TFLiteModel(tflite_path)
+    
+    # Load the data
+    ds, _, _ = read_to_dataset(data_folder)
+    
+    # Test tflite model inference speed
+    t_start = time.time()
+    num_samples = 0
+    mae = 0
+    for x, y in ds:
+        x = x.numpy()
+        x = np.expand_dims(x,axis=0)
+        #print(f"Predicting {x.shape}")
+        pred = tflite_model.predict(x)
+        mae += np.abs(pred[0] - y)
+        num_samples += x.shape[0]
+    t_end = time.time()
+    
+    print(f"Mean absolute error: {mae / num_samples}")
+    print(f"Time to predict {num_samples} samples: {t_end - t_start}")
 
 if __name__ == "__main__":
-    model_path = "model.keras"
-    tflite_path = "model_test.tflite"
+    model_path = "AttentionModels/model_0.keras"
+    model_path = "Emb-1Conv3-1MLP-B4096/model_0.keras"
+    # Replace keras -> tflite
+    tflite_path = model_path.replace(".keras", ".tflite")
     
     # Convert the model to a tflite model
     convert_model_to_tflite(model_path, tflite_path)
@@ -91,7 +120,7 @@ if __name__ == "__main__":
     print(f"Size of tflite model: {model_size_kb} KB")
     
     # Load the data
-    data_folder = "TestIndividualPlayers"
+    data_folder = "Data"
     ds, _, _ = read_to_dataset(data_folder)
     
     # Test tflite model inference speed
