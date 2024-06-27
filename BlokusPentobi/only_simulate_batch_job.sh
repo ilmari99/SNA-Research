@@ -1,8 +1,8 @@
 #!/bin/bash
 
-#SBATCH --job-name=BlokusPentobi200KLevel1-Eps005-WeightUsingBenchmark-Emb-2Conv3-2MLP-B512-SmallLR
+#SBATCH --job-name=BlokusPentobiTestDataset200K-Lvl5-Eps01
 #SBATCH --account=project_2010270
-#SBATCH --time=01:30:00
+#SBATCH --time=01:45:00
 #SBATCH --partition=medium
 #SBATCH --output=%x/simulate_%j.out
 #SBATCH --error=%x/simulate_%j.err
@@ -78,6 +78,6 @@ for node in $(scontrol show hostname $SLURM_JOB_NODELIST); do
     --num_games=20000 \
     --num_cpus=100 \
     --player_maker=use_internal \
-    --level=1 &
+    --level=5 &
 done
 wait

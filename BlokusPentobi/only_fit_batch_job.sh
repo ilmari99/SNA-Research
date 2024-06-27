@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --job-name=BlokusPentobi200KLevel1-Eps005-WeightUsingBenchmark-Emb-2Conv3-2MLP-B512-SmallLR
+#SBATCH --job-name=BlokusPentobi160KLevel1-WeightUsingBenchmark-Emb8-Patch4-EmbPos64-MHA8-Dense64-B512-lr001
 #SBATCH --account=project_2010270
 # Write the output files to the folder wth job-name
 #SBATCH --output=%x/fit_%j.out

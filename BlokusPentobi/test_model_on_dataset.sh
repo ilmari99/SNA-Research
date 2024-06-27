@@ -1,11 +1,11 @@
 #!/bin/bash
 
-#SBATCH --job-name=Emb-Patch-MHA-Dense-B2048
+#SBATCH --job-name=BlokusPentobiTestDataset200K-Emb16-3x32-64-128Conv3BN-2Dense32-lr00005-Batch64-BCE
 #SBATCH --account=project_2010270
 # Write the output files to the folder wth job-name
 #SBATCH --output=%x/test_%j.out
 #SBATCH --error=%x/test_%j.err
-#SBATCH --time=01:00:00
+#SBATCH --time=03:00:00
 #SBATCH --partition=gpusmall
 #SBATCH --mail-type=END
 
@@ -14,13 +14,11 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --gres=gpu:a100:1,nvme:40
-# Print all arguments
-echo "All arguments: $@"
 
 module purge
 module load tensorflow/2.15
 
-DATA_FOLDER=/scratch/project_2010270/BlokusPentobiTestDataset50K/Data
+DATA_FOLDER=/scratch/project_2010270/BlokusPentobiTestDataset200K-Lvl5-Eps01/Data
 TEST_NAME=$SLURM_JOB_NAME
 
 SBATCH_OUTPUT=$TEST_NAME/test_%j.out
@@ -65,4 +63,4 @@ $PYTHON_EXE ./$TEST_NAME/BlokusPentobi/fit_model_single.py \
 --num_epochs=30 \
 --patience=5 \
 --validation_split=0.2 \
---batch_size=2048 \
+--batch_size=64 \

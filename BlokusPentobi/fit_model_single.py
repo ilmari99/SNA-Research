@@ -5,9 +5,10 @@ import tensorflow as tf
 import numpy as np
 from utils import read_to_dataset
 from utils import convert_model_to_tflite
+from utils import BlokusPentobiMetric
 import argparse
 
-from board_norming import NormalizeBoardToPerspectiveLayer
+from board_norming import NormalizeBoardToPerspectiveLayer, separate_to_patches
 
 
 class SaveModelCallback(tf.keras.callbacks.Callback):
@@ -19,7 +20,7 @@ class SaveModelCallback(tf.keras.callbacks.Callback):
         self.model.save(self.model_save_path)
         convert_model_to_tflite(self.model_save_path)
 
-def get_model(input_shape):
+def get_model(input_shape, tflite_path=None):
     inputs = tf.keras.Input(shape=input_shape)
     #input_len = input_shape[1]
     
@@ -40,7 +41,6 @@ def get_model(input_shape):
     # Normalize the board to the perspective of the player
     board = NormalizeBoardToPerspectiveLayer()([board, perspective_pids])
     
-    #print(f"Board: {board}")
     board = tf.reshape(board, (-1, board_side_len, board_side_len, 1))
     
     # Convert the board to a tensor with 5 channels, i.e. one-hot encode the values -1...3
@@ -51,10 +51,19 @@ def get_model(input_shape):
     board = tf.reshape(board, (-1, board_side_len, board_side_len, 16))
     
     # Apply convolutions
-    x = keras.layers.Conv2D(32, (3,3), activation='relu')(board)
-    x = keras.layers.Conv2D(64, (3,3), activation='relu')(x)
-    #x = keras.layers.Conv2D(64, (3,3), activation='relu')(x)
-    #x = keras.layers.Conv2D(128, (3,3), activation='relu')(x)
+    #x = keras.layers.Conv2D(16, (3,3), activation='linear')(board)
+    #x = keras.layers.BatchNormalization()(x)
+    #x = keras.layers.ReLU()(x)
+    x = keras.layers.Conv2D(32, (3,3), activation='linear')(board)
+    x = keras.layers.BatchNormalization()(x)
+    x = keras.layers.ReLU()(x)
+    x = keras.layers.Conv2D(64, (3,3), activation='linear')(x)
+    x = keras.layers.BatchNormalization()(x)
+    x = keras.layers.ReLU()(x)
+    x = keras.layers.Conv2D(128, (3,3), activation='linear')(x)
+    x = keras.layers.BatchNormalization()(x)
+    x = keras.layers.ReLU()(x)
+    
     x = keras.layers.Flatten()(x)
     x = keras.layers.Dropout(0.4)(x)
     x = keras.layers.Dense(32, activation='relu')(x)
@@ -64,9 +73,13 @@ def get_model(input_shape):
     
     model = keras.Model(inputs=inputs, outputs=output)
 
-    model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.0001),
-            loss='mse',
-            metrics=['mae'],
+    metrics = ['mae',"mse","binary_crossentropy"]
+    if tflite_path is not None:
+        metrics.append(BlokusPentobiMetric(tflite_path))
+
+    model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.00005),
+            loss='binary_crossentropy',
+            metrics=metrics,
             #run_eagerly=True
     )
     return model
@@ -120,7 +133,7 @@ def main(data_folder,
         if load_model_path:
             model = tf.keras.models.load_model(load_model_path)
         else:
-            model = get_model(input_shape)
+            model = get_model(input_shape, model_save_path.replace(".keras", ".tflite"))
             print(model.summary())
         
         tb_log = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
@@ -132,7 +145,7 @@ def main(data_folder,
     
     # Run benchmark.py to test the model
     model_tflite_path = model_save_path.replace(".keras", ".tflite")
-    os.system(f"python3 BlokusPentobi/benchmark.py --model_path={model_tflite_path} --num_games=800 --num_cpus=30")
+    os.system(f"python3 BlokusPentobi/benchmark.py --model_path={model_tflite_path} --num_games=600 --num_cpus=30")
     
 
 if __name__ == "__main__":

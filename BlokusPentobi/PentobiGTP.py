@@ -157,7 +157,7 @@ class PentobiGTP:
         #    sc[winner_idx] += 50
         return sc
     
-    def write_states_to_file(self, filename, overwrite=False):
+    def write_states_to_file(self, filename, overwrite=False, use_discount=False):
         if not filename:
             raise ValueError("Filename is empty")
         states = np.array(self.game_states)
@@ -170,12 +170,13 @@ class PentobiGTP:
         # Get the score for the player whose perspective the state is from
         pids = states[:,0].astype(int)
         scores = scores[pids]
-        for i, sc, pid in zip(range(len(scores)), scores, pids):
-            num_played_moves = np.sum(pids[:i] == pid)
-            # If we have noly played a few moves, we can't trust the score
-            # so we want to discount the score if we have only played a few moves
-            discount = np.min([1, (num_played_moves + 1)/15])
-            scores[i] = round(sc * discount)
+        if use_discount:
+            for i, sc, pid in zip(range(len(scores)), scores, pids):
+                num_played_moves = np.sum(pids[:i] == pid)
+                # If we have noly played a few moves, we can't trust the score
+                # so we want to discount the score if we have only played a few moves
+                discount = np.min([1, (num_played_moves + 1)/15])
+                scores[i] = round(sc * discount)
         
         states = np.column_stack([states, scores])
         # The states are in the format [pid, current_player, board, score] All values are integers
@@ -187,7 +188,7 @@ class PentobiGTP:
         np.savetxt(filename, states, fmt="%d", delimiter=",")
 
     def send_command(self, command, errors="raise", lock = True):
-        #print(f"Sending command '{command}' to pentobi: {self.command}")
+        #print(f"Sending command '{command}'.")
         if lock:
             with self.lock:
                 # Send the command to the process

@@ -1,6 +1,6 @@
 #!/bin/bash
-
-#SBATCH --job-name=BlokusPentobi160KLevel1-WeightUsingBenchmark-Emb8-Patch4-EmbPos64-MHA8-Dense64-B512
+#/scratch/project_2010270/BlokusPentobi120KLevel1-WeightUsingBenchamark-Emb-2Conv3-2MLP-B512-SmallLR/Models/model_16.tflite
+#SBATCH --job-name=BlokusPentobi120KLevel1-WeightUsingBenchamark-Emb-2Conv3-2MLP-B512-SmallLR
 #SBATCH --account=project_2010270
 #SBATCH --time=01:00:00
 #SBATCH --partition=medium
@@ -16,9 +16,7 @@
 # Print all arguments
 echo "All arguments: $@"
 
-model_folder=$SLURM_JOB_NAME
-model_folder=/scratch/project_2010270/$SLURM_JOB_NAME/Models
-#"/Models"
+tflite_file=./BlokusPentobi120KLevel1-WeightUsingBenchamark-Emb-2Conv3-2MLP-B512-SmallLR/model_0.tflite
 
 module purge
 module load tensorflow/2.15
@@ -47,29 +45,4 @@ $PYTHON_EXE -c "import tensorflow as tf; print(tf.__version__)"
 $PYTHON_EXE -c "import tensorflow as tf; print(tf.config.list_physical_devices('GPU'))"
 $PYTHON_EXE --version
 
-for file in "$model_folder"/*.tflite
-do
-    echo $file
-    if [[ $file != *.tflite ]]
-    then
-        continue 1
-    fi
-
-    # Extract the number N from the filename model_<N>.tflite
-    if [[ $file =~ model_([0-9]+).tflite ]]; then
-        number=${BASH_REMATCH[1]}
-        # Skip the file if N is less than 10
-        if ((number < -1)); then
-            echo "Skipping "$file
-            continue 1
-        fi
-    fi
-
-    $PYTHON_EXE ./BlokusPentobi/benchmark.py --num_internal=3 --model_path=$file --num_games=1000 --num_cpus=100 --pentobi_level=1
-done
-
-# Print the Models and their win rates in descending order
-# "Model .../model_0.tflite win percent: 0.335"
-cat $SLURM_JOB_NAME/benchmark_$SLURM_JOB_ID.out | grep "percent" | awk '{print $NF, $0}' | sort -k1,1n -r | cut -d' ' -f2-
-
-wait
+$PYTHON_EXE ./BlokusPentobi/benchmark.py --num_internal=3 --model_path=$tflite_file --num_games=1000 --num_cpus=100 --pentobi_level=5

@@ -1,6 +1,8 @@
 
+import multiprocessing
 import os
 import random
+import subprocess
 from typing import List
 
 import numpy as np
@@ -94,6 +96,7 @@ class TFLiteModel:
             self.input_details = self.interpreter.get_input_details()
             self.output_details = self.interpreter.get_output_details()
             self.interpreter.allocate_tensors()
+            self.lock = multiprocessing.Lock()
             self.initialized = True
     
     def is_valid_size_input(self, X) -> bool:
@@ -105,18 +108,56 @@ class TFLiteModel:
         """Predict the output of the model.
         The input should be a numpy array with size (batch_size, input_size)
         """
-        if not self.is_valid_size_input(X):
-            # Add a dimension to the input
-            X = np.expand_dims(X, axis=-1)
+        with self.lock:
             if not self.is_valid_size_input(X):
-                raise ValueError(f"Input shape {X.shape} is not valid for the model. Expected shape {self.input_details[0]['shape']}")
-        self.interpreter.resize_tensor_input(self.input_details[0]['index'], X.shape)
-        self.interpreter.allocate_tensors()
-        self.interpreter.set_tensor(self.input_details[0]['index'], X)
-        self.interpreter.invoke()
-        out = self.interpreter.get_tensor(self.output_details[0]['index'])
-        return list(out)
-    
+                # Add a dimension to the input
+                X = np.expand_dims(X, axis=-1)
+                if not self.is_valid_size_input(X):
+                    raise ValueError(f"Input shape {X.shape} is not valid for the model. Expected shape {self.input_details[0]['shape']}")
+            self.interpreter.resize_tensor_input(self.input_details[0]['index'], X.shape)
+            self.interpreter.allocate_tensors()
+            self.interpreter.set_tensor(self.input_details[0]['index'], X)
+            self.interpreter.invoke()
+            out = self.interpreter.get_tensor(self.output_details[0]['index'])
+            return list(out)
+
+class BlokusPentobiMetric(tf.keras.metrics.Metric):
+
+    def __init__(self, model_tflite_path):
+        super(BlokusPentobiMetric, self).__init__(name='blokus_pentobi_metric')
+        self.model_tflite_path = model_tflite_path
+        self.win_rate = None
+        self.avg_score = None
+
+    def update_state(self, y_true, y_pred):
+        # Skip updating during training
+        return
+
+    def result(self):
+        # Run the shell command
+        if not os.path.exists(self.model_tflite_path):
+            return 0, 0
+        command = f"python3 BlokusPentobi/benchmark.py --model_path={self.model_tflite_path} --num_games=400 --num_cpus=30"
+        output = subprocess.run(command.split(), capture_output=True, text=True).stdout
+
+        # Parse the output for win rate and average score
+        for line in output.splitlines():
+            if "Wins" in line:
+                wins_dict = eval(line.split(": ")[-1])
+                self.win_rate = wins_dict.get("PlayerToTest", None)
+            if "Average score" in line:
+                score_dict = eval(line.split(": ")[-1])
+                self.avg_score = score_dict.get("PlayerToTest", None)
+
+        # Reset metric state for next evaluation
+        self.reset_states()
+
+        # Return win rate and average score as a tuple
+        return self.win_rate, self.avg_score
+
+    def reset_states(self):
+        self.win_rate = None
+        self.avg_score = None
 
 def convert_model_to_tflite(file_path : str, output_file : str = None) -> None:
     if output_file is None:
