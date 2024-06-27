@@ -122,42 +122,40 @@ class TFLiteModel:
             return list(out)
 
 class BlokusPentobiMetric(tf.keras.metrics.Metric):
-
-    def __init__(self, model_tflite_path):
-        super(BlokusPentobiMetric, self).__init__(name='blokus_pentobi_metric')
+    def __init__(self, model_tflite_path, name='blokus_pentobi_metric', ret_metric="average_score", num_games=60, num_cpus=10, **kwargs):
+        super(BlokusPentobiMetric, self).__init__(name=name)
         self.model_tflite_path = model_tflite_path
-        self.win_rate = None
-        self.avg_score = None
+        assert ret_metric in ["average_score", "win_rate"], "ret_metric must be either 'average_score' or 'win_rate'"
+        self.ret_metric = ret_metric
+        self.num_games = num_games
+        self.num_cpus = num_cpus
+        self.win_rate = -1
+        self.avg_score = -1
 
-    def update_state(self, y_true, y_pred):
-        # Skip updating during training
-        return
+    def update_state(self, y_true, y_pred, sample_weight=None):
+        pass
 
     def result(self):
-        # Run the shell command
-        if not os.path.exists(self.model_tflite_path):
-            return 0, 0
-        command = f"python3 BlokusPentobi/benchmark.py --model_path={self.model_tflite_path} --num_games=400 --num_cpus=30"
-        output = subprocess.run(command.split(), capture_output=True, text=True).stdout
+        try:
+            print(f"Running benchmark for model at {self.model_tflite_path}")
+            command = f"python3 BlokusPentobi/benchmark.py --model_path={self.model_tflite_path} --num_games={self.num_games} --num_cpus={self.num_cpus}"
+            output = subprocess.run(command.split(), capture_output=True, text=True).stdout
+            print(output)
+            
+            # Parse the output for win rate and average score
+            for line in output.splitlines():
+                if line.startswith("Wins"):
+                    wins_dict = eval(line.split("Wins ")[-1])
+                    self.win_rate = wins_dict.get("PlayerToTest", -1)
+                if line.startswith("Average score"):
+                    score_dict = eval(line.split("Average score ")[-1])
+                    self.avg_score = score_dict.get("PlayerToTest", -1)
 
-        # Parse the output for win rate and average score
-        for line in output.splitlines():
-            if "Wins" in line:
-                wins_dict = eval(line.split(": ")[-1])
-                self.win_rate = wins_dict.get("PlayerToTest", None)
-            if "Average score" in line:
-                score_dict = eval(line.split(": ")[-1])
-                self.avg_score = score_dict.get("PlayerToTest", None)
-
-        # Reset metric state for next evaluation
-        self.reset_states()
-
-        # Return win rate and average score as a tuple
-        return self.win_rate, self.avg_score
-
-    def reset_states(self):
-        self.win_rate = None
-        self.avg_score = None
+            # Return win rate and average score as a tuple
+            return self.avg_score if self.ret_metric == "average_score" else self.win_rate
+        except Exception as e:
+            print(f"Error running benchmark: {e}")
+            return -1
 
 def convert_model_to_tflite(file_path : str, output_file : str = None) -> None:
     if output_file is None:
@@ -165,7 +163,7 @@ def convert_model_to_tflite(file_path : str, output_file : str = None) -> None:
         
     print("Converting '{}' to '{}'".format(file_path, output_file))
 
-    model = tf.keras.models.load_model(file_path)
+    model = tf.keras.models.load_model(file_path, compile=False)
     converter = tf.lite.TFLiteConverter.from_keras_model(model)
     converter.target_spec.supported_ops = [
         tf.lite.OpsSet.TFLITE_BUILTINS, # enable TensorFlow Lite ops.
