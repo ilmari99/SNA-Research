@@ -7,6 +7,7 @@ import random
 import argparse
 from typing import Dict
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+os.environ["CUDA_VISIBLE_DEVICES"] = ""
 import numpy as np
 from PentobiGTP import PentobiGTP
 from PentobiPlayers import PentobiInternalPlayer, PentobiNNPlayer#, PentobiInternalEpsilonGreedyPlayer
@@ -217,7 +218,7 @@ if __name__=="__main__":
         os.makedirs(model_folder, exist_ok=True)
     
     model_paths = [os.path.join(model_folder, f) for f in os.listdir(model_folder) if f.endswith(".tflite")]
-    models = [TFLiteModel(path) for path in model_paths]
+    #models = [TFLiteModel(path) for path in model_paths]
     
     player_maker_map = {
         "selfplay" : player_maker_selfplay,

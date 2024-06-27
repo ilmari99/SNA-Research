@@ -4,6 +4,7 @@ import os
 import random
 import argparse
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+os.environ["CUDA_VISIBLE_DEVICES"] = ""
 import numpy as np
 from PentobiGTP import PentobiGTP
 from PentobiPlayers import PentobiInternalPlayer, PentobiNNPlayer
@@ -43,7 +44,7 @@ def play_pentobi(i, seed, player_maker, save_data_file = "", proc_args = {}):
     if save_data_file:
         proc.write_states_to_file(save_data_file)
     score = list(proc.score)
-    pl_names = [type(pl).__name__+f"_{i}" for i,pl in enumerate(players)]
+    pl_names = [pl.name for i,pl in enumerate(players)]
     proc.close()
     #print({pl : sc for pl,sc in zip(pl_names, score)})
     return {pl : sc for pl,sc in zip(pl_names, score)}
@@ -59,12 +60,23 @@ def player_maker_benchmark(proc, model_path, num_internal = 3):
    
     opponents = []
     for pid in range(1,num_internal+1):
-        opponents.append(PentobiInternalPlayer(pid,proc,move_selection_strategy="epsilon_greedy", move_selection_kwargs={"epsilon" : 0.01}))
+        opponents.append(PentobiInternalPlayer(pid,
+                                               proc,
+                                               move_selection_strategy="epsilon_greedy",
+                                               move_selection_kwargs={"epsilon" : 0.01},
+                                               name="PentobiInternalPlayer" + str(pid))
+        )
         
     model = TFLiteModel(model_path)
     nn_players = []
     for pid in range(len(opponents) + 1, 5):
-        player_to_test = PentobiNNPlayer(pid,proc,model,move_selection_strategy="epsilon_greedy", move_selection_kwargs={"epsilon" : 0.01})
+        player_to_test = PentobiNNPlayer(pid,
+                                         proc,
+                                         model,
+                                         move_selection_strategy="epsilon_greedy",
+                                         move_selection_kwargs={"epsilon" : 0.01},
+                                         name="PlayerToTest"
+                                         )
         nn_players.append(player_to_test)
     
     players = nn_players + opponents
@@ -104,7 +116,7 @@ if __name__=="__main__":
     pentobi_gtp = os.path.abspath(args.pentobi_gtp)
     assert args.num_internal < 4 and args.num_internal > 0, "Number of internal players error."
 
-    model = TFLiteModel(model_path)
+    #model = TFLiteModel(model_path)
     
     def _player_maker(proc):
         return player_maker_benchmark(proc, model_path,args.num_internal)
@@ -137,40 +149,34 @@ if __name__=="__main__":
                 break
     #print(results)
 
-    class_wins = {}
-    class_avg_score = {}
+    player_wins = {}
+    player_avg_score = {}
     num_games = 0
-    games_per_class = {}
+    games_per_player = {}
     for res in results:
         scores = list(res.values())
         players = list(res.keys())
         max_sc = max(scores)
         idx = scores.index(max_sc)
         winner_name = players[idx]
-        winner_name_splitted = winner_name.split("_")
-        winner_name = winner_name_splitted[0:-1]
-        winner_class = "".join(winner_name)
-        if winner_class not in class_wins:
-            class_wins[winner_class] = 0
-        class_wins[winner_class] += 1
+        if winner_name not in player_wins.keys():
+            player_wins[winner_name] = 0
+        player_wins[winner_name] += 1
         
         for sc, pl in zip(scores,players):
-            pl_splitted = pl.split("_")
-            pl = pl_splitted[0:-1]
-            class_ = "".join(pl)
-            if class_ not in games_per_class:
-                games_per_class[class_] = 0
-            games_per_class[class_] += 1
-            if class_ not in class_avg_score:
-                class_avg_score[class_] = 0
-            class_avg_score[class_] += sc
+            if pl not in games_per_player:
+                games_per_player[pl] = 0
+            games_per_player[pl] += 1
+            if pl not in player_avg_score:
+                player_avg_score[pl] = 0
+            player_avg_score[pl] += sc
         num_games += 1
-    class_avg_score = {k : v/games_per_class[k] for k,v in class_avg_score.items()}
-    class_wins = {k : v/games_per_class[k] for k,v in class_wins.items()}
-    print(f"Wins",class_wins)
-    print(f"Average score", class_avg_score)
+    player_avg_score = {k : v/games_per_player[k] for k,v in player_avg_score.items()}
+    player_wins = {k : v/games_per_player[k] for k,v in player_wins.items()}
+    print(f"Wins",player_wins)
+    print(f"Average score", player_avg_score)
     
-    print(f"Model {model_path} win percent: {class_wins.get('PentobiNNPlayer',0)}")
+    print(f"Model {model_path} win percent: {player_wins.get('PlayerToTest',0)}")
     
     if not args.dont_update_win_rate:
         # Write the loss percent to a win_rates.json file at the correct index
@@ -195,7 +201,7 @@ if __name__=="__main__":
                         win_rates_dict[i_model_path] = wr
                     print(f"Converted win rates {win_rates} to {win_rates_dict}")
                     win_rates = win_rates_dict
-        win_rates[model_path] = class_wins.get('PentobiNNPlayer',0)
+        win_rates[model_path] = player_wins.get('PlayerToTest',0)
         with open(win_rate_file, "w") as f:
             json.dump(win_rates, f)
     
