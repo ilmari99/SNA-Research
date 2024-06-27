@@ -139,7 +139,7 @@ class BlokusPentobiMetric(tf.keras.metrics.Metric):
 
     def result(self):
         self.num_calls += 1
-        if self.num_calls % 2 != 0:
+        if self.num_calls % 2 == 0:
             return self.avg_score if self.ret_metric == "average_score" else self.win_rate
         try:
             print(f"Running benchmark for model at {self.model_tflite_path}")
@@ -159,7 +159,7 @@ class BlokusPentobiMetric(tf.keras.metrics.Metric):
             # Return win rate and average score as a tuple
             return self.avg_score if self.ret_metric == "average_score" else self.win_rate
         except Exception as e:
-            print(f"Error running benchmark: {e}")
+            print(f"Error running benchmark: {e}", flush=True)
             return self.avg_score if self.ret_metric == "average_score" else self.win_rate
 
 def convert_model_to_tflite(file_path : str, output_file : str = None) -> None:
