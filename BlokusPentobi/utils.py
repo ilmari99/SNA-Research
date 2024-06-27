@@ -122,9 +122,10 @@ class TFLiteModel:
             return list(out)
 
 class BlokusPentobiMetric(tf.keras.metrics.Metric):
-    def __init__(self, model_tflite_path, name='blokus_pentobi_metric', ret_metric="average_score", num_games=60, num_cpus=10, **kwargs):
+    def __init__(self, model_tflite_path, name='blokus_pentobi_metric', ret_metric="average_score", num_games=60, num_cpus=10,timeout=60, **kwargs):
         super(BlokusPentobiMetric, self).__init__(name=name)
         self.model_tflite_path = model_tflite_path
+        self.timeout = timeout
         assert ret_metric in ["average_score", "win_rate"], "ret_metric must be either 'average_score' or 'win_rate'"
         self.ret_metric = ret_metric
         self.num_games = num_games
@@ -139,7 +140,7 @@ class BlokusPentobiMetric(tf.keras.metrics.Metric):
         try:
             print(f"Running benchmark for model at {self.model_tflite_path}")
             command = f"python3 BlokusPentobi/benchmark.py --model_path={self.model_tflite_path} --num_games={self.num_games} --num_cpus={self.num_cpus}"
-            output = subprocess.run(command.split(), capture_output=True, text=True).stdout
+            output = subprocess.run(command.split(), capture_output=True, text=True, timeout=self.timeout).stdout
             print(output)
             
             # Parse the output for win rate and average score
