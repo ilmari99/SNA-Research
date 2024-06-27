@@ -73,14 +73,9 @@ def get_model(input_shape, tflite_path=None):
     
     model = keras.Model(inputs=inputs, outputs=output)
 
-    metrics = ['mae',"mse","binary_crossentropy"]
-    if tflite_path is not None:
-        metrics.append(BlokusPentobiMetric(tflite_path))
-
-    model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.00005),
-            loss='binary_crossentropy',
-            metrics=metrics,
-            #run_eagerly=True
+    model.compile(
+        optimizer=tf.keras.optimizers.Adam(learning_rate=0.00005),
+        loss='binary_crossentropy',
     )
     return model
     
@@ -136,6 +131,11 @@ def main(data_folder,
             model = get_model(input_shape, model_save_path.replace(".keras", ".tflite"))
             print(model.summary())
         
+        # Compile the model, keeping optimizer and loss, but adding metrics
+        metrics = ['mae',"mse","binary_crossentropy",BlokusPentobiMetric(model_save_path.replace(".keras", ".tflite"))]
+        model.compile(optimizer=model.optimizer, loss=model.loss, metrics=metrics)
+        
+        
         tb_log = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
         early_stop = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=patience, restore_best_weights=True)
         save_model_cb = SaveModelCallback(model_save_path)
@@ -145,7 +145,7 @@ def main(data_folder,
     
     # Run benchmark.py to test the model
     model_tflite_path = model_save_path.replace(".keras", ".tflite")
-    os.system(f"python3 BlokusPentobi/benchmark.py --model_path={model_tflite_path} --num_games=600 --num_cpus=30")
+    os.system(f"python3 BlokusPentobi/benchmark.py --model_path={model_tflite_path} --num_games=60 --num_cpus=10")
     
 
 if __name__ == "__main__":
