@@ -1,0 +1,1 @@
+find /scratch/project_2010270 -type d -name "Data" -exec sh -c 'read -p "Do you want to delete the directory {}? (y/n) " answer; if [ "$answer" = "y" ]; then (rm -r "{}" &); fi' \;
