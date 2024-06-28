@@ -63,18 +63,20 @@ def get_model(input_shape, tflite_path=None):
     x = keras.layers.Conv2D(128, (3,3), activation='linear')(x)
     x = keras.layers.BatchNormalization()(x)
     x = keras.layers.ReLU()(x)
+    x = keras.layers.Conv2D(256, (3,3), activation='linear')(x)
+    x = keras.layers.BatchNormalization()(x)
+    x = keras.layers.ReLU()(x)
     
     x = keras.layers.Flatten()(x)
     x = keras.layers.Dropout(0.4)(x)
-    x = keras.layers.Dense(32, activation='relu')(x)
-    x = keras.layers.Dropout(0.4)(x)
-    x = keras.layers.Dense(32, activation='relu')(x)
+    x = keras.layers.Dense(64, activation='relu')(x)
+    x = keras.layers.Dense(64, activation='relu')(x)
     output = keras.layers.Dense(1, activation='sigmoid')(x)
     
     model = keras.Model(inputs=inputs, outputs=output)
 
     model.compile(
-        optimizer=tf.keras.optimizers.Adam(learning_rate=0.00005),
+        optimizer=tf.keras.optimizers.Adam(learning_rate=0.0001),
         loss='binary_crossentropy',
     )
     return model
@@ -132,7 +134,7 @@ def main(data_folder,
             print(model.summary())
         
         # Compile the model, keeping optimizer and loss, but adding metrics
-        metrics = ['mae',"mse","binary_crossentropy",BlokusPentobiMetric(model_save_path.replace(".keras", ".tflite"))]
+        metrics = ['mae',"mse","binary_crossentropy",BlokusPentobiMetric(model_save_path.replace(".keras", ".tflite"),num_games=100, num_cpus=25,timeout=75)]
         model.compile(optimizer=model.optimizer, loss=model.loss, metrics=metrics)
         
         
@@ -145,7 +147,7 @@ def main(data_folder,
     
     # Run benchmark.py to test the model
     model_tflite_path = model_save_path.replace(".keras", ".tflite")
-    os.system(f"python3 BlokusPentobi/benchmark.py --model_path={model_tflite_path} --num_games=60 --num_cpus=10")
+    os.system(f"python3 BlokusPentobi/benchmark.py --model_path={model_tflite_path} --num_games=600 --num_cpus=28")
     
 
 if __name__ == "__main__":
