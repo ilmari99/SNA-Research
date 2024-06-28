@@ -126,13 +126,14 @@ def main(data_folder,
         val_ds = val_ds.prefetch(tf.data.experimental.AUTOTUNE)
         
         if load_model_path:
-            model = tf.keras.models.load_model(load_model_path)
+            model = tf.keras.models.load_model(load_model_path,custom_objects={"BlokusPentobiMetric":BlokusPentobiMetric})
         else:
             model = get_model(input_shape, model_save_path.replace(".keras", ".tflite"))
             print(model.summary())
         
         # Compile the model, keeping optimizer and loss, but adding metrics
-        metrics = ['mae',"mse","binary_crossentropy",BlokusPentobiMetric(model_save_path.replace(".keras", ".tflite"))]
+        metrics = ['mae',"mse","binary_crossentropy",
+                   BlokusPentobiMetric(model_save_path.replace(".keras", ".tflite"),num_games=100, num_cpus=25, timeout=75)]
         model.compile(optimizer=model.optimizer, loss=model.loss, metrics=metrics)
         
         
@@ -145,7 +146,7 @@ def main(data_folder,
     
     # Run benchmark.py to test the model
     model_tflite_path = model_save_path.replace(".keras", ".tflite")
-    os.system(f"python3 BlokusPentobi/benchmark.py --model_path={model_tflite_path} --num_games=60 --num_cpus=10")
+    os.system(f"python3 BlokusPentobi/benchmark.py --model_path={model_tflite_path} --num_games=600 --num_cpus=25")
     
 
 if __name__ == "__main__":
