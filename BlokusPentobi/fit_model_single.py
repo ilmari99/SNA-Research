@@ -63,18 +63,20 @@ def get_model(input_shape, tflite_path=None):
     x = keras.layers.Conv2D(128, (3,3), activation='linear')(x)
     x = keras.layers.BatchNormalization()(x)
     x = keras.layers.ReLU()(x)
+    x = keras.layers.Conv2D(256, (3,3), activation='linear')(x)
+    x = keras.layers.BatchNormalization()(x)
+    x = keras.layers.ReLU()(x)
     
     x = keras.layers.Flatten()(x)
     x = keras.layers.Dropout(0.4)(x)
-    x = keras.layers.Dense(32, activation='relu')(x)
-    x = keras.layers.Dropout(0.4)(x)
-    x = keras.layers.Dense(32, activation='relu')(x)
+    x = keras.layers.Dense(64, activation='relu')(x)
+    x = keras.layers.Dense(64, activation='relu')(x)
     output = keras.layers.Dense(1, activation='sigmoid')(x)
     
     model = keras.Model(inputs=inputs, outputs=output)
 
     model.compile(
-        optimizer=tf.keras.optimizers.Adam(learning_rate=0.00005),
+        optimizer=tf.keras.optimizers.Adam(learning_rate=0.0001),
         loss='binary_crossentropy',
     )
     return model
