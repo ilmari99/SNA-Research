@@ -123,6 +123,12 @@ class PentobiGTP:
         self.current_player = 1
         # Lock to ensure thread-safe access to the process
         self.lock = multiprocessing.Lock()
+        # Send showboard to get the initial board state
+        test = self.send_command("showboard")
+        # Check that the process is running, and what is the output
+        if self.process.poll() is not None:
+            raise ValueError(f"Error:  GTP process terminated with code {self.process.returncode}")
+        
         
     def _find_pentobi_gtp_binary(self):
         # From the currect directory, search for the pentobi-gtp binary

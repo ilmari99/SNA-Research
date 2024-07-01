@@ -85,11 +85,16 @@ def player_maker_benchmark(proc, model_paths):
     assert len(model_paths) == 1, f"Only one model path is allowed when benchmarking"
     model_path = model_paths[0]
     model = TFLiteModel(model_path)
-    player_to_test = PentobiNNPlayer(1,proc,model,move_selection_strategy="best")
+    player_to_test = PentobiNNPlayer(1,proc,model,move_selection_strategy="epsilon_greedy", move_selection_kwargs={"epsilon":0.01})
     
     opponents = []
     for pid in range(2,5):
-        opponents.append(PentobiInternalPlayer(pid, proc,move_selection_strategy="epsilon_greedy", move_selection_kwargs={"epsilon":0.01}))
+        opponents.append(PentobiInternalPlayer(pid,
+                                               proc,move_selection_strategy="epsilon_greedy",
+                                               move_selection_kwargs={"epsilon":0.01},
+                                               name=f"PentobiInternalPlayer_{pid}"
+                                               )
+                         )
     
     players = [player_to_test] + opponents
     players = shuffle_players_func(players)
@@ -167,18 +172,22 @@ def player_maker_internal_vs_internal(proc, gtp_base_sessions : Dict[int,Pentobi
         chosen_lvl = random.choice(levels)
         gtp_base_sess = gtp_base_sessions[chosen_lvl]
         player = PentobiInternalPlayer(i+1, proc, move_selection_strategy="epsilon_greedy",
-                                       move_selection_kwargs={"epsilon":0.03},
+                                       move_selection_kwargs={"epsilon":0.01},
                                        get_move_pentobi_sess=gtp_base_sess,
                                        name=f"PentobiInternalPlayer_{chosen_lvl}")
         players.append(player)
     return players
 
 def player_maker_benchmark_internal(proc,gtp_base_sess):
-    player_to_test = PentobiInternalPlayer(1,proc,move_selection_strategy="best",get_move_pentobi_sess=gtp_base_sess,name=f"PentobiInternalPlayer_benchmark")
+    player_to_test = PentobiInternalPlayer(1,proc,move_selection_strategy="epsilon_greedy",
+                                           move_selection_kwargs={"epsilon":0.01},
+                                           get_move_pentobi_sess=gtp_base_sess,
+                                           name=f"PentobiInternalPlayer_benchmark")
     opponents = []
     for pid in range(2,5):
         opponents.append(PentobiInternalPlayer(pid,proc,move_selection_strategy="epsilon_greedy",
-                                               move_selection_kwargs={"epsilon":0.01}
+                                               move_selection_kwargs={"epsilon":0.01},
+                                               name=f"PentobiInternalPlayer_{pid}"
                                                ))
     players = [player_to_test] + opponents
     players = shuffle_players_func(players)
@@ -206,6 +215,7 @@ if __name__=="__main__":
     parser.add_argument("--data_folder", type=str, default=env_vars.get('data_folder', "./Data"), help="Path to data folder")
     parser.add_argument("--model_folder", type=str, default=env_vars.get('model_folder', "./Models"), help="Path to model folder")
     parser.add_argument("--level", required=False, default=1,type=int)
+    parser.add_argument("--model_path", type=str, required=False, default=None)
     args = parser.parse_args()
     
     print(args)
@@ -220,7 +230,10 @@ if __name__=="__main__":
     if not os.path.exists(model_folder):
         os.makedirs(model_folder, exist_ok=True)
     
-    model_paths = [os.path.join(model_folder, f) for f in os.listdir(model_folder) if f.endswith(".tflite")]
+    if args.model_path:
+        model_paths = [args.model_path]
+    else:
+        model_paths = [os.path.join(model_folder, f) for f in os.listdir(model_folder) if f.endswith(".tflite")]
     #models = [TFLiteModel(path) for path in model_paths]
     
     player_maker_map = {
@@ -234,16 +247,19 @@ if __name__=="__main__":
     assert args.player_maker in player_maker_map.keys(), f"The player_maker argument must be in {player_maker_map.keys()}"
     
     if args.player_maker == "benchmark":
-        assert model_folder.endswith(".tflite"), "If the 'benchmark' player_maker is used, the model_folder must be a single file, not a folder."
-        args.player_maker = [args.player_maker]
+        assert args.model_path, "The model_path argument must be provided when using the benchmark player maker"
 
     if args.player_maker == "internal_vs_internal":
-        levels = [1,4]
+        # Get the digits on 'level' and make a list of them
+        levels_str = str(args.level)
+        levels = [int(d) for d in levels_str]
+        args.level = 1
         gtp_base_sessions = _make_gtp_base_sessions(levels, pentobi_gtp)
         gtp_base_sessions = {lvl : sess for lvl, sess in zip(levels, gtp_base_sessions)}
     
     if args.player_maker == "benchmark_internal":
-        gtp_base_sess = _make_gtp_base_sessions([3], pentobi_gtp)[0]
+        gtp_base_sess = _make_gtp_base_sessions([args.level], pentobi_gtp)[0]
+        args.level = 1
 
     def _player_maker(proc):
         
@@ -306,7 +322,7 @@ if __name__=="__main__":
             # Highest score wins
             num_games[pl] += 1
             total_scores[pl] += sc
-            if sc == max(result.values()):
+            if sc == max(result.values()) and len([s for s in result.values() if s == sc]) == 1:
                 win_counts[pl] += 1
         
     win_rates = {pl : win_counts[pl] / num_games[pl] for pl in num_games.keys()}
