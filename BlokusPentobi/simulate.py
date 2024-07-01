@@ -98,8 +98,11 @@ def player_maker_benchmark(proc, model_paths):
 def player_maker_with_randomly_internal_players(proc,
                                                 model_paths = [],
                                                 model_weights = [],
-                                                internal_player_epsilon=0.1
+                                                internal_player_epsilon=0.1,
+                                                decay_epsilon=True,
                                                 ):
+    if decay_epsilon:
+        internal_player_epsilon = internal_player_epsilon * 0.9**len(model_paths)
     if not model_paths:
         # Make four players using the internal player
         players = [PentobiInternalPlayer(i+1, proc,move_selection_strategy="epsilon_greedy",
