@@ -159,17 +159,15 @@ if __name__=="__main__":
         max_sc = max(scores)
         idx = scores.index(max_sc)
         winner_name = players[idx]
-        if winner_name not in player_wins.keys():
-            player_wins[winner_name] = 0
-        player_wins[winner_name] += 1
+        if len([sc for sc in scores if sc == max_sc]) > 1:
+            winner_name = "Draw"
         
         for sc, pl in zip(scores,players):
-            if pl not in games_per_player:
-                games_per_player[pl] = 0
-            games_per_player[pl] += 1
-            if pl not in player_avg_score:
-                player_avg_score[pl] = 0
-            player_avg_score[pl] += sc
+            games_per_player[pl] = games_per_player.get(pl,0) + 1
+            player_avg_score[pl] = player_avg_score.get(pl,0) + sc
+            if pl == winner_name:
+                # Increment the win count
+                player_wins[pl] = player_wins.get(pl,0) + 1
         num_games += 1
     player_avg_score = {k : v/games_per_player[k] for k,v in player_avg_score.items()}
     player_wins = {k : v/games_per_player[k] for k,v in player_wins.items()}
