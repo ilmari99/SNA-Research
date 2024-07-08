@@ -16,27 +16,39 @@ def parse_file(file_path):
             last_val_mae = None
 
         # Extract the average score for PentobiNNPlayer
-        avg_score_match = re.search(r"Average score.*'PentobiNNPlayer': (\d+\.\d+)", content)
+        avg_score_match = re.search(r"Average score.*'PlayerToTest': (\d+\.\d+)", content)
+        if not avg_score_match:
+            avg_score_match = re.search(r"Average score.*'PentobiNNPlayer': (\d+\.\d+)", content)
         if avg_score_match:
             avg_score = float(avg_score_match.group(1))
         else:
             avg_score = None
 
         # Extract the win rate for PentobiNNPlayer
-        win_rate_match = re.search(r"Wins.*'PentobiNNPlayer': (\d+\.\d+)", content)
+        win_rate_match = win_rate_match = re.search(r"Wins.*'PlayerToTest': (\d+)", content)
+        if not win_rate_match:
+            win_rate_match = re.search(r"Wins.*'PentobiNNPlayer': (\d+)", content)
         if win_rate_match:
             win_rate = float(win_rate_match.group(1))
         else:
             win_rate = None
 
         if any((val is None for val in [last_val_mae, avg_score, win_rate])):
+            print(f"Error parsing file {file_path}: val_mae={last_val_mae}, avg_score={avg_score}, win_rate={win_rate}")
             return None
+        
+        num_params_match = re.search(r"Total params: (\d+)", content)
+        if num_params_match:
+            num_params = int(num_params_match.group(1))
+        else:
+            num_params = None
 
         return {
             'file': file_path,
             'val_mae': last_val_mae,
             'avg_score': avg_score,
-            'win_rate': win_rate
+            'win_rate': win_rate,
+            'num_params': num_params,
         }
 
     except Exception as e:
@@ -47,6 +59,10 @@ if __name__ == "__main__":
     # Given a directory, parse all *.out files
     parser = argparse.ArgumentParser()
     parser.add_argument("directory", help="Directory containing the *.out files")
+    parser.add_argument("--x_axis", help="X-axis value to plot", default="val_mae")
+    parser.add_argument("--y_axis", help="Y-axis value to plot", default="avg_score")
+    parser.add_argument("--str_filter", help="Regular expression to filter the files", default=".out")
+    parser.add_argument("--output", help="Output file to save the results", default="val_mae_vs_win_rate.png")
     args = parser.parse_args()
     directory = os.path.abspath(args.directory)
     print(f"Directory: ", directory)
@@ -55,30 +71,30 @@ if __name__ == "__main__":
     results = []
     for root, subdirs, files in files:
         for file in files:
-            if not file.endswith(".out"):
+            if args.str_filter not in file:
                 continue
-            if "BlokusPentobiTestDataset200K-Emb16-3Conv" not in root:
-                continue
+            print(f"Processing file: {file}")
             file = os.path.join(root, file)
             result = parse_file(file)
             if result:
                 results.append(result)
-                print(f"Result: {result['file']}: {result['avg_score']}")
-
+                #print(f"Result: {result['file']}: {result['avg_score']}"
+    results = sorted(results, key=lambda x: x[args.x_axis] if x[args.x_axis] is not None else 0)
     # Print the results
     for result in results:
         print(result)
 
     # Extract val_mae and win_rate for the scatter plot
-    val_mae = [result['val_mae'] for result in results]
-    win_rate = [result['avg_score'] for result in results]
+    x_values = [result[args.x_axis] for result in results]
+    y_values = [result[args.y_axis] for result in results]
 
     # Create scatter plot
     plt.figure(figsize=(10, 6))
-    plt.scatter(val_mae, win_rate, alpha=0.7)
-    plt.xlabel('Validation MAE')
-    plt.ylabel('Win Rate')
-    plt.title('Scatter plot of Validation MAE vs Win Rate')
+    plt.scatter(x_values, y_values, alpha=0.7)
+    plt.xlabel(args.x_axis)
+    #plt.xlim(400000, 600000)
+    plt.ylabel(args.y_axis)
+    plt.title('Scatter plot of ' + args.x_axis + ' vs ' + args.y_axis)
     plt.grid(True)
-    plt.savefig('val_mae_vs_win_rate.png')
-    print('Scatter plot saved as val_mae_vs_win_rate.png')
+    plt.savefig(args.output)
+    print('Scatter plot saved as ', args.output)
