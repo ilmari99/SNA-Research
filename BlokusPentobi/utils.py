@@ -128,11 +128,11 @@ class BlokusPentobiMetric(tf.keras.metrics.Metric):
                  ret_metric="average_score",
                  num_games=60,
                  num_cpus=10,
-                 timeout=60,
+                 game_timeout=20,
                  **kwargs):
         super(BlokusPentobiMetric, self).__init__(name=name)
         self.model_tflite_path = model_tflite_path
-        self.timeout = timeout
+        self.game_timeout = game_timeout
         assert ret_metric in ["average_score", "win_rate"], "ret_metric must be either 'average_score' or 'win_rate'"
         self.ret_metric = ret_metric
         self.num_games = num_games
@@ -140,19 +140,21 @@ class BlokusPentobiMetric(tf.keras.metrics.Metric):
         self.win_rate = -1
         self.avg_score = -1
         self.num_calls = 0
+        print(f"Created BlokusPentobimetric: {self.get_config()}")
 
     def update_state(self, y_true, y_pred, sample_weight=None):
         pass
 
     def result(self):
         # Calculate on every oddth call
-        if self.num_calls % 2 != 0:
-            return self.avg_score if self.ret_metric == "average_score" else self.win_rate
         self.num_calls += 1
+        if self.num_calls % 2 == 0:
+            print(f"Skipping call number: {self.num_calls}")
+            return self.avg_score if self.ret_metric == "average_score" else self.win_rate
         try:
             print(f"Running benchmark for model at {self.model_tflite_path}")
-            command = f"python3 BlokusPentobi/benchmark.py --dont_update_win_rate --model_path={self.model_tflite_path} --num_games={self.num_games} --num_cpus={self.num_cpus}"
-            output = subprocess.run(command.split(), capture_output=True, text=True, timeout=self.timeout).stdout
+            command = f"python3 BlokusPentobi/benchmark.py --model_path={self.model_tflite_path} --num_games={self.num_games} --num_cpus={self.num_cpus} --game_timeout={self.game_timeout}"
+            output = subprocess.run(command.split(), capture_output=True, text=True).stdout
             print(output)
             
             # Parse the output for win rate and average score
@@ -174,7 +176,7 @@ class BlokusPentobiMetric(tf.keras.metrics.Metric):
         return {"model_tflite_path": self.model_tflite_path,
                 "num_games": self.num_games,
                 "num_cpus": self.num_cpus,
-                "timeout": self.timeout,
+                "timeout": self.game_timeout,
                 "ret_metric": self.ret_metric}
     
     @classmethod
@@ -198,16 +200,3 @@ def convert_model_to_tflite(file_path : str, output_file : str = None) -> None:
     with open(output_file, "wb") as f:
         f.write(tflite_model)
     return output_file
-
-if __name__ == "__main__":
-    isg = BlokusPentobiMetric("model.tflite",
-                              num_games=40,
-                              num_cpus=10,
-                              ret_metric="average_score")
-    print(isg.result())
-    
-    json_config = isg.get_config()
-    print(json_config)
-    isg2 = BlokusPentobiMetric.from_config(json_config)
-    print(isg2.result())
-    exit(0)

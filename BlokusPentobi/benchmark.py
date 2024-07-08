@@ -47,7 +47,7 @@ def play_pentobi(i, seed, player_maker, timeout, save_data_file = "", proc_args 
         elapsed_t = time.time() - start_t
     
     if elapsed_t >= timeout:
-        print(f"Game {i} timed out")
+        print(f"Game {i} timed out",flush=True)
         proc.close()
         return {}
         
@@ -164,6 +164,8 @@ if __name__=="__main__":
     num_games = 0
     games_per_player = {}
     for res in results:
+        if not res:
+            continue
         scores = list(res.values())
         players = list(res.keys())
         max_sc = max(scores)
