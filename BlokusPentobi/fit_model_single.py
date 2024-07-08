@@ -19,6 +19,28 @@ class SaveModelCallback(tf.keras.callbacks.Callback):
     def on_epoch_end(self, epoch, logs=None):
         self.model.save(self.model_save_path)
         convert_model_to_tflite(self.model_save_path)
+        
+@tf.keras.saving.register_keras_serializable()     
+class TransformerEncoderLayer(tf.keras.layers.Layer):
+    def __init__(self, embed_dim, num_heads, ff_dim, rate=0.1):
+        super(TransformerEncoderLayer, self).__init__()
+        self.att = tf.keras.layers.MultiHeadAttention(num_heads=num_heads, key_dim=embed_dim)
+        self.ffn = tf.keras.Sequential([
+            tf.keras.layers.Dense(ff_dim, activation='relu'),
+            tf.keras.layers.Dense(embed_dim)
+        ])
+        self.layernorm1 = tf.keras.layers.LayerNormalization(epsilon=1e-6)
+        self.layernorm2 = tf.keras.layers.LayerNormalization(epsilon=1e-6)
+        self.dropout1 = tf.keras.layers.Dropout(rate)
+        self.dropout2 = tf.keras.layers.Dropout(rate)
+        
+    def call(self, inputs, training):
+        attn_output = self.att(inputs, inputs)
+        attn_output = self.dropout1(attn_output, training=training)
+        out1 = self.layernorm1(inputs + attn_output)
+        ffn_output = self.ffn(out1)
+        ffn_output = self.dropout2(ffn_output, training=training)
+        return self.layernorm2(out1 + ffn_output)
 
 def get_model(input_shape, tflite_path=None):
     inputs = tf.keras.Input(shape=input_shape)
@@ -38,7 +60,6 @@ def get_model(input_shape, tflite_path=None):
     board_side_len = int(np.sqrt(board.shape[1]))
     board = tf.reshape(board, (-1, board_side_len, board_side_len))
     
-    # Normalize the board to the perspective of the player
     board = NormalizeBoardToPerspectiveLayer()([board, perspective_pids])
     
     board = tf.reshape(board, (-1, board_side_len, board_side_len, 1))
@@ -47,33 +68,32 @@ def get_model(input_shape, tflite_path=None):
     board = board + 1
     
     # Embed each value (0 ... 4) to 16 dimensions
-    board = tf.keras.layers.Embedding(5, 16)(board)
-    board = tf.reshape(board, (-1, board_side_len, board_side_len, 16))
+    board = tf.keras.layers.Embedding(5, 6)(board)
+    board = tf.reshape(board, (-1, board_side_len, board_side_len, 6))
     
     # Apply convolutions
     #x = keras.layers.Conv2D(16, (3,3), activation='linear')(board)
     #x = keras.layers.BatchNormalization()(x)
     #x = keras.layers.ReLU()(x)
-    x = keras.layers.Conv2D(32, (3,3), activation='linear')(board)
-    x = keras.layers.BatchNormalization()(x)
-    x = keras.layers.ReLU()(x)
-    x = keras.layers.Conv2D(64, (3,3), activation='linear')(x)
-    x = keras.layers.BatchNormalization()(x)
-    x = keras.layers.ReLU()(x)
-    x = keras.layers.Conv2D(128, (3,3), activation='linear')(x)
-    x = keras.layers.BatchNormalization()(x)
-    x = keras.layers.ReLU()(x)
-    x = keras.layers.Conv2D(256, (3,3), activation='linear')(x)
-    x = keras.layers.BatchNormalization()(x)
-    x = keras.layers.ReLU()(x)
+    #x = keras.layers.Conv2D(128, (3,3), activation='linear')(board)
+    #x = keras.layers.BatchNormalization()(x)
+    #x = keras.layers.ReLU()(x)
+    #x = keras.layers.Conv2D(64, (3,3), activation='linear')(x)
+    #x = keras.layers.BatchNormalization()(x)
+    #x = keras.layers.ReLU()(x)
+    #x = keras.layers.Conv2D(128, (3,3), activation='linear')(x)
+    #x = keras.layers.BatchNormalization()(x)
+    #x = keras.layers.ReLU()(x)
     
-    x = keras.layers.Flatten()(x)
-    x = keras.layers.Dropout(0.4)(x)
-    x = keras.layers.Dense(64, activation='relu')(x)
-    x = keras.layers.Dense(64, activation='relu')(x)
+    x = keras.layers.Flatten()(board)
+    #x = keras.layers.Dropout(0.4)(x)
+    #x = keras.layers.Dense(256, activation='relu')(x)
+    x = keras.layers.Dense(128, activation='relu')(x)
+    x = keras.layers.Dense(128, activation='relu')(x)
+    x = keras.layers.Dense(128, activation='relu')(x)
     output = keras.layers.Dense(1, activation='sigmoid')(x)
     
-    model = keras.Model(inputs=inputs, outputs=output)
+    model = tf.keras.Model(inputs=inputs, outputs=output)
 
     model.compile(
         optimizer=tf.keras.optimizers.Adam(learning_rate=0.0001),
@@ -121,7 +141,7 @@ def main(data_folder,
         print(f"Input shape: {input_shape}")
         print(f"Num samples: {approx_num_samples}")
         
-        train_ds = train_ds.shuffle(1000).batch(batch_size)
+        train_ds = train_ds.shuffle(10000).batch(batch_size)
         val_ds = val_ds.batch(batch_size)
         
         train_ds = train_ds.prefetch(tf.data.experimental.AUTOTUNE)
@@ -135,7 +155,7 @@ def main(data_folder,
         
         # Compile the model, keeping optimizer and loss, but adding metrics
         metrics = ['mae',"mse","binary_crossentropy",
-                   BlokusPentobiMetric(model_save_path.replace(".keras", ".tflite"),num_games=100, num_cpus=25, timeout=75)]
+                   BlokusPentobiMetric(model_save_path.replace(".keras", ".tflite"),num_games=100, num_cpus=25, game_timeout=60)]
         model.compile(optimizer=model.optimizer, loss=model.loss, metrics=metrics)
         
         
@@ -148,7 +168,7 @@ def main(data_folder,
     
     # Run benchmark.py to test the model
     model_tflite_path = model_save_path.replace(".keras", ".tflite")
-    os.system(f"python3 BlokusPentobi/benchmark.py --model_path={model_tflite_path} --num_games=600 --num_cpus=25")
+    os.system(f"python3 BlokusPentobi/benchmark.py --model_path={model_tflite_path} --num_games=500 --num_cpus=25 --game_timeout=20")
     
 
 if __name__ == "__main__":
