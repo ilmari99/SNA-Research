@@ -163,7 +163,7 @@ class PentobiGTP:
         #    sc[winner_idx] += 50
         return sc
     
-    def write_states_to_file(self, filename, overwrite=False, use_discount=False):
+    def write_states_to_file(self, filename, overwrite=False, use_discount=False, label_rank=False):
         if not filename:
             raise ValueError("Filename is empty")
         states = np.array(self.game_states)
@@ -171,9 +171,23 @@ class PentobiGTP:
         # To every state, append the score that was obtained by pid state[0]
         scores = self.score
         scores = np.array(scores)
-        winner_idx = np.argmax(scores)
-        if np.sum(scores == scores[winner_idx]) == 1:
-            scores[winner_idx] += 50
+        #winner_idx = np.argmax(scores)
+        #if np.sum(scores == scores[winner_idx]) == 1:
+        #    scores[winner_idx] += 50
+        # Get the rank of the scores, i.e. the index of the scores in the sorted array. BUT so that
+        # same scores have the same (lower) rank
+        if label_rank:
+            ranks = []
+            for sc in scores:
+                # E.g. if scores = [77,85,77,75] and sc = 77, then the rank is 3, since there are 3 scores
+                # that are lower than or equal to 77
+                rank = np.sum(scores >= sc)
+                ranks.append(rank)
+            scores = np.array(ranks) - 1
+        else:
+            winner_idx = np.argmax(scores)
+            if np.sum(scores == scores[winner_idx]) == 1:
+                scores[winner_idx] += 50
         # Get the score for the player whose perspective the state is from
         pids = states[:,0].astype(int)
         scores = scores[pids]
@@ -292,3 +306,20 @@ class PentobiGTP:
     def play_game(self, players):
         for player in players:
             player.play_move()
+            
+            
+def random_playout(proc : PentobiGTP, state_file, start_pid):
+    """ Play a random game starting from the current state.
+    """
+    proc.send_command("clear_board")
+    proc.change_player(start_pid)
+    # Set the board to the state
+    proc.send_command("loadsgf " + state_file)
+    # Play random moves until the game is finished
+    while not proc.is_game_finished():
+        pid = proc.current_player
+        moves = proc.get_legal_moves(pid)
+        move = random.choice(moves)
+        proc.play_move(pid, move)
+    return proc.score
+

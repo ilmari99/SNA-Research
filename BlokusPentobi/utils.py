@@ -13,7 +13,7 @@ def read_to_dataset(paths,
                     frac_test_files=0,
                     add_channel=False,
                     shuffle_files=True,
-                    filter_files_fn = None):
+                    filter_files_fn = None,):
     """ Create a tf dataset from a folder of files.
     If split_files_to_test_set is True, then frac_test_files of the files are used for testing.
     
@@ -62,6 +62,25 @@ def read_to_dataset(paths,
                                 cycle_length=tf.data.experimental.AUTOTUNE,
                                 num_parallel_calls=tf.data.experimental.AUTOTUNE,
                                 deterministic=False)
+    
+    # Check the distribution of the labels by taking 100 samples
+    print("Checking label distribution")
+    labels = []
+    for x, y in train_ds.take(100):
+        labels.append(y)
+    labels = np.array(labels)
+    
+    if len(np.unique(labels)) == 2:
+        print(f"Binary classification detected, labels: {np.unique(labels)}")
+    elif len(np.unique(labels)) > 2:
+        print(f"Multi-class classification detected, labels: {np.unique(labels)}")
+        print(f"Mapping to one-hot encoding")
+        train_ds = train_ds.map(lambda x, y: (x, tf.one_hot(tf.cast(y, tf.int32), len(np.unique(labels)))), num_parallel_calls=tf.data.experimental.AUTOTUNE)
+        if len(test_files) > 0:
+            test_ds = test_ds.map(lambda x, y: (x, tf.one_hot(tf.cast(y, tf.int32), len(np.unique(labels)))), num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    else:
+        print(f"Regression detected, labels: {np.unique(labels)}")
+    
     # Add a channel dimension if necessary
     if add_channel:
         train_ds = train_ds.map(lambda x, y: (tf.expand_dims(x, axis=-1), y), num_parallel_calls=tf.data.experimental.AUTOTUNE)

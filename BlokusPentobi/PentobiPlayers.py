@@ -3,7 +3,7 @@ import random
 import warnings
 import numpy as np
 
-from PentobiGTP import PentobiGTP
+from PentobiGTP import PentobiGTP,random_playout
 
     
 class PentobiInternalPlayer:
@@ -57,12 +57,153 @@ class PentobiInternalPlayer:
             else:
                 selected_move = self._make_move_with_pentobi_sess()
         elif self.move_selection_strategy == "best":
-            selected_move = self._make_move_with_proc()
+            selected_move = self._make_move_with_pentobi_sess()
         #print(f"Player {self.pid} chose move: {selected_move}", flush=True)
         if selected_move == "=":
             selected_move = "pass"
         self.pentobi_sess.play_move(self.pid, selected_move, mock_move=False)
         return
+    
+class MCTSNode:
+    """ An MCTS node contains the following information:
+    - The state of the game (blksgf file, pid)
+    - The number of visits
+    - The number of wins
+    - The children of the node
+    - The parent of the node
+    """
+    def __init__(self, state_file, pid, session : PentobiGTP, parent=None):
+        self.state_file = state_file
+        with open(state_file, "r") as f:
+            self.state_file_content = f.read()
+        self.pid = pid
+        self.parent = parent
+        self.children = []
+        self.visits = 0
+        self.wins = 0
+        self.session = session
+    
+    @property
+    def hash(self):
+        return hash(self.state_file_content) + self.pid
+    
+    def get_moves(self):
+        return self.session.get_legal_moves(self.pid)
+    
+    def set_session_state(self):
+        self.session.send_command(f"loadsgf {self.state_file}", lock=True)
+        self.session.current_player = self.pid
+        return
+    
+    def set_children(self):
+        moves = self.get_moves()
+        if not moves:
+            return
+        states = []
+        for move in moves:
+            self.set_session_state()
+            self.session.play_move(self.pid, move, mock_move=True)
+            state_file = f"{hash(self.session.board)}.blksgf"
+            self.session.send_command(f"savesgf {state_file}")
+            states.append((state_file, self.session.current_player))
+        self.moves = moves
+        self.children = [MCTSNode(state_file, pid, self.session, parent=self) for state_file, pid in states]
+        return
+    
+    def get_ucb(self, c=1.0):
+        if self.visits == 0:
+            return np.inf
+        return self.wins/self.visits + c*np.sqrt(np.log(self.parent.visits)/self.visits)
+    
+    def select_child(self, c=1.0):
+        ucb_vals = [child.get_ucb(c) for child in self.children]
+        return self.children[np.argmax(ucb_vals)]
+    
+    def playout(self):
+        assert self.parent is not None, "Cannot playout from root node"
+        self.set_session_state()
+        while not self.session.is_game_finished():
+            moves = self.session.get_legal_moves(self.session.current_player)
+            move = random.choice(moves)
+            self.session.play_move(self.session.current_player, move)
+        scores = self.session.score
+        max_score = max(scores)
+        won = scores[self.pid-1] == max_score and scores.count(max_score) == 1
+        return 1 if won else 0
+    
+    def backpropagate(self, result):
+        self.visits += 1
+        self.wins += result
+        if self.parent:
+            self.parent.backpropagate(result)
+        return
+    
+    def delete_tree(self):
+        # remove all state files
+        for child in self.children:
+            child.delete_tree()
+            os.remove(child.state_file)
+        return
+    
+    def __repr__(self):
+        return f"MCTSNode: Visits: {self.visits}, Wins: {self.wins}, Children: {len(self.children)}"
+
+
+class MCTSPentobiPlayer:
+    def __init__(self, pid, pentobi_sess, name="MCTSPentobiPlayer"):
+        self.pid = pid
+        self.pentobi_sess : PentobiGTP = pentobi_sess
+        self.name = name
+        
+    def get_root(self):
+        current_state = f"{hash(self.pentobi_sess.board)}.blksgf"
+        if self.previous_root is None:
+            self.pentobi_sess.send_command(f"savesgf {current_state}")
+            root = MCTSNode(current_state, self.pid, self.pentobi_sess)
+            return root
+        # If the previous root is not None, and the current state is already in the tree, return the node
+        nodes = [self.previous_root]
+        while nodes:
+            node = nodes.pop()
+            if node.state_file == current_state:
+                return node
+            nodes.extend(node.children)
+        # If the current state is not in the tree, return None
+        self.pentobi_sess.send_command(f"savesgf {current_state}")
+        root = MCTSNode(current_state, self.pid, self.pentobi_sess)
+        return root
+        
+        
+    def play_move(self):
+        """ Run an MCTS search to find the best move and play it
+        """
+        current_state = f"{hash(self.pentobi_sess.board)}.blksgf"
+        self.pentobi_sess.send_command(f"savesgf {current_state}")
+        root = MCTSNode(current_state, self.pid, self.pentobi_sess)
+        root.set_children()
+        for _ in range(100):
+            node = root
+            # Find a leaf node
+            while node.children:
+                node = node.select_child()
+            # Playout from the leaf node
+            result = node.playout()
+            node.backpropagate(result)
+        best_child_idx = np.argmax([child.visits for child in root.children])
+        best_child = root.children[best_child_idx]
+        best_move = root.moves[best_child_idx]
+        # Return to the current state
+        self.pentobi_sess.send_command(f"loadsgf {current_state}")
+        self.pentobi_sess.current_player = self.pid
+        self.pentobi_sess.play_move(self.pid, best_move)
+        
+        # Save the root
+        self.previous_root = root
+        
+        
+        
+            
+                
     
 class PentobiNNPlayer:
     def __init__(self, pid, pentobi_sess, model, move_selection_strategy="best", move_selection_kwargs={}, name="PentobiNNPlayer"):
@@ -108,6 +249,11 @@ class PentobiNNPlayer:
         if len(moves) == 1 and moves[0] == "pass":
             return self.pentobi_sess.play_move(self.pid, "pass", mock_move=False)
         predictions = self.model.predict(next_states)
+        predictions = np.array(predictions)
+        #print(predictions,flush=True)
+        # If each prediction is not a single value, we'll assume we want to use the first value
+        if len(predictions[0]) > 1 and predictions.shape[1] > 1:
+            predictions = predictions[:,0]
         #print(predictions,flush=True)
         if move_selection_strategy == "best":
             best_move = np.argmax(predictions)
