@@ -68,32 +68,32 @@ def get_model(input_shape, tflite_path=None):
     board = board + 1
     
     # Embed each value (0 ... 4) to 16 dimensions
-    board = tf.keras.layers.Embedding(5, 6)(board)
-    board = tf.reshape(board, (-1, board_side_len, board_side_len, 6))
+    board = tf.keras.layers.Embedding(5, 16)(board)
+    board = tf.reshape(board, (-1, board_side_len, board_side_len, 16))
     
     # Apply convolutions
     #x = keras.layers.Conv2D(16, (3,3), activation='linear')(board)
     #x = keras.layers.BatchNormalization()(x)
     #x = keras.layers.ReLU()(x)
-    #x = keras.layers.Conv2D(128, (3,3), activation='linear')(board)
-    #x = keras.layers.BatchNormalization()(x)
-    #x = keras.layers.ReLU()(x)
-    #x = keras.layers.Conv2D(64, (3,3), activation='linear')(x)
-    #x = keras.layers.BatchNormalization()(x)
-    #x = keras.layers.ReLU()(x)
-    #x = keras.layers.Conv2D(128, (3,3), activation='linear')(x)
-    #x = keras.layers.BatchNormalization()(x)
-    #x = keras.layers.ReLU()(x)
+    x = keras.layers.Conv2D(32, (3,3), activation='linear')(board)
+    x = keras.layers.BatchNormalization()(x)
+    x = keras.layers.ReLU()(x)
+    x = keras.layers.Conv2D(64, (3,3), activation='linear')(x)
+    x = keras.layers.BatchNormalization()(x)
+    x = keras.layers.ReLU()(x)
+    x = keras.layers.Conv2D(128, (3,3), activation='linear')(x)
+    x = keras.layers.BatchNormalization()(x)
+    x = keras.layers.ReLU()(x)
     
-    x = keras.layers.Flatten()(board)
-    #x = keras.layers.Dropout(0.4)(x)
-    #x = keras.layers.Dense(256, activation='relu')(x)
-    x = keras.layers.Dense(128, activation='relu')(x)
-    x = keras.layers.Dense(128, activation='relu')(x)
-    x = keras.layers.Dense(128, activation='relu')(x)
+    x = tf.reshape(x,(-1,14*14,128))
+    x = tf.keras.layers.MultiHeadAttention(num_heads=2, key_dim=128)(x,x) + x
+    
+    x = keras.layers.Flatten()(x)
+    x = keras.layers.Dropout(0.4)(x)
+    x = keras.layers.Dense(64, activation='relu')(x)
+    x = keras.layers.Dense(64, activation='relu')(x)
     output = keras.layers.Dense(1, activation='sigmoid')(x)
     
-    model = tf.keras.Model(inputs=inputs, outputs=output)
     model = tf.keras.Model(inputs=inputs, outputs=output)
 
     model.compile(
@@ -169,7 +169,7 @@ def main(data_folder,
     
     # Run benchmark.py to test the model
     model_tflite_path = model_save_path.replace(".keras", ".tflite")
-    os.system(f"python3 BlokusPentobi/benchmark.py --model_path={model_tflite_path} --num_games=500 --num_cpus=25 --game_timeout=20")
+    os.system(f"python3 BlokusPentobi/benchmark.py --model_path={model_tflite_path} --num_games=200 --num_cpus=25 --game_timeout=60")
     
 
 if __name__ == "__main__":

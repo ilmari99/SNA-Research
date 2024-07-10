@@ -172,7 +172,8 @@ class PentobiGTP:
         scores = self.score
         scores = np.array(scores)
         winner_idx = np.argmax(scores)
-        scores[winner_idx] += 50
+        if np.sum(scores == scores[winner_idx]) == 1:
+            scores[winner_idx] += 50
         # Get the score for the player whose perspective the state is from
         pids = states[:,0].astype(int)
         scores = scores[pids]

@@ -55,7 +55,7 @@ def play_pentobi(i, seed, player_maker, timeout, save_data_file = "", proc_args 
         return {}
         
     if save_data_file:
-        proc.write_states_to_file(save_data_file)
+        proc.write_states_to_file(save_data_file,use_discount=False)
     score = list(proc.score)
     pl_names = [pl.name for pl in players]
     proc.close()
@@ -114,7 +114,7 @@ def player_maker_with_randomly_internal_players(proc,
                                                 model_paths = [],
                                                 model_weights = [],
                                                 internal_player_epsilon=0.1,
-                                                decay_epsilon=True,
+                                                decay_epsilon=False,
                                                 ):
     if decay_epsilon:
         internal_player_epsilon = internal_player_epsilon * 0.9**len(model_paths)
