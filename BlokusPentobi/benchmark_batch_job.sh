@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --job-name=BlokusPentobi160KLevel1-WeightUsingBenchmark-Emb8-Patch4-EmbPos64-MHA8-Dense64-B512
+#SBATCH --job-name=BlokusPentobi160KLevel1-MC-Emb16-3x32-64-128Conv3BN-Dropout-2x64-32Dense-Batch16384-CCE
 #SBATCH --account=project_2010270
 #SBATCH --time=01:00:00
 #SBATCH --partition=medium
@@ -65,7 +65,7 @@ do
         fi
     fi
 
-    $PYTHON_EXE ./BlokusPentobi/benchmark.py --num_internal=3 --model_path=$file --num_games=1000 --num_cpus=100 --pentobi_level=1
+    $PYTHON_EXE ./BlokusPentobi/benchmark.py --num_internal=3 --model_path=$file --num_games=1000 --num_cpus=100 --pentobi_level=5
 done
 
 # Print the Models and their win rates in descending order

@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 
 def parse_file(file_path):
     try:
-        with open(file_path, 'r') as file:
+        with open(file_path, 'r',encoding="utf-8") as file:
             content = file.read()
 
         # Extract the last val_mae value
@@ -14,6 +14,12 @@ def parse_file(file_path):
             last_val_mae = float(val_mae_matches[-4])
         else:
             last_val_mae = None
+            
+        val_loss_matches = re.findall(r'- val_loss: (\d+\.\d+)', content)
+        if val_loss_matches:
+            last_val_loss = float(val_loss_matches[-4])
+        else:
+            last_val_loss = None
 
         # Extract the average score for PentobiNNPlayer
         avg_score_match = re.search(r"Average score.*'PlayerToTest': (\d+\.\d+)", content)
@@ -32,8 +38,11 @@ def parse_file(file_path):
             win_rate = float(win_rate_match.group(1))
         else:
             win_rate = None
-
-        if any((val is None for val in [last_val_mae, avg_score, win_rate])):
+        
+        if (last_val_loss is None) and (last_val_mae is None):
+            print(f"Error parsing file {file_path}: last_val_loss or last_val_mae is None: {last_val_loss=} {last_val_mae=}")
+        
+        if any((val is None for val in [avg_score, win_rate])):
             print(f"Error parsing file {file_path}: val_mae={last_val_mae}, avg_score={avg_score}, win_rate={win_rate}")
             return None
         
@@ -46,6 +55,7 @@ def parse_file(file_path):
         return {
             'file': file_path,
             'val_mae': last_val_mae,
+            'val_loss' : last_val_loss,
             'avg_score': avg_score,
             'win_rate': win_rate,
             'num_params': num_params,

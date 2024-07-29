@@ -55,7 +55,7 @@ def play_pentobi(i, seed, player_maker, timeout, save_data_file = "", proc_args 
         return {}
         
     if save_data_file:
-        proc.write_states_to_file(save_data_file,use_discount=False)
+        proc.write_states_to_file(save_data_file,use_discount=False, label_rank=True)
     score = list(proc.score)
     pl_names = [pl.name for pl in players]
     proc.close()

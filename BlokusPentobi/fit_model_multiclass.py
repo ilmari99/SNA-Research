@@ -75,30 +75,30 @@ def get_model(input_shape, tflite_path=None):
     #x = keras.layers.Conv2D(16, (3,3), activation='linear')(board)
     #x = keras.layers.BatchNormalization()(x)
     #x = keras.layers.ReLU()(x)
-    x = keras.layers.Conv2D(32, (3,3), activation='linear', padding='same')(board)
+    x = keras.layers.Conv2D(32, (3,3), activation='linear')(board)
     #x = keras.layers.BatchNormalization()(x)
     x = keras.layers.ReLU()(x)
-    x = keras.layers.Conv2D(64, (3,3), activation='linear', padding='same')(x)
+    x = keras.layers.Conv2D(64, (3,3), activation='linear')(x)
     #x = keras.layers.BatchNormalization()(x)
     x = keras.layers.ReLU()(x)
-    x = keras.layers.Conv2D(128, (3,3), activation='linear', padding='same')(x)
+    x = keras.layers.Conv2D(128, (3,3), activation='linear')(x)
     #x = keras.layers.BatchNormalization()(x)
     x = keras.layers.ReLU()(x)
     
-    #x = tf.reshape(x,(-1,20*20,128))
+    #x = tf.reshape(x,(-1,14*14,128))
     #x = tf.keras.layers.MultiHeadAttention(num_heads=4, key_dim=128)(x,x) + x
     
     x = keras.layers.Flatten()(x)
-    #x = keras.layers.Dropout(0.4)(x)
+    x = keras.layers.Dropout(0.4)(x)
     x = keras.layers.Dense(64, activation='relu')(x)
-    x = keras.layers.Dense(64, activation='relu')(x)
+    x = keras.layers.Dense(32, activation='relu')(x)
     output = keras.layers.Dense(4, activation='softmax')(x)
     
     model = tf.keras.Model(inputs=inputs, outputs=output)
 
     model.compile(
         optimizer=tf.keras.optimizers.Adam(learning_rate=0.0001),
-        loss='categorical_crossentropy',
+        loss=tf.keras.losses.CategoricalCrossentropy()
     )
     return model
     
@@ -156,7 +156,7 @@ def main(data_folder,
         
         # Compile the model, keeping optimizer and loss, but adding metrics
         metrics = ["accuracy", "categorical_crossentropy",
-                   BlokusPentobiMetric(model_save_path.replace(".keras", ".tflite"),num_games=50, num_cpus=6, game_timeout=60)]
+                   BlokusPentobiMetric(model_save_path.replace(".keras", ".tflite"),num_games=100, num_cpus=25, game_timeout=60)]
         model.compile(optimizer=model.optimizer, loss=model.loss, metrics=metrics)
         
         
@@ -169,7 +169,7 @@ def main(data_folder,
     
     # Run benchmark.py to test the model
     model_tflite_path = model_save_path.replace(".keras", ".tflite")
-    os.system(f"python3 BlokusPentobi/benchmark.py --model_path={model_tflite_path} --num_games=60 --num_cpus=6 --game_timeout=60")
+    os.system(f"python3 BlokusPentobi/benchmark.py --model_path={model_tflite_path} --num_games=200 --num_cpus=25 --game_timeout=60")
     
 
 if __name__ == "__main__":

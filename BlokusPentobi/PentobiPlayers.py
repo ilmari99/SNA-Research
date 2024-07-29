@@ -251,9 +251,12 @@ class PentobiNNPlayer:
         predictions = self.model.predict(next_states)
         predictions = np.array(predictions)
         #print(predictions,flush=True)
-        # If each prediction is not a single value, we'll assume we want to use the first value
+        # If each prediction is not a single value, we'll assume the values are the probabilities
+        # of ending up 1st, 2nd, 3rd, or 4th
         if len(predictions[0]) > 1 and predictions.shape[1] > 1:
-            predictions = predictions[:,0]
+            weights = np.array([4,3,2,1])
+            # Dot product of predictions and weights
+            predictions = np.dot(predictions, weights)
         #print(predictions,flush=True)
         if move_selection_strategy == "best":
             best_move = np.argmax(predictions)

@@ -1,11 +1,11 @@
 #!/bin/bash
 
-#SBATCH --job-name=BlokusPentobiTestDataset200K-Emb16-3x32-64-128Conv3BN-2Dense32-lr00005-Batch64-BCE
+#SBATCH --job-name=BlokusPentobiTestDataset200K-MC-Emb16-3Conv/3x32-64-128Conv3-Dropout-2x64-32Dense-Batch4096-CCE
 #SBATCH --account=project_2010270
 # Write the output files to the folder wth job-name
 #SBATCH --output=%x/test_%j.out
 #SBATCH --error=%x/test_%j.err
-#SBATCH --time=03:00:00
+#SBATCH --time=12:00:00
 #SBATCH --partition=gpusmall
 #SBATCH --mail-type=END
 
@@ -18,7 +18,7 @@
 module purge
 module load tensorflow/2.15
 
-DATA_FOLDER=/scratch/project_2010270/BlokusPentobiTestDataset200K-Lvl5-Eps01/Data
+DATA_FOLDER=/scratch/project_2010270/BlokusPentobiTestDataset200K-Lvl5-Eps01-MC/Data
 TEST_NAME=$SLURM_JOB_NAME
 
 SBATCH_OUTPUT=$TEST_NAME/test_%j.out
@@ -56,11 +56,11 @@ if [ ! -e ./$TEST_NAME/BlokusPentobi ]; then
     cp -r ./BlokusPentobi ./$TEST_NAME/BlokusPentobi
 fi
 
-$PYTHON_EXE ./$TEST_NAME/BlokusPentobi/fit_model_single.py \
+$PYTHON_EXE ./$TEST_NAME/BlokusPentobi/fit_model_multiclass.py \
 --data_folder=$DATA_FOLDER \
 --model_save_path=$MODEL_SAVE_PATH \
 --log_dir=$SLURM_JOB_NAME/tblog_$SLURM_JOB_ID \
---num_epochs=30 \
---patience=5 \
+--num_epochs=120 \
+--patience=20 \
 --validation_split=0.2 \
---batch_size=64 \
+--batch_size=4096 \
