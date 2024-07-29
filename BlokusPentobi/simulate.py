@@ -55,7 +55,7 @@ def play_pentobi(i, seed, player_maker, timeout, save_data_file = "", proc_args 
         return {}
         
     if save_data_file:
-        proc.write_states_to_file(save_data_file,use_discount=False, label_rank=True)
+        proc.write_states_to_file(save_data_file,use_discount=False, label_rank=True, append_mode=True)
     score = list(proc.score)
     pl_names = [pl.name for pl in players]
     proc.close()
@@ -227,6 +227,7 @@ if __name__=="__main__":
     parser.add_argument("--level", required=False, default=1,type=int)
     parser.add_argument("--model_path", type=str, required=False, default=None)
     parser.add_argument("--game_timeout", type=int, default=60, help="Game timeout in seconds")
+    parser.add_argument("--max_num_files", type=int, default=-1, help="Maximum number of files to write the results to")
     args = parser.parse_args()
     
     print(args)
@@ -305,6 +306,7 @@ if __name__=="__main__":
         }
         for i in range(num_games):
             seed = np.random.randint(2**32)
+            i = i if args.max_num_files == -1 else i % args.max_num_files
             file = f"{data_folder}/data_{i}.csv"
             yield (i, seed, _player_maker, args.game_timeout, file, kwargs)
     

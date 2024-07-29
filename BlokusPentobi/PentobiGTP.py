@@ -163,7 +163,7 @@ class PentobiGTP:
         #    sc[winner_idx] += 50
         return sc
     
-    def write_states_to_file(self, filename, overwrite=False, use_discount=False, label_rank=False):
+    def write_states_to_file(self, filename, overwrite=False, use_discount=False, label_rank=False,append_mode=False):
         if not filename:
             raise ValueError("Filename is empty")
         states = np.array(self.game_states)
@@ -192,6 +192,7 @@ class PentobiGTP:
         pids = states[:,0].astype(int)
         scores = scores[pids]
         if use_discount:
+            assert not label_rank, "Can't use discount and label rank at the same time"
             for i, sc, pid in zip(range(len(scores)), scores, pids):
                 num_played_moves = np.sum(pids[:i] == pid)
                 # If we have noly played a few moves, we can't trust the score
@@ -203,10 +204,15 @@ class PentobiGTP:
         # The states are in the format [pid, current_player, board, score] All values are integers
         # Save as csv
         os.makedirs(os.path.dirname(filename), exist_ok=True)
-        if os.path.exists(filename) and not overwrite:
+        if os.path.exists(filename) and not (overwrite or append_mode):
             raise FileExistsError(f"File {filename} already exists")
         #fmt = ["%d" for _ in range(states.shape[1] - 1)] + ["%f"]
-        np.savetxt(filename, states, fmt="%d", delimiter=",")
+        if append_mode:
+            with open(filename, "ab") as f:
+                np.savetxt(f, states, fmt="%d", delimiter=",")
+        else:
+            np.savetxt(filename, states, fmt="%d", delimiter=",")
+
 
     def send_command(self, command, errors="raise", lock = True):
         #print(f"Sending command '{command}'.")
