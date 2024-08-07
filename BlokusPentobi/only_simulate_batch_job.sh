@@ -1,8 +1,8 @@
 #!/bin/bash
 
-#SBATCH --job-name=BlokusPentobiMC20KLevel1-Cumulate-Emb16-3x32-64-128Conv3-Dropout-2x64-32Dense-Batch16384-CCE
+#SBATCH --job-name=BlokusPentobiMC2MLevel1-ResNet-Emb8-32conv5-4x64-Res3BN-GavgPool-Batch4096-CCE
 #SBATCH --account=project_2010270
-#SBATCH --time=03:00:00
+#SBATCH --time=07:00:00
 #SBATCH --partition=medium
 #SBATCH --output=%x/simulate_%j.out
 #SBATCH --error=%x/simulate_%j.err
@@ -53,7 +53,7 @@ $PYTHON_EXE --version
 DATA_FOLDER=$RLF_BLOKUS_SCRATCH/Data
 MODEL_FOLDER=$RLF_BLOKUS_SCRATCH/Models
 
-#rm -r $DATA_FOLDER
+rm -r $DATA_FOLDER
 
 mkdir -p $DATA_FOLDER
 mkdir -p $MODEL_FOLDER
@@ -69,18 +69,17 @@ for node in $(scontrol show hostname $SLURM_JOB_NODELIST); do
     echo $new_data_folder
 
     if [ -d $new_data_folder ]; then
-        random_number=$(( (RANDOM << 16) | RANDOM ))
-        new_data_folder="${new_data_folder}_${random_number}"
-        
+        rm -r $new_data_folder
     fi
 
     srun --nodes=1 --ntasks=1 --cpus-per-task=128 -w $node $PYTHON_EXE ./$SLURM_JOB_NAME/BlokusPentobi/simulate.py \
     --data_folder=$new_data_folder \
     --model_folder=$MODEL_FOLDER \
-    --num_games=2000 \
+    --num_games=200000 \
     --num_cpus=100 \
     --player_maker=use_internal \
-    --game_timeout=60 \
+    --game_timeout=80 \
+    --max_num_files=1000 \
     --level=1 &
 done
 wait

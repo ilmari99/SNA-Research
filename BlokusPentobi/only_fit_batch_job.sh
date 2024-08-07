@@ -1,19 +1,20 @@
 #!/bin/bash
 
-#SBATCH --job-name=BlokusPentobiMC20KLevel1-Cumulate-Emb16-3x32-64-128Conv3-Dropout-2x64-32Dense-Batch16384-CCE
+#SBATCH --job-name=BlokusPentobiMC2MLevel1-ResNet-Emb8-32conv5-4x64-Res3BN-GavgPool-Batch4096-CCE
 #SBATCH --account=project_2010270
 # Write the output files to the folder wth job-name
 #SBATCH --output=%x/fit_%j.out
 #SBATCH --error=%x/fit_%j.err
-#SBATCH --time=08:00:00
+#SBATCH --time=12:00:00
 #SBATCH --partition=gpusmall
 #SBATCH --mail-type=END
+#SBATCH --exclude=g1301
 
 # Reserve compute
-#SBATCH --cpus-per-task=32
+#SBATCH --cpus-per-task=64
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --gres=gpu:a100:1,nvme:40
+#SBATCH --gres=gpu:a100:2,nvme:40
 # Print all arguments
 echo "All arguments: $@"
 
@@ -88,10 +89,10 @@ $PYTHON_EXE ./$SLURM_JOB_NAME/BlokusPentobi/fit_model_multiclass.py \
 --load_model_path=$MODEL_FILE \
 --model_save_path=$MODEL_SAVE_PATH \
 --log_dir=$SLURM_JOB_NAME/tblog_$SLURM_JOB_ID \
---num_epochs=50 \
---patience=8 \
+--num_epochs=10 \
+--patience=4 \
 --validation_split=0.2 \
---batch_size=16384 \
+--batch_size=4096 \
 
 
 

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --job-name=BlokusPentobi160KLevel1-MC-Emb16-3x32-64-128Conv3BN-Dropout-2x64-32Dense-Batch16384-CCE
+#SBATCH --job-name=BlokusPentobiTestDataset2M-MC-ResNet/Emb8-32conv5-4x64-Res3BN-GavgPool-Batch4096-CCE
 #SBATCH --account=project_2010270
 #SBATCH --time=01:00:00
 #SBATCH --partition=test
@@ -16,8 +16,7 @@
 # Print all arguments
 echo "All arguments: $@"
 
-tflite_file=/scratch/project_2010270/RLFramework/BlokusPentobi160KLevel1-MC-Emb16-3x32-64-128Conv3BN-Dropout-2x64-32Dense-Batch16384-CCE/model_0.tflite
-
+tflite_file=BlokusPentobiTestDataset2M-MC-ResNet/Emb8-32conv5-4x64-Res3BN-GavgPool-Batch4096-CCE/model_0.tflite
 module purge
 module load tensorflow/2.15
 
@@ -45,4 +44,4 @@ $PYTHON_EXE -c "import tensorflow as tf; print(tf.__version__)"
 $PYTHON_EXE -c "import tensorflow as tf; print(tf.config.list_physical_devices('GPU'))"
 $PYTHON_EXE --version
 
-$PYTHON_EXE ./BlokusPentobi/benchmark.py --num_internal=3 --model_path=$tflite_file --num_games=200 --num_cpus=100 --pentobi_level=1
+$PYTHON_EXE ./BlokusPentobi/benchmark.py --num_internal=3 --model_path=$tflite_file --num_games=600 --num_cpus=100 --pentobi_level=5

@@ -21,26 +21,59 @@ class SaveModelCallback(tf.keras.callbacks.Callback):
         convert_model_to_tflite(self.model_save_path)
         
 @tf.keras.saving.register_keras_serializable()     
-class TransformerEncoderLayer(tf.keras.layers.Layer):
-    def __init__(self, embed_dim, num_heads, ff_dim, rate=0.1):
-        super(TransformerEncoderLayer, self).__init__()
-        self.att = tf.keras.layers.MultiHeadAttention(num_heads=num_heads, key_dim=embed_dim)
-        self.ffn = tf.keras.Sequential([
-            tf.keras.layers.Dense(ff_dim, activation='relu'),
-            tf.keras.layers.Dense(embed_dim)
-        ])
-        self.layernorm1 = tf.keras.layers.LayerNormalization(epsilon=1e-6)
-        self.layernorm2 = tf.keras.layers.LayerNormalization(epsilon=1e-6)
-        self.dropout1 = tf.keras.layers.Dropout(rate)
-        self.dropout2 = tf.keras.layers.Dropout(rate)
+class TransformerDecoderLayer(tf.keras.layers.Layer):
+    """ A Transformer decoder layer.
+    Takes in a sequence of vectors, calculates self-attention,
+    adds and normalizes, then applies a feed forward layer,
+    then adds and normalizes again.
+    """
+    def __init__(self, num_heads, key_dim, ff_dim, dropout=0.1):
+        super(TransformerDecoderLayer, self).__init__()
+        self.num_heads = num_heads
+        self.key_dim = key_dim
+        self.ff_dim = ff_dim
+        self.dropout = dropout
         
-    def call(self, inputs, training):
-        attn_output = self.att(inputs, inputs)
-        attn_output = self.dropout1(attn_output, training=training)
-        out1 = self.layernorm1(inputs + attn_output)
-        ffn_output = self.ffn(out1)
-        ffn_output = self.dropout2(ffn_output, training=training)
-        return self.layernorm2(out1 + ffn_output)
+        self.mha = keras.layers.MultiHeadAttention(num_heads=num_heads, key_dim=key_dim)
+        self.ff = keras.Sequential([
+            keras.layers.Dense(ff_dim, activation='relu'),
+            keras.layers.Dense(key_dim)
+        ])
+        
+        self.layernorm1 = tf.keras.layers.LayerNormalization()
+        self.layernorm2 = tf.keras.layers.LayerNormalization()
+        
+        self.dropout1 = tf.keras.layers.Dropout(dropout)
+        self.dropout2 = tf.keras.layers.Dropout(dropout)
+        
+    def call(self, x):
+        attn_output = self.mha(x, x)
+        attn_output = self.dropout1(attn_output)
+        out1 = self.layernorm1(x + attn_output)
+        
+        ff_output = self.ff(out1)
+        ff_output = self.dropout2(ff_output)
+        out2 = self.layernorm2(out1 + ff_output)
+        return out2
+
+@tf.keras.saving.register_keras_serializable()     
+class DecoderOnlyTransformer(tf.keras.Model):
+    """ A plain Decoder only transformer, with no causal masking.
+    """
+    def __init__(self, num_layers, num_heads, key_dim, ff_dim, dropout=0.1):
+        super(DecoderOnlyTransformer, self).__init__()
+        self.num_layers = num_layers
+        self.num_heads = num_heads
+        self.key_dim = key_dim
+        self.ff_dim = ff_dim
+        self.dropout = dropout
+        
+        self.decoder_layers = [TransformerDecoderLayer(num_heads, key_dim, ff_dim, dropout) for _ in range(num_layers)]
+        
+    def call(self, x):
+        for i in range(self.num_layers):
+            x = self.decoder_layers[i](x)
+        return x
 
 def get_model(input_shape, tflite_path=None):
     inputs = keras.Input(shape=input_shape)
@@ -68,30 +101,21 @@ def get_model(input_shape, tflite_path=None):
     board = board + 1
     
     # Embed each value (0 ... 4) to 16 dimensions
-    board = tf.keras.layers.Embedding(5, 16)(board)
-    board = tf.reshape(board, (-1, board_side_len, board_side_len, 16))
+    embedding_dim = 16
+    board = tf.keras.layers.Embedding(5, embedding_dim)(board)
+    #board = tf.reshape(board, (-1, board_side_len, board_side_len, 16))
+    # Convert to a sequence of vectors for the transformer
+    board = tf.reshape(board, (-1, board_side_len*board_side_len, embedding_dim))
+    # Positional encoding
+    positions = tf.range(board_side_len*board_side_len)
+    positions = tf.expand_dims(positions, 0) # (1, board_side_len*board_side_len)
+    positions = tf.tile(positions, [tf.shape(board)[0], 1]) # (batch_size, board_side_len*board_side_len)
+    positions = tf.keras.layers.Embedding(board_side_len*board_side_len, embedding_dim)(positions)
+    board = board + positions
     
-    # Apply convolutions
-    #x = keras.layers.Conv2D(16, (3,3), activation='linear')(board)
-    #x = keras.layers.BatchNormalization()(x)
-    #x = keras.layers.ReLU()(x)
-    x = keras.layers.Conv2D(32, (3,3), activation='linear')(board)
-    #x = keras.layers.BatchNormalization()(x)
-    x = keras.layers.ReLU()(x)
-    x = keras.layers.Conv2D(64, (3,3), activation='linear')(x)
-    #x = keras.layers.BatchNormalization()(x)
-    x = keras.layers.ReLU()(x)
-    x = keras.layers.Conv2D(128, (3,3), activation='linear')(x)
-    #x = keras.layers.BatchNormalization()(x)
-    x = keras.layers.ReLU()(x)
+    x = DecoderOnlyTransformer(num_layers=8, num_heads=8, key_dim=embedding_dim, ff_dim=128)(board)
+    x = tf.keras.layers.Flatten()(x)
     
-    #x = tf.reshape(x,(-1,14*14,128))
-    #x = tf.keras.layers.MultiHeadAttention(num_heads=4, key_dim=128)(x,x) + x
-    
-    x = keras.layers.Flatten()(x)
-    x = keras.layers.Dropout(0.4)(x)
-    x = keras.layers.Dense(64, activation='relu')(x)
-    x = keras.layers.Dense(32, activation='relu')(x)
     output = keras.layers.Dense(4, activation='softmax')(x)
     
     model = tf.keras.Model(inputs=inputs, outputs=output)
@@ -99,6 +123,66 @@ def get_model(input_shape, tflite_path=None):
     model.compile(
         optimizer=tf.keras.optimizers.Adam(learning_rate=0.0001),
         loss=tf.keras.losses.CategoricalCrossentropy()
+    )
+    return model
+
+def residual_block(x, filters, kernel_size=(3,3)):
+    y = keras.layers.Conv2D(filters, kernel_size, padding='same', activation='relu')(x)
+    y = keras.layers.Conv2D(filters, kernel_size, padding='same')(y)
+    y = keras.layers.Add()([x, y])
+    y = keras.layers.ReLU()(y)
+    return y
+
+def get_model(input_shape, tflite_path=None):
+    inputs = keras.Input(shape=input_shape)
+    #input_len = input_shape[1]
+    
+    # Separate the input into the board and the rest
+    # Board is everything except the first 2 elements
+    board = inputs[:,2:]
+    meta = inputs[:,:2]
+    
+    meta = keras.layers.Flatten()(meta)
+    # This element tells whose perspective of the game we are evaluating.
+    perspective_pids = meta[:,0]
+    perspective_pids = tf.cast(perspective_pids, tf.int32)
+    
+    # Reshape the board
+    board_side_len = int(np.sqrt(board.shape[1]))
+    board = tf.reshape(board, (-1, board_side_len, board_side_len))
+    
+    board = NormalizeBoardToPerspectiveLayer()([board, perspective_pids])
+    
+    board = tf.reshape(board, (-1, board_side_len, board_side_len, 1))
+    
+    # Convert the board to a tensor with 5 channels, i.e. one-hot encode the values -1...3
+    board = board + 1
+    
+    # Embed each value (0 ... 4) to 16 dimensions
+    board = tf.keras.layers.Embedding(5, 8)(board)
+    board = tf.reshape(board, (-1, board_side_len, board_side_len, 8))
+    
+    x = keras.layers.Conv2D(64, (5,5), padding='same', activation='relu')(board)
+
+    filters = [64,64,64,64]
+    kernel_sizes = [(3,3), (3,3), (3,3),(3,3)]
+    assert len(filters) == len(kernel_sizes)
+    for i in range(len(filters)):
+        # x has to have the same number of channels as filters[i]
+        if x.shape[-1] != filters[i]:
+            x = keras.layers.Conv2D(filters[i], (1,1), padding='same')(x)
+        x = residual_block(x, filters[i], kernel_sizes[i])
+        x = keras.layers.BatchNormalization()(x)
+
+    # Global average pooling
+    x = keras.layers.GlobalAveragePooling2D()(x)
+    output = keras.layers.Dense(4, activation='softmax')(x)
+    
+    model = tf.keras.Model(inputs=inputs, outputs=output)
+
+    model.compile(
+        optimizer=tf.keras.optimizers.Adam(learning_rate=0.0001),
+        loss=tf.keras.losses.CategoricalCrossentropy(label_smoothing=0.0)
     )
     return model
     
@@ -142,8 +226,8 @@ def main(data_folder,
         print(f"Input shape: {input_shape}")
         print(f"Num samples: {approx_num_samples}")
         
-        train_ds = train_ds.shuffle(10000).batch(batch_size, num_parallel_calls=tf.data.experimental.AUTOTUNE, deterministic=False)
-        val_ds = val_ds.batch(batch_size, num_parallel_calls=tf.data.experimental.AUTOTUNE, deterministic=False)
+        train_ds = train_ds.shuffle(10000).batch(batch_size, num_parallel_calls=tf.data.experimental.AUTOTUNE, deterministic=False, drop_remainder=True)
+        val_ds = val_ds.batch(batch_size, num_parallel_calls=tf.data.experimental.AUTOTUNE, deterministic=False, drop_remainder=True)
         
         train_ds = train_ds.prefetch(tf.data.experimental.AUTOTUNE)
         val_ds = val_ds.prefetch(tf.data.experimental.AUTOTUNE)
