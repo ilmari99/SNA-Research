@@ -1,78 +1,101 @@
-import multiprocessing
+import argparse
 import os
 import random
 import numpy as np
 
+from RLFramework.simulate import simulate_games
 from MoskaGame import MoskaGame
 from MoskaPlayer import MoskaPlayer
-from MoskaHumanPlayer import MoskaHumanPlayer
 from MoskaNNPlayer import MoskaNNPlayer
-from MoskaHeuristicPlayer import MoskaHeuristicPlayer
-
 
 def game_constructor(i):
-    model_paths = ["/home/ilmari/python/RLFramework/MoskaModelsNoCumulate/model_5.tflite"]
     return MoskaGame(
-        timeout=15,
+        timeout=25,
         logger_args = None,
         render_mode = "",
-        gather_data = "",
-        model_paths=model_paths,
+        gather_data = f"",
+        model_paths=[], #Fetch the model_paths from the NN player
         )
 
-def players_constructor(i, model_path = ""):
+def players_constructor(i, model_file):
+    if not os.path.exists(model_file):
+        raise Exception(f"No file found: {model_file}")
     random_players = [MoskaPlayer(name=f"Player{j}_{i}",
                                     logger_args=None,
                                     )
                 for j in range(3)]
-    if not model_path:
-        test_player = MoskaPlayer(name=f"TestPlayer_{i}",
-                                    logger_args=None,
-                                    )
-    else:
-        test_player = MoskaNNPlayer(name=f"TestPlayer_{i}",
-                                    logger_args=None,
-                                    model_path=model_path,
-                                    move_selection_temp=0.0,
-                                    )
-    players = random_players + [test_player]
+    
+    nn_player = MoskaNNPlayer(name=f"NNPlayer_{i}",
+                              model_path=model_file,
+    )
+    players = random_players + [nn_player]
     random.shuffle(players)
     return players
 
-def run_game(args):
-    i, model_path, seed = args
-    random.seed(seed)
-    np.random.seed(seed)
-    game = game_constructor(i)
-    players = players_constructor(i, model_path)
-    res = game.play_game(players)
-    return res
+def parse_args():
+    parser = argparse.ArgumentParser(description='Benchmark all models in a directory.')
+    parser.add_argument('--output_file', type=str, required=False, help='File where to save the benchmark result.',default="moska_benchmark.out")
+    parser.add_argument('--model_file', type=str, required=True, help='The NN to benchmark.')
+    parser.add_argument('--output_folder', type=str, required=False, default="MoskaBenchmarkFolder")
+    parser.add_argument('--opponent', type=str, required=False, default="random",help="benchmark type")
+    parser.add_argument('--num_games', type=int, required=True, help='The number of games to play for each model.')
+    parser.add_argument('--num_cpus', type=int, help='The number of CPUs to use.', default=os.cpu_count()-1)
+    args = parser.parse_args()
+
+    return args
+
 
 if __name__ == "__main__":
-    # Run games with multiprocessing pool
-    num_games = 100
-    model_path = "/home/ilmari/python/RLFramework/MoskaModelsNoCumulate/model_5.tflite"
-    num_cpus = 10
-    with multiprocessing.Pool(num_cpus) as p:
-        results = p.map(run_game, [(i, model_path, random.randint(0,2**32)) for i in range(num_games)])
+    args = parse_args()
+    print(args)
 
-    # Find how many times the test player won
-    num_losses = 0
-    total_games = 0
-    for result in results:
-        print(result)
-        test_player_pid = 0
-        for player_json in result.player_jsons:
-            if "TestPlayer" in player_json["name"]:
-                test_player_pid = player_json["pid"]
-                break
-        if not result.successful:
-            print(f"Game failed: {result}")
-            continue
-        if result.finishing_order[-1] == test_player_pid:
-            num_losses += 1
-        total_games += 1
+    model_file = os.path.abspath(args.model_file)
+    output_file = os.path.abspath(args.output_file)
+
+    def _game_constructor(i):
+        return game_constructor(i)
     
-    print(f"Test player lost {num_losses} out of {total_games} games.")
-    print(f"Loss rate: {num_losses / total_games}")
+    def _players_constructor(i):
+        return players_constructor(i, model_file)
 
+    num_games = args.num_games
+    num_cpus = args.num_cpus
+    folder = args.output_folder
+    res = simulate_games(game_constructor=_game_constructor,
+                         players_constructor=_players_constructor,
+                         folder=folder,
+                         num_games=num_games,
+                        num_cpus=num_cpus,
+                        num_files=-1,
+                        exists_ok=True,
+                        return_results=True,
+                        )
+    
+    successful_games = [r for r in res if r.successful]
+    print(f"Number of succesful games: {len(successful_games)}")
+    
+    num_not_losses = {}
+    for result in successful_games:
+        for player in result.player_jsons:
+            pname = player["name"].split("_")[0]
+            if pname not in num_not_losses:
+                num_not_losses[pname] = 0
+            num_not_losses[pname] += player["score"]
+            
+    print(f"Number of not lost games: ", num_not_losses)
+    
+    num_losses = {pname:len(successful_games) - num_not_losses[pname] for pname in num_not_losses}
+    
+    print(f"Number of lost games:", num_losses)
+    
+    loss_percents = {pname : num_losses[pname] / len(successful_games) for pname in num_not_losses}
+    
+    print(f"Loss percents:", loss_percents)
+    
+    
+    
+    
+    
+    
+    
+    

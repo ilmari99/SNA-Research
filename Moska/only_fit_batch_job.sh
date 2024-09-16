@@ -1,25 +1,25 @@
 #!/bin/bash
 
-#SBATCH --job-name=moska_fit
+#SBATCH --job-name=MoskaSNA200K-MLP-4x400Dense-2xDrop03-Batch4096
 #SBATCH --account=project_2010270
-#SBATCH --time=07:00:00
+#SBATCH --time=10:00:00
 #SBATCH --partition=gpusmall
-#SBATCH --output=moska_fit_%j.out
-#SBATCH --error=moska_fit_%j.err
+#SBATCH --output=%x/fit_%j.out
+#SBATCH --error=%x/fit_%j.err
 #SBATCH --mail-type=END
 
 # Reserve compute
-#SBATCH --cpus-per-task=64
+#SBATCH --cpus-per-task=32
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --gres=gpu:a100:1,nvme:30
+#SBATCH --gres=gpu:a100:1,nvme:40
 # Print all arguments
 echo "All arguments: $@"
 
 module purge
 module load tensorflow/2.15
 
-RLF_MOSKA_SCRATCH="/scratch/project_2010270/MoskaNew2"
+RLF_MOSKA_SCRATCH="/scratch/project_2010270/$SLURM_JOB_NAME"
 
 PIP_EXE=./venv/bin/pip3
 PYTHON_EXE=./venv/bin/python3
@@ -75,15 +75,19 @@ fi
 # We save the model to the model folder with the epoch number
 MODEL_SAVE_PATH=$MODEL_FOLDER/model_$EPOCH_NUM.keras
 
+if [ ! -e ./$SLURM_JOB_NAME/Moska ]; then
+    echo Copying Moska folder to ./$SLURM_JOB_NAME/Moska
+    cp -r ./Moska ./$SLURM_JOB_NAME/Moska
+fi
+
 $PYTHON_EXE ./Moska/fit_model_single.py \
 --data_folder=$DATA_FOLDER \
 --load_model_path=$MODEL_FILE \
 --model_save_path=$MODEL_SAVE_PATH \
---num_epochs=25 \
+--num_epochs=15 \
 --patience=2 \
---validation_split=0.2 \
---batch_size=16384 \
---model_type=mlp
+--validation_split=0.15 \
+--batch_size=4096 \
 
 
 

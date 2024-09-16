@@ -394,6 +394,9 @@ class MoskaGame(Game):
         """
         assert len(players) >= 2 and len(players) <= 8, "Moska is a game for 2-8 players."
         self.players = players
+        player_models = [pl.model_path for pl in players if hasattr(pl,"model_path")]
+        if not self.model_paths:
+            self.set_models(player_models)
         self.deck = REFERENCE_DECK.copy()
         np.random.shuffle(self.deck)
         player_full_cards = []
